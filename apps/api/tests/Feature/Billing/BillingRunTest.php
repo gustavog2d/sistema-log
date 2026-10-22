@@ -6,8 +6,10 @@ use App\Billing\PaymentGateway;
 use App\Billing\SubscriptionBilling;
 use App\Models\PlatformUser;
 use App\Platform\Auth\PlatformAudit;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seedBillingCatalog();
@@ -253,4 +255,180 @@ it('never undoes a recorded charge when only the audit log fails', function () {
     expect($this->subscriptionRow($sub->id)->status)->toBe('active');
     expect($this->invoicesOf($sub->id))->toHaveCount(1);
     expect($summary->charged)->toBe(1);
+});
+
+it('M2 keeps the gateway idempotency key tied to the original due date even after a long delay', function () {
+    $sub = $this->subscription([
+        'status' => 'active', 'current_period_start' => $this->at('2026-07-01 09:00:00'), 'current_period_end' => $this->at('2026-08-01 09:00:00'),
+    ]);
+
+    runBilling($this->at('2026-11-10 12:00:00'));
+    DB::connection('pgsql_admin')->table('invoices')->delete();
+    DB::connection('pgsql_admin')->table('subscriptions')->where('id', $sub->id)->update(['status' => 'active', 'current_period_end' => $this->at('2026-08-01 09:00:00')]);
+    runBilling($this->at('2026-11-10 12:05:00'));
+
+    // Mesmo vencimento original, execuções em horas diferentes: uma só cobrança no gateway.
+    expect($this->gateway()->charges())->toHaveCount(1);
+});
+
+it('M1 makes a technical failure visible: audit event and a failing exit code', function () {
+    $this->app->singleton(PaymentGateway::class, fn () => new class extends FakePaymentGateway
+    {
+        public function charge(string $customerRef, string $paymentMethodRef, int $amountCents, string $currency, string $idempotencyKey): ChargeResult
+        {
+            throw new RuntimeException('gateway fora do ar');
+        }
+    });
+    $this->subscription();
+
+    $this->artisan('billing:run')->expectsOutputToContain('Erros: 1')->assertFailed();
+
+    expect(DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'billing.error')->count())->toBe(1);
+});
+
+it('B3 does not allow a trial without an end date or an active subscription without a period end', function () {
+    $sub = $this->subscription();
+
+    foreach (['trial_ends_at' => 'trialing', 'current_period_end' => 'active'] as $column => $status) {
+        expect(fn () => DB::connection('pgsql_admin')->table('subscriptions')->where('id', $sub->id)->update(['status' => $status, $column => null]))
+            ->toThrow(QueryException::class);
+    }
+});
+
+it('M3 keeps the platform role from updating or deleting invoices and the api role from reading payment methods', function () {
+    $this->subscription();
+    runBilling();
+
+    foreach ([
+        fn () => DB::connection('pgsql_platform')->table('invoices')->update(['amount_cents' => 1]),
+        fn () => DB::connection('pgsql_platform')->table('invoices')->delete(),
+        fn () => DB::table('payment_methods')->count(),
+    ] as $forbidden) {
+        try {
+            $forbidden();
+            $code = null;
+        } catch (QueryException $e) {
+            $code = $e->getCode();
+        }
+
+        expect($code)->toBe('42501');
+    }
+});
+
+it('P1 skips a subscription that another process is already working on and picks it up on the next run', function () {
+    $sub = $this->subscription();
+    $other = DB::connection('pgsql_admin');
+
+    $other->beginTransaction();
+    $other->table('subscriptions')->where('id', $sub->id)->lockForUpdate()->first();
+
+    $summary = runBilling();
+    $other->rollBack();
+
+    expect($summary->charged)->toBe(0)->and($summary->errors)->toBe(0);
+    expect($this->invoicesOf($sub->id))->toBe([])->and($this->gateway()->charges())->toBe([]);
+
+    expect(runBilling()->charged)->toBe(1);
+});
+
+it('P2 respects the offset of an --as-of date and does not depend on the application time zone', function () {
+    config(['app.timezone' => 'America/Sao_Paulo']);
+    $sub = $this->subscription(['trial_ends_at' => $this->at('2026-12-01 02:30:00')]);
+
+    $this->artisan('billing:run', ['--as-of' => '2026-11-30T23:29:59-03:00'])->assertSuccessful();
+    expect($this->subscriptionRow($sub->id)->status)->toBe('trialing');
+
+    $this->artisan('billing:run', ['--as-of' => '2026-11-30T23:30:00-03:00'])->assertSuccessful();
+    expect($this->subscriptionRow($sub->id)->status)->toBe('active');
+});
+
+it('P3 crosses the year boundary keeping the day', function () {
+    $sub = $this->subscription(['trial_ends_at' => $this->at('2026-12-31 09:00:00')]);
+
+    runBilling($this->at('2026-12-31 10:00:00'));
+
+    expect(Carbon::parse($this->subscriptionRow($sub->id)->current_period_end)->toDateTimeString())->toBe('2027-01-31 09:00:00');
+});
+
+it('P4 handles the boundary where the new period would end exactly now', function () {
+    $sub = $this->subscription(['status' => 'active', 'current_period_start' => $this->at('2026-10-10 09:00:00'), 'current_period_end' => $this->at('2026-10-10 09:00:00')]);
+
+    // O novo período terminaria exatamente em asOf: é atraso de um ciclo inteiro, então começa na execução.
+    runBilling($this->at('2026-11-10 09:00:00'));
+
+    $row = $this->subscriptionRow($sub->id);
+    expect(Carbon::parse($row->current_period_start)->toDateTimeString())->toBe('2026-11-10 09:00:00');
+    expect(Carbon::parse($row->current_period_end)->toDateTimeString())->toBe('2026-12-10 09:00:00');
+});
+
+it('P5 charges one yearly period when a yearly subscription is more than a year late', function () {
+    $sub = $this->subscription(['cycle' => 'yearly', 'price_cents' => 54000, 'status' => 'active', 'current_period_start' => $this->at('2024-01-10 09:00:00'), 'current_period_end' => $this->at('2025-01-10 09:00:00')]);
+
+    runBilling();
+
+    $row = $this->subscriptionRow($sub->id);
+    expect(Carbon::parse($row->current_period_start)->toDateTimeString())->toBe('2026-11-10 12:00:00');
+    expect(Carbon::parse($row->current_period_end)->toDateTimeString())->toBe('2027-11-10 12:00:00');
+    expect($this->invoicesOf($sub->id))->toHaveCount(1);
+});
+
+it('P6 keeps the billing day across short months in chained renewals', function () {
+    $sub = $this->subscription(['trial_ends_at' => $this->at('2026-01-31 09:00:00')]);
+    $ends = [];
+
+    foreach (['2026-01-31 10:00:00', '2026-02-28 10:00:00', '2026-03-31 10:00:00', '2026-04-30 10:00:00'] as $moment) {
+        runBilling($this->at($moment));
+        $ends[] = Carbon::parse($this->subscriptionRow($sub->id)->current_period_end)->toDateString();
+    }
+
+    expect($ends)->toBe(['2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31']);
+    expect($this->invoicesOf($sub->id))->toHaveCount(4);
+});
+
+it('P7 rolls back and charges only once when the gateway approves but the database fails afterwards', function () {
+    $sub = $this->subscription(['trial_ends_at' => $this->at('2026-11-10 09:00:00')]);
+    // Uma fatura do mesmo período já existe: o insert da fatura viola a unicidade depois da cobrança aprovada.
+    DB::connection('pgsql_admin')->table('invoices')->insert([
+        'id' => (string) Str::uuid(), 'tenant_id' => $sub->tenant_id, 'subscription_id' => $sub->id,
+        'period_start' => $this->at('2026-11-10 09:00:00'), 'period_end' => $this->at('2026-12-10 09:00:00'),
+        'amount_cents' => 5000, 'currency' => 'BRL', 'status' => 'paid', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $summary = runBilling();
+
+    expect($summary->errors)->toBe(1)->and($summary->charged)->toBe(0);
+    expect($this->subscriptionRow($sub->id)->status)->toBe('trialing');
+    expect($this->gateway()->charges())->toHaveCount(1);
+
+    DB::connection('pgsql_admin')->table('invoices')->delete();
+    runBilling();
+
+    expect($this->subscriptionRow($sub->id)->status)->toBe('active');
+    expect($this->gateway()->charges())->toHaveCount(1);
+});
+
+it('P8 records who was charged and why a payment failed in the audit log', function () {
+    $paid = $this->subscription();
+    $failed = $this->subscription([], 'pm_fake_fail_x');
+
+    runBilling();
+
+    $events = DB::connection('pgsql_admin')->table('platform_audit_logs')->get()->mapWithKeys(fn ($e) => [$e->event.':'.json_decode($e->metadata, true)['subscription'] => json_decode($e->metadata, true)]);
+
+    expect($events["billing.charged:{$paid->id}"])->toMatchArray(['tenant' => $paid->tenant_id, 'amount_cents' => 5000]);
+    expect($events["billing.failed:{$failed->id}"])->toMatchArray(['tenant' => $failed->tenant_id, 'reason' => 'card_declined']);
+    expect($events)->toHaveKey("subscription.suspended:{$failed->id}");
+});
+
+it('P9 counts only after the commit', function () {
+    $sub = $this->subscription(['trial_ends_at' => $this->at('2026-11-10 09:00:00')]);
+    DB::connection('pgsql_admin')->table('invoices')->insert([
+        'id' => (string) Str::uuid(), 'tenant_id' => $sub->tenant_id, 'subscription_id' => $sub->id,
+        'period_start' => $this->at('2026-11-10 09:00:00'), 'period_end' => $this->at('2026-12-10 09:00:00'),
+        'amount_cents' => 5000, 'currency' => 'BRL', 'status' => 'paid', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+
+    $summary = runBilling();
+
+    expect($summary->charged)->toBe(0);
 });

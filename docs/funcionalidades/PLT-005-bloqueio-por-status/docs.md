@@ -23,4 +23,4 @@ Faz a API do assinante respeitar o status da assinatura: em teste ou ativa, tudo
 
 | Versão | Data | Mudança |
 | --- | --- | --- |
-| 0.1.0 | 2026-10-26 | Middleware `subscription.access` e `GET /subscription` |
+| 0.1.0 | 2026-10-22 | Middleware `subscription.access` e `GET /subscription` |

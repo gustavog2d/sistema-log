@@ -20,10 +20,11 @@ Route::middleware('public')->group(function () {
     Route::get('/plans', PublicPlanController::class)->middleware('throttle:public-catalog');
 });
 
-Route::middleware('tenant')->group(function () {
+// Toda rota do assinante passa por `subscription.access`: com a assinatura suspensa ou cancelada, só leitura.
+Route::middleware(['tenant', 'subscription.access'])->group(function () {
     Route::get('/tenant/current', CurrentTenantController::class);
     // Sempre permitido, mesmo com a assinatura suspensa: é como o assinante entende o bloqueio.
-    Route::get('/subscription', SubscriptionController::class);
+    Route::get('/subscription', SubscriptionController::class)->middleware('throttle:subscription-status');
 });
 
 // Cadastro do assinante (PLT-003): público, só nos hosts da plataforma.

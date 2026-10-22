@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Billing\SubscriptionAccess;
 use App\Http\Problem;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -20,13 +21,6 @@ class SubscriptionController extends Controller
             return Problem::response(404, 'Not Found', 'Este negócio não tem assinatura.');
         }
 
-        $canWrite = in_array($subscription->status, ['trialing', 'active'], true);
-        $nextCharge = match ($subscription->status) {
-            'trialing' => $subscription->trial_ends_at,
-            'active' => $subscription->current_period_end,
-            default => null,
-        };
-
         return response()->json([
             'status' => $subscription->status,
             'plan' => ['key' => $plan->key, 'name' => $plan->name],
@@ -35,9 +29,9 @@ class SubscriptionController extends Controller
             'currency' => $subscription->currency,
             'trial_ends_at' => $subscription->trial_ends_at?->toIso8601String(),
             'current_period_end' => $subscription->current_period_end?->toIso8601String(),
-            'next_charge_at' => $nextCharge?->toIso8601String(),
+            'next_charge_at' => SubscriptionAccess::nextChargeAt($subscription)?->toIso8601String(),
             'suspended_at' => $subscription->suspended_at?->toIso8601String(),
-            'can_write' => $canWrite,
+            'can_write' => SubscriptionAccess::canWrite($subscription->status),
         ]);
     }
 }

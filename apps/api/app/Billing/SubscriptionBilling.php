@@ -24,6 +24,8 @@ class SubscriptionBilling
 
     public function run(Carbon $asOf): BillingRunSummary
     {
+        // Sempre em UTC (o banco guarda UTC) e sem microssegundos: o período e a chave de idempotência usam o mesmo instante.
+        $asOf = $asOf->copy()->utc()->startOfSecond();
         $summary = new BillingRunSummary;
 
         $ids = DB::connection('pgsql_platform')->table('subscriptions')
@@ -38,12 +40,22 @@ class SubscriptionBilling
 
         foreach ($ids as $id) {
             try {
-                $events = DB::connection('pgsql_platform')->transaction(fn (Connection $db) => $this->process($db, $id, $asOf, $summary));
+                $events = DB::connection('pgsql_platform')->transaction(fn (Connection $db) => $this->process($db, $id, $asOf));
             } catch (Throwable $e) {
                 $summary->errors++;
                 report($e);
+                $this->audit([['billing.error', ['subscription' => $id, 'error' => $e::class]]]);
 
                 continue;
+            }
+
+            // Contadores só depois do commit: se a transação falhar, nada foi contado.
+            foreach ($events as [$event]) {
+                match ($event) {
+                    'billing.charged' => $summary->charged++,
+                    'subscription.suspended' => $summary->suspended++,
+                    default => null,
+                };
             }
 
             $this->audit($events);
@@ -55,10 +67,10 @@ class SubscriptionBilling
     /**
      * @return list<array{0: string, 1: array<string, scalar>}> eventos de auditoria a gravar depois da transação
      */
-    private function process(Connection $db, string $id, Carbon $asOf, BillingRunSummary $summary): array
+    private function process(Connection $db, string $id, Carbon $asOf): array
     {
-        // Linha travada: duas execuções simultâneas nunca processam a mesma assinatura.
-        $row = $db->table('subscriptions')->where('id', $id)->lockForUpdate()->first();
+        // Linha travada: duas execuções simultâneas nunca processam a mesma assinatura (a que perde pula a linha).
+        $row = $db->table('subscriptions')->where('id', $id)->lock('for update skip locked')->first();
         $sub = $row instanceof stdClass ? DueSubscription::fromRow($row) : null;
         $due = $sub?->dueAt();
 
@@ -68,36 +80,34 @@ class SubscriptionBilling
 
         $db->statement("select set_config('app.tenant_id', ?, true)", [$sub->tenantId]);
 
-        [$start, $end] = $this->period($due, $sub->cycle, $asOf);
-        $result = $this->charge($db, $sub, $start);
+        [$start, $end] = $this->period($due, $sub->cycle, $asOf, $sub->billingDay());
+        $result = $this->charge($db, $sub, $due);
 
         $db->table('invoices')->insert([
             'id' => (string) Str::uuid(), 'tenant_id' => $sub->tenantId, 'subscription_id' => $sub->id,
             'period_start' => $start, 'period_end' => $end, 'amount_cents' => $sub->priceCents, 'currency' => $sub->currency,
             'status' => $result->paid ? 'paid' : 'failed', 'failure_reason' => $result->failureReason,
             'gateway_charge_ref' => $result->ref !== '' ? $result->ref : null, 'paid_at' => $result->paid ? $asOf : null,
-            'created_at' => $asOf, 'updated_at' => $asOf,
+            'created_at' => now(), 'updated_at' => now(),
         ]);
 
         $context = ['subscription' => $sub->id, 'tenant' => $sub->tenantId, 'amount_cents' => $sub->priceCents];
 
         if ($result->paid) {
             $db->table('subscriptions')->where('id', $sub->id)->update([
-                'status' => 'active', 'current_period_start' => $start, 'current_period_end' => $end, 'updated_at' => $asOf,
+                'status' => 'active', 'current_period_start' => $start, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
-            $summary->charged++;
 
             return [['billing.charged', $context]];
         }
 
         // Pagamento não aprovado: suspensão imediata, sem carência e sem nova tentativa automática.
-        $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'suspended', 'suspended_at' => $asOf, 'updated_at' => $asOf]);
-        $summary->suspended++;
+        $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'suspended', 'suspended_at' => $asOf, 'updated_at' => now()]);
 
         return [['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $context]];
     }
 
-    private function charge(Connection $db, DueSubscription $sub, Carbon $start): ChargeResult
+    private function charge(Connection $db, DueSubscription $sub, Carbon $due): ChargeResult
     {
         if ($sub->priceCents === 0) {
             // Cortesia: nada a cobrar, o gateway não é chamado.
@@ -111,8 +121,9 @@ class SubscriptionBilling
             return new ChargeResult(false, '', 'no_payment_method');
         }
 
-        // Chave determinística (assinatura + início do período): a mesma cobrança nunca é feita duas vezes.
-        return $this->gateway->charge($sub->customerRef, $methodRef, $sub->priceCents, $sub->currency, 'sub:'.$sub->id.':'.$start->format('YmdHis'));
+        // Chave determinística (assinatura + vencimento original, que nunca muda mesmo com atraso longo):
+        // uma nova tentativa depois de uma falha após a cobrança nunca cobra de novo.
+        return $this->gateway->charge($sub->customerRef, $methodRef, $sub->priceCents, $sub->currency, 'sub:'.$sub->id.':due:'.$due->format('YmdHis'));
     }
 
     private function isDue(DueSubscription $sub, Carbon $asOf): bool
@@ -122,13 +133,18 @@ class SubscriptionBilling
 
     /**
      * O período começa no vencimento. Se o atraso for de um ciclo inteiro ou mais, começa na execução
-     * (cobra um período só, não os antigos em sequência).
+     * (cobra um período só, não os antigos em sequência). O dia da cobrança é o do fim do teste e é
+     * preservado: 31/01 → 28/02 → 31/03 (um mês curto não muda o dia para sempre).
      *
      * @return array{0: Carbon, 1: Carbon}
      */
-    private function period(Carbon $due, string $cycle, Carbon $asOf): array
+    private function period(Carbon $due, string $cycle, Carbon $asOf, int $billingDay): array
     {
-        $end = fn (Carbon $start): Carbon => $cycle === 'yearly' ? $start->copy()->addYearNoOverflow() : $start->copy()->addMonthNoOverflow();
+        $end = function (Carbon $start) use ($cycle, $billingDay): Carbon {
+            $next = $cycle === 'yearly' ? $start->copy()->addYearNoOverflow() : $start->copy()->addMonthNoOverflow();
+
+            return $next->day(min($billingDay, $next->daysInMonth));
+        };
 
         $start = $due->copy();
 

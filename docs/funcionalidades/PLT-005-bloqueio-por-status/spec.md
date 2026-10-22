@@ -1,6 +1,6 @@
 # PLT-005 · Bloqueio de acesso por status da assinatura
 
-- **Status:** aprovada (regras de negócio de Gustavo em 2026-10-24; decisões técnicas delegadas)
+- **Status:** aprovada (regras de negócio de Gustavo em 2026-10-22; decisões técnicas delegadas)
 - **Fase:** 1 · Plataforma
 - **Plano / feature flag:** —
 - **Depende de:** PLT-004
@@ -21,7 +21,7 @@ Quem não pagou deve perder o acesso na hora. Esta funcionalidade faz a API do a
 - **RN-01** — Estados e acesso: `trialing` e `active` têm acesso completo; `suspended` e `canceled` têm **somente leitura** (GET, HEAD e OPTIONS); qualquer outro método nas rotas do assinante é recusado.
 - **RN-02** — Recusa: 403 em Problem Details com `code` = `subscription_suspended` ou `subscription_canceled`. Negócio sem assinatura é tratado como suspenso.
 - **RN-03** — A decisão é tomada a cada requisição, lendo o status atual (nenhum cache): suspender bloqueia na hora, regularizar libera na hora.
-- **RN-04** — A regra vale para todas as rotas do grupo `tenant` que gravam dados (middleware `subscription.access`). Rotas da plataforma e públicas não são afetadas.
+- **RN-04** — A regra vale para **todas** as rotas do grupo `tenant` (`Route::middleware(['tenant', 'subscription.access'])`); um teste falha se uma rota de escrita do grupo ficar sem o middleware. Rotas da plataforma e públicas não são afetadas. `GET /subscription` tem limite de 60 por minuto por IP.
 - **RN-05** — `GET /api/v1/subscription` (rota do assinante, sempre permitida, mesmo suspenso) devolve: `status`, `plan` (chave e nome), `cycle`, `price_cents`, `currency`, `trial_ends_at`, `current_period_end`, `next_charge_at`, `suspended_at` e `can_write`.
 - **RN-06** — Cada negócio só enxerga a própria assinatura.
 

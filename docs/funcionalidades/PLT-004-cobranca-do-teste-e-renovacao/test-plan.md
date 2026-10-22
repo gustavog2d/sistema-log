@@ -1,6 +1,6 @@
 # PLT-004 · Plano de teste
 
-- **Spec:** [spec.md](spec.md) (versão aprovada em: 2026-10-24)
+- **Spec:** [spec.md](spec.md) (versão aprovada em: 2026-10-22)
 - **Responsável:** agente QA
 
 PostgreSQL real (`app_test`). O tempo é controlado por `--as-of` e por `Carbon::setTestNow`. O ID do critério aparece no nome de cada teste.
@@ -17,13 +17,14 @@ PostgreSQL real (`app_test`). O tempo é controlado por `--as-of` e por `Carbon:
 | T-06 | CA-11, CA-12 | Serviço | `BillingRunTest.php` (ignoradas; falha técnica isolada) | passando |
 | T-07 | CA-14 | Banco | `BillingRunTest.php` (auditoria) | passando |
 | T-08 | CA-15, CA-17 | Comando | `Feature/Billing/BillingCommandTest.php` | passando |
-| T-09 | isolamento | Esquema | `SchemaRlsTest` (invoices com RLS) | passando |
+| T-09 | isolamento | Esquema/Banco | `SchemaRlsTest` (exige RLS em toda tabela fora da lista de plataforma, inclusive `invoices`) e `InvoiceSecurityTest` (RLS forçado, papéis) | passando |
+| T-10 | RN-03, RN-11, RN-12, RN-13 | Serviço/Comando | `BillingRunTest.php` (P1 a P9: linha travada pulada, fuso com deslocamento e `app.timezone` diferente de UTC, virada de ano, fronteira, ciclo anual atrasado, deriva do dia em renovações encadeadas, falha de banco depois da cobrança, conteúdo da auditoria, contadores depois do commit) e `BillingCommandTest.php` (P10: `--as-of` recusado fora de local/testing; erro técnico dá código diferente de zero) | passando |
 
-Teste real contra a API em execução (2026-10-26): dois cadastros (cartão bom e cartão que falha), `billing:run` simulando o dia 3 (nada acontece) e o dia 8 (um cobrado, um suspenso na hora); o status e as faturas bateram com o esperado.
+Teste real contra a API em execução (2026-10-22): dois cadastros (cartão bom e cartão que falha), `billing:run` simulando o dia 3 (nada acontece) e o dia 8 (um cobrado, um suspenso na hora); o status e as faturas bateram com o esperado.
 
 ## Casos obrigatórios
 
-- [x] Sucesso do fluxo principal; [x] idempotência; [x] concorrência (linha travada); [x] fuso/virada de mês (31/01, anos bissextos); [x] auditoria; [x] isolamento de tenant (RLS em `invoices`)
+- [x] Sucesso do fluxo principal; [x] idempotência; [x] concorrência (teste P1 com duas conexões: a linha travada é pulada e processada na execução seguinte); [x] fuso, virada de mês e de ano, anos bissextos; [x] auditoria; [x] isolamento de tenant (RLS em `invoices`)
 - [ ] Permissão, plano, limite: não se aplicam (sem rotas)
 
 ## Fora do plano

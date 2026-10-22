@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
 use Symfony\Component\Yaml\Yaml;
 
 beforeEach(fn () => $this->seedBillingCatalog());
@@ -57,19 +58,33 @@ it('CA-11 is not available on the platform host', function () {
     $this->getJson('http://app.test/api/v1/subscription')->assertNotFound();
 });
 
-it('returns a body that matches the openapi contract', function () {
+it('returns bodies that respect the schemas of the openapi contract, including types, enums and dates', function () {
+    $this->loadOpenApi('PLT-005-bloqueio-por-status');
     $this->subscription(['status' => 'active'], 'pm_fake_ok_x', 'neg');
-    $spec = Yaml::parseFile(base_path('../../docs/funcionalidades/PLT-005-bloqueio-por-status/openapi.yaml'));
-    $keys = fn (string $path): array => array_map('strval', array_keys(data_get($spec, $path)));
+    $this->subscription(['status' => 'suspended', 'suspended_at' => $this->at('2026-11-10 12:00:00')], 'pm_fake_ok_x', 'susp');
+    $this->makeTenant('semassinatura');
 
-    $body = $this->getJson('http://neg.app.test/api/v1/subscription')->assertOk()->json();
-
-    expect(array_keys($body))->toEqualCanonicalizing($keys('components.schemas.Subscription.properties'));
-    expect(array_keys($body['plan']))->toEqualCanonicalizing($keys('components.schemas.Subscription.properties.plan.properties'));
+    expect($this->schemaErrors($this->getJson('http://neg.app.test/api/v1/subscription')->assertOk()->json(), 'Subscription'))->toBe([]);
+    expect($this->schemaErrors($this->getJson('http://susp.app.test/api/v1/subscription')->assertOk()->json(), 'Subscription'))->toBe([]);
+    expect($this->schemaErrors($this->getJson('http://semassinatura.app.test/api/v1/subscription')->assertNotFound()->json(), 'Problem'))->toBe([]);
 });
 
-it('declares the blocked write problem in the contract', function () {
-    $spec = Yaml::parseFile(base_path('../../docs/funcionalidades/PLT-005-bloqueio-por-status/openapi.yaml'));
+it('returns a blocked write that respects the SubscriptionBlocked schema and the referenced response', function () {
+    $this->loadOpenApi('PLT-005-bloqueio-por-status');
+    $this->subscription(['status' => 'suspended'], 'pm_fake_ok_x', 'neg');
+    Route::middleware(['tenant', 'subscription.access'])->post('api/v1/_probe/escrita', fn () => []);
 
-    expect(data_get($spec, 'components.schemas.SubscriptionBlocked.properties.code.enum'))->toBe(['subscription_suspended', 'subscription_canceled']);
+    $body = $this->postJson('http://neg.app.test/api/v1/_probe/escrita')->assertForbidden()->json();
+
+    expect($this->schemaErrors($body, 'SubscriptionBlocked'))->toBe([]);
+    expect(data_get(Yaml::parseFile(base_path('../../docs/funcionalidades/PLT-005-bloqueio-por-status/openapi.yaml')), 'components.responses.SubscriptionBlocked.content.application/problem+json.schema.$ref'))
+        ->toBe('#/components/schemas/SubscriptionBlocked');
+});
+
+it('the validator really catches a wrong type, a missing field and a value outside the enum', function () {
+    $this->loadOpenApi('PLT-005-bloqueio-por-status');
+
+    $errors = $this->schemaErrors(['status' => 'pausada', 'can_write' => 'sim', 'plan' => ['key' => 'x']], 'Subscription');
+
+    expect(implode(' | ', $errors))->toContain('valor fora do enum')->toContain('falta cycle')->toContain('can_write: tipo string');
 });

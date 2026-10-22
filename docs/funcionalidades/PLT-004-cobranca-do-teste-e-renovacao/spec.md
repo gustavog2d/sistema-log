@@ -1,6 +1,6 @@
 # PLT-004 · Cobrança do fim do teste e renovações (com meio de pagamento de teste)
 
-- **Status:** aprovada (regras de negócio de Gustavo em 2026-10-24; decisões técnicas delegadas)
+- **Status:** aprovada (regras de negócio de Gustavo em 2026-10-22; decisões técnicas delegadas)
 - **Fase:** 1 · Plataforma
 - **Plano / feature flag:** —
 - **Depende de:** PLT-003
@@ -20,13 +20,16 @@ O teste de 7 dias já começa com o pagamento cadastrado, mas ninguém cobra. Es
 
 - **RN-01** — Uma assinatura está **vencida** quando é `trialing` com `trial_ends_at` no passado, ou `active` com `current_period_end` no passado.
 - **RN-02** — `php artisan billing:run [--as-of=DATA]` processa as assinaturas vencidas (a data padrão é agora; `--as-of` permite simular o tempo). Roda sozinho a cada 5 minutos, sem sobreposição. Cada assinatura é processada em sua própria transação, e o erro de uma não impede as demais.
-- **RN-03** — Cobrança: valor = `price_cents` gravado na assinatura (preço do cadastro, nunca o atual do plano), pelo meio de pagamento da assinatura, com chave de idempotência determinística (assinatura + início do período). Rodar duas vezes nunca cobra duas vezes.
-- **RN-04** — Cobrança aprovada: assinatura `active`; o período começa no vencimento (não em "agora") e dura 1 mês ou 1 ano conforme o ciclo (1 mês sem estouro de dia, ex.: 31/01 → 28/02). Se o atraso for de um ciclo inteiro ou mais (sistema parado), o período começa na data da execução, e não cobra períodos antigos em sequência.
+- **RN-03** — Cobrança: valor = `price_cents` gravado na assinatura (preço do cadastro, nunca o atual do plano), pelo meio de pagamento da assinatura, com chave de idempotência determinística derivada do **vencimento original** (assinatura + data do vencimento, que não muda mesmo com atraso longo). Rodar duas vezes, ou repetir depois de uma falha que ocorreu após a cobrança, nunca cobra duas vezes.
+- **RN-04** — Cobrança aprovada: assinatura `active`; o período começa no vencimento (não em "agora") e dura 1 mês ou 1 ano conforme o ciclo. **O dia da cobrança é o do fim do teste e é preservado**: um mês curto não muda o dia para sempre (31/01 → 28/02 → 31/03 → 30/04; 29/02 → 28/02 no ano seguinte). Se o atraso for de um ciclo inteiro ou mais (sistema parado), o período começa na data da execução, e não cobra períodos antigos em sequência.
 - **RN-05** — Cobrança recusada: assinatura `suspended` na hora, com `suspended_at`; a fatura fica `failed` com o motivo. **Não há carência nem nova tentativa automática.** Sem meio de pagamento, também suspende (`no_payment_method`).
 - **RN-06** — Falha técnica (gateway indisponível, exceção) **não** muda o estado: a assinatura continua vencida e será tentada na próxima execução.
 - **RN-07** — Preço zero (cortesia, PLT-012): não chama o gateway; a fatura nasce `paid` com valor 0 e a assinatura segue `active`.
 - **RN-08** — `invoices` (dado de assinante, com RLS): assinatura, período, valor, moeda, status (`paid`, `failed`), motivo, referência da cobrança, datas. Uma fatura por assinatura e início de período. O papel de plataforma grava (informando o tenant na transação); o papel da API só lê, e só as do tenant em contexto.
 - **RN-09** — Auditoria (`billing.charged`, `billing.failed`, `subscription.suspended`), gravada depois de cada transação, sem dados de pagamento.
+- **RN-11** — `--as-of` só é aceito nos ambientes `local` e `testing` (simular o tempo em produção cobraria assinaturas antes da hora). A data é convertida para UTC (um `--as-of` com deslocamento, como `-03:00`, vale o mesmo instante).
+- **RN-12** — Erro técnico nunca passa em silêncio: gera o evento de auditoria `billing.error` e o comando termina com código de saída diferente de zero. Os contadores do resumo só contam o que foi confirmado (depois do commit).
+- **RN-13** — Duas execuções simultâneas nunca processam a mesma assinatura (a linha é travada; quem chega depois a pula). `subscriptions` exige data de fim do teste (`trialing`) ou de fim do período (`active`) no banco, e o papel de plataforma não altera nem apaga faturas.
 - **RN-10** — Assinaturas `suspended` ou `canceled` nunca são processadas. Regularizar uma suspensão (novo meio de pagamento) é do PLT-007.
 
 ## Critérios de aceite

@@ -16,7 +16,7 @@ Cobra a assinatura quando o teste de 7 dias acaba e a cada renovação (mensal o
 - **Preço zero** (cortesia): não chama o gateway; a fatura nasce `paid` de 0.
 - Rodar duas vezes nunca cobra duas vezes (chave determinística por assinatura e período; linha da assinatura travada).
 - Atraso de mais de um ciclo (sistema parado): cobra um período só, a partir da data da execução.
-- Mês curto: 31/01 → 28/02 (sem estourar o mês). Os períodos seguintes continuam do fim do anterior.
+- Dia da cobrança preservado: o dia é o do fim do teste. 31/01 → 28/02 → 31/03 → 30/04 (um mês curto não muda o dia para sempre).
 
 ## Como testar o fluxo sem esperar 7 dias
 
@@ -35,10 +35,12 @@ docker compose exec api php artisan billing:run --as-of="2026-12-01 10:00:00"
 ## Limitações
 
 - Sem webhooks nem conciliação (entram com o gateway real), sem e-mails (PLT-010), sem regularização nem cancelamento (PLT-007).
-- Com o gateway real, a chamada de cobrança deve sair de dentro da transação com a linha travada (a chave determinística já impede a cobrança dupla).
+- Com o gateway real, a chamada de cobrança deve sair **de fora** da transação com a linha travada: reservar a fatura em estado `pending`, confirmar, cobrar e depois finalizar (hoje a fatura só tem `paid` e `failed`). A chave determinística (vencimento original) já impede a cobrança dupla enquanto isso não é feito. Item rastreado no backlog (INT-001).
+- `--as-of` é recusado fora de `local` e `testing`.
+- O comando termina com código diferente de zero se houver erro técnico (o agendador e o monitoramento enxergam).
 
 ## Changelog
 
 | Versão | Data | Mudança |
 | --- | --- | --- |
-| 0.1.0 | 2026-10-26 | `billing:run`, faturas, suspensão imediata e simulação de tempo |
+| 0.1.0 | 2026-10-22 | `billing:run`, faturas, suspensão imediata e simulação de tempo |

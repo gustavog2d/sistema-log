@@ -17,6 +17,13 @@ class RunBilling extends Command
     {
         $option = $this->option('as-of');
 
+        // Simular o tempo cobraria assinaturas antes da hora: só em desenvolvimento e testes.
+        if ($option !== null && $option !== '' && ! app()->environment(['local', 'testing'])) {
+            $this->error('--as-of só pode ser usado nos ambientes local e testing.');
+
+            return self::FAILURE;
+        }
+
         try {
             $asOf = is_string($option) && $option !== '' ? Carbon::parse($option, 'UTC') : now();
         } catch (Throwable) {
@@ -31,6 +38,7 @@ class RunBilling extends Command
         $this->info("Suspensas: {$summary->suspended}");
         $this->info("Erros: {$summary->errors}");
 
-        return self::SUCCESS;
+        // Falha técnica nunca passa em silêncio: o agendador e o monitoramento enxergam o código de saída.
+        return $summary->errors > 0 ? self::FAILURE : self::SUCCESS;
     }
 }

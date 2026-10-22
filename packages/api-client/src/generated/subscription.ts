@@ -83,6 +83,11 @@ export interface Problem {
 }
 
 /**
+ * Escrita bloqueada: a assinatura está suspensa ou cancelada (somente leitura). TODA rota do assinante que grava dados deve declarar este 403 (o middleware subscription.access o devolve).
+ */
+export type SubscriptionBlockedResponse = SubscriptionBlocked;
+
+/**
  * Problem Details (RFC 9457)
  */
 export type ProblemResponse = Problem;

@@ -1,5 +1,7 @@
 <?php
 
+use App\Billing\Fake\FakePaymentGateway;
+use App\Billing\PaymentGateway;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Support\Carbon;
 
@@ -52,4 +54,21 @@ it('does not depend on the real clock of the machine when --as-of is used', func
 
     expect($this->subscriptionRow($sub->id)->status)->toBe('active');
     Carbon::setTestNow();
+});
+
+it('P10 refuses --as-of outside local and testing', function () {
+    $this->app['env'] = 'production';
+    $this->app->singleton(PaymentGateway::class, fn () => new FakePaymentGateway);
+
+    $this->artisan('billing:run', ['--as-of' => '2030-01-01'])
+        ->expectsOutputToContain('--as-of só pode ser usado')
+        ->assertFailed();
+});
+
+it('P10 still runs in production without --as-of', function () {
+    $this->app['env'] = 'production';
+    $this->app->singleton(PaymentGateway::class, fn () => new FakePaymentGateway);
+    $this->subscription();
+
+    $this->artisan('billing:run')->assertSuccessful();
 });

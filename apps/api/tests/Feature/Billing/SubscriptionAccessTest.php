@@ -81,3 +81,48 @@ it('only looks at the subscription of the business of the host', function () {
     writeProbe($this)->assertForbidden();
     $this->postJson('http://outro.app.test/api/v1/_probe/data')->assertOk();
 });
+
+it('A1 applies subscription.access to every non read route of the real tenant group', function () {
+    $offenders = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1') && in_array('tenant', $route->gatherMiddleware(), true))
+        ->filter(fn ($route) => array_diff($route->methods(), ['GET', 'HEAD', 'OPTIONS']) !== [])
+        ->reject(fn ($route) => in_array('subscription.access', $route->gatherMiddleware(), true))
+        ->map(fn ($route) => implode('|', $route->methods()).' '.$route->uri())
+        ->values()
+        ->all();
+
+    expect($offenders)->toBe([]);
+});
+
+it('A1 would flag a tenant write route that forgot the middleware', function () {
+    Route::middleware('tenant')->post('api/v1/_probe/esquecida', fn () => []);
+
+    $flagged = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route) => $route->uri() === 'api/v1/_probe/esquecida' && ! in_array('subscription.access', $route->gatherMiddleware(), true));
+
+    expect($flagged)->toHaveCount(1);
+});
+
+it('B2 limits the public subscription status per address', function () {
+    $this->subscription(['status' => 'active'], 'pm_fake_ok_x', 'neg');
+
+    foreach (range(1, 60) as $_) {
+        $this->getJson('http://neg.app.test/api/v1/subscription')->assertOk();
+    }
+
+    $this->getJson('http://neg.app.test/api/v1/subscription')->assertStatus(429);
+});
+
+it('allows OPTIONS for a suspended subscription', function () {
+    $this->subscription(['status' => 'suspended'], 'pm_fake_ok_x', 'neg');
+
+    $this->call('OPTIONS', 'http://neg.app.test/api/v1/_probe/data')->assertOk();
+});
+
+it('fails loudly when the middleware is used without the tenant middleware', function () {
+    Route::middleware('subscription.access')->post('api/v1/_probe/sem-tenant', fn () => []);
+
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->postJson('http://neg.app.test/api/v1/_probe/sem-tenant'))->toThrow(LogicException::class);
+});

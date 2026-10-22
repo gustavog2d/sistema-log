@@ -34,6 +34,10 @@ trait BillingTestHelpers
             'id' => $methodId, 'tenant_id' => $tenant->id, 'gateway_ref' => $methodRef,
             'type' => 'card', 'brand' => 'visa', 'last4' => '4242', 'created_at' => now(), 'updated_at' => now(),
         ]);
+        if (($subscription['status'] ?? 'trialing') === 'active') {
+            $subscription += ['current_period_start' => now()->subDays(10), 'current_period_end' => now()->addDays(20)];
+        }
+
         $db->table('subscriptions')->insert($subscription + [
             'id' => $id, 'tenant_id' => $tenant->id, 'plan_id' => $planId, 'payment_method_id' => $methodId,
             'gateway_customer_ref' => 'cus_fake_x', 'cycle' => 'monthly', 'status' => 'trialing', 'price_cents' => 5000,

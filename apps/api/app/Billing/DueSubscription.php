@@ -19,6 +19,7 @@ final readonly class DueSubscription
         public string $customerRef,
         public ?Carbon $trialEndsAt,
         public ?Carbon $currentPeriodEnd,
+        public int $billingDayOfMonth = 1,
     ) {}
 
     public static function fromRow(stdClass $row): self
@@ -36,7 +37,14 @@ final readonly class DueSubscription
             customerRef: is_string($row->gateway_customer_ref) ? $row->gateway_customer_ref : '',
             trialEndsAt: $date($row->trial_ends_at),
             currentPeriodEnd: $date($row->current_period_end),
+            billingDayOfMonth: ($date($row->trial_ends_at) ?? $date($row->current_period_end) ?? now())->day,
         );
+    }
+
+    /** Dia do mês da cobrança: o do fim do teste, preservado nas renovações. */
+    public function billingDay(): int
+    {
+        return $this->billingDayOfMonth;
     }
 
     /** Vencimento: fim do teste ou fim do período, conforme o status. */
