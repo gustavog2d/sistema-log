@@ -28,6 +28,18 @@ export const SubscriptionCycle = {
   yearly: 'yearly',
 } as const;
 
+/**
+ * Meio de pagamento atual (nunca a referência do gateway)
+ * @nullable
+ */
+export type SubscriptionPaymentMethod = {
+  type: string;
+  /** @nullable */
+  brand: string | null;
+  /** @nullable */
+  last4: string | null;
+} | null;
+
 export interface Subscription {
   status: SubscriptionStatus;
   plan: SubscriptionPlan;
@@ -39,7 +51,7 @@ export interface Subscription {
   /** @nullable */
   current_period_end: string | null;
   /**
-     * Quando a próxima cobrança será tentada; nulo se suspensa ou cancelada
+     * Quando a próxima cobrança será tentada; nulo se suspensa, cancelada ou com cancelamento pedido
      * @nullable
      */
   next_charge_at: string | null;
@@ -47,6 +59,13 @@ export interface Subscription {
   suspended_at: string | null;
   /** Falso quando a assinatura está suspensa ou cancelada (somente leitura) */
   can_write: boolean;
+  /**
+     * Meio de pagamento atual (nunca a referência do gateway)
+     * @nullable
+     */
+  payment_method: SubscriptionPaymentMethod;
+  /** Verdadeiro quando há cancelamento pedido e ainda não efetivado (PLT-007) */
+  cancel_at_period_end: boolean;
 }
 
 export type SubscriptionBlockedStatus = typeof SubscriptionBlockedStatus[keyof typeof SubscriptionBlockedStatus];

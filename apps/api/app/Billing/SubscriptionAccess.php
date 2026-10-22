@@ -40,6 +40,11 @@ final class SubscriptionAccess
     /** Quando a próxima cobrança será tentada; nulo se suspensa ou cancelada. */
     public static function nextChargeAt(Subscription $subscription): ?Carbon
     {
+        // Com cancelamento pedido, o vencimento encerra a assinatura em vez de cobrar.
+        if ($subscription->canceled_at !== null) {
+            return null;
+        }
+
         return match ($subscription->status) {
             'trialing' => $subscription->trial_ends_at,
             'active' => $subscription->current_period_end,
