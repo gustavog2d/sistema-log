@@ -20,6 +20,14 @@ final class SubscriptionAccess
     }
 
     /** Código de erro de máquina quando a escrita é bloqueada; nulo quando permitida. */
+    /** O negócio sem assinatura conta como sem acesso de escrita. */
+    public static function canWriteFor(string $tenantId): bool
+    {
+        $status = Subscription::query()->where('tenant_id', $tenantId)->value('status');
+
+        return self::canWrite(is_string($status) ? $status : null);
+    }
+
     public static function blockedCode(?string $status): ?string
     {
         if (self::canWrite($status)) {

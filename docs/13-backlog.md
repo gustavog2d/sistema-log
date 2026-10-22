@@ -19,7 +19,7 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-003 | Cadastro self-service (API): dados do negócio, subdomínio, nicho, plano, pagamento de teste e 7 dias de teste | PLT-002 | Subdomínio único e reservado; provisionamento idempotente | Entregue (API) |
 | PLT-004 | Cobrança do fim do teste e das renovações com meio de pagamento de teste; suspensão imediata em falha (`billing:run`) | PLT-003 | Rodar duas vezes não cobra duas vezes; falha suspende na hora | Entregue (API) |
 | PLT-005 | Bloqueio de acesso por status (somente leitura quando suspensa ou cancelada) e `GET /subscription` | PLT-004 | Suspensa = só leitura; liberar na hora ao regularizar (a regularização é do PLT-007) | Entregue (API) |
-| PLT-006 | Autenticação do assinante (web e token mobile), recuperação de senha, 2FA do dono | FND-005 | Token de um tenant não vale em outro | A especificar |
+| PLT-006 | Autenticação do assinante (web e token mobile), recuperação de senha, 2FA do dono | FND-005 | Token de um tenant não vale em outro | Entregue (API) |
 | PLT-007 | Gestão da assinatura pelo dono: plano, forma de pagamento, faturas, upgrade, downgrade, cancelamento | PLT-004 | Downgrade acima do limite é bloqueado com aviso | A especificar |
 | PLT-008 | Usuários e papéis do assinante: convite, papéis, desativação, limite do plano | PLT-006 | Cada papel só acessa o que a matriz permite | A especificar |
 | PLT-009 | Gestão de assinantes no super admin: lista, detalhe, exceções, suspender, impersonação auditada | PLT-005 | Impersonação sempre registrada | A especificar |

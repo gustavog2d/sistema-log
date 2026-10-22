@@ -24,7 +24,7 @@ trait ResetsTenancyDatabase
     protected function setUpResetsTenancyDatabase(): void
     {
         // Trava: esta suíte recria e trunca tabelas e jamais pode tocar o banco de desenvolvimento.
-        foreach (['pgsql', 'pgsql_admin', 'pgsql_platform'] as $connection) {
+        foreach (['pgsql', 'pgsql_admin', 'pgsql_platform', 'pgsql_auth'] as $connection) {
             $database = DB::connection($connection)->getDatabaseName();
 
             if ($database !== TestCase::TEST_DATABASE) {
@@ -46,7 +46,7 @@ trait ResetsTenancyDatabase
         Schema::connection('pgsql_admin')->enableTenantRls('probe_items');
 
         DB::connection('pgsql_admin')->statement(
-            'TRUNCATE tenants, platform_users, platform_audit_logs, personal_access_tokens, plans, features, plan_features, users, memberships, subscriptions, payment_methods, idempotency_keys, invoices CASCADE',
+            'TRUNCATE tenants, platform_users, platform_audit_logs, personal_access_tokens, plans, features, plan_features, users, memberships, subscriptions, payment_methods, idempotency_keys, invoices, user_access_tokens, password_reset_tokens CASCADE',
         );
         app(TenantContext::class)->clear();
         app(TenantDatabaseContext::class)->clear();

@@ -18,7 +18,7 @@ abstract class TestCase extends BaseTestCase
 
         // A variável de ambiente do contêiner (DB_DATABASE=app) vence o phpunit.xml; por isso o
         // banco de teste é fixado aqui, na configuração, antes de qualquer conexão ser aberta.
-        foreach (['pgsql', 'pgsql_admin', 'pgsql_platform'] as $connection) {
+        foreach (['pgsql', 'pgsql_admin', 'pgsql_platform', 'pgsql_auth'] as $connection) {
             $app['config']->set("database.connections.{$connection}.database", self::TEST_DATABASE);
         }
 
