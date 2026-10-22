@@ -10,6 +10,7 @@ use App\Http\Controllers\Platform\PlanFeatureController;
 use App\Http\Controllers\Platform\TwoFactorController;
 use App\Http\Controllers\PublicPlanController;
 use App\Http\Controllers\SignupController;
+use App\Http\Controllers\SubscriptionController;
 use App\Platform\Auth\AccessTokens;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +22,8 @@ Route::middleware('public')->group(function () {
 
 Route::middleware('tenant')->group(function () {
     Route::get('/tenant/current', CurrentTenantController::class);
+    // Sempre permitido, mesmo com a assinatura suspensa: é como o assinante entende o bloqueio.
+    Route::get('/subscription', SubscriptionController::class);
 });
 
 // Cadastro do assinante (PLT-003): público, só nos hosts da plataforma.

@@ -15,3 +15,6 @@ Schedule::command('sanctum:prune-expired --hours=24')->daily();
 // Chaves de idempotência antigas (o cadastro guarda a resposta por um dia).
 Schedule::call(fn () => DB::connection('pgsql_platform')->table('idempotency_keys')->where('created_at', '<', now()->subDay())->delete())
     ->name('idempotency:prune')->daily();
+
+// Cobra o fim dos testes e as renovações; suspende quem não pagou (PLT-004).
+Schedule::command('billing:run')->everyFiveMinutes()->withoutOverlapping();

@@ -17,8 +17,8 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-001b | Painel web do super admin (login, 2FA e navegação) consumindo a API do PLT-001 | PLT-001, FND-006 | Rota de plataforma inacessível a usuário de tenant | A especificar |
 | PLT-002 | Catálogo de planos e funcionalidades (entitlements) gerido pelo super admin | PLT-001 | Funcionalidade fora do plano devolve 403 | Entregue |
 | PLT-003 | Cadastro self-service (API): dados do negócio, subdomínio, nicho, plano, pagamento de teste e 7 dias de teste | PLT-002 | Subdomínio único e reservado; provisionamento idempotente | Entregue (API) |
-| PLT-004 | Assinatura e cobrança recorrente pelo gateway (checkout, webhooks, reconciliação) | PLT-003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | A especificar |
-| PLT-005 | Bloqueio e liberação de acesso conforme status da assinatura | PLT-004 | Suspensa = só leitura; regularizar reativa | A especificar |
+| PLT-004 | Assinatura e cobrança recorrente pelo gateway (checkout, webhooks, reconciliação) | PLT-003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | Em desenvolvimento |
+| PLT-005 | Bloqueio e liberação de acesso conforme status da assinatura | PLT-004 | Suspensa = só leitura; regularizar reativa | Em desenvolvimento |
 | PLT-006 | Autenticação do assinante (web e token mobile), recuperação de senha, 2FA do dono | FND-005 | Token de um tenant não vale em outro | A especificar |
 | PLT-007 | Gestão da assinatura pelo dono: plano, forma de pagamento, faturas, upgrade, downgrade, cancelamento | PLT-004 | Downgrade acima do limite é bloqueado com aviso | A especificar |
 | PLT-008 | Usuários e papéis do assinante: convite, papéis, desativação, limite do plano | PLT-006 | Cada papel só acessa o que a matriz permite | A especificar |
