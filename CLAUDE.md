@@ -39,6 +39,7 @@ bash scripts/verify-structure.sh && bash scripts/verify-compose.sh && bash scrip
 Notas:
 
 - **Multi-tenant (FND-005):** a API roda com o papel `app_runtime` (sujeito ao RLS); migrations rodam com `--database=pgsql_admin`. Toda rota de `/api/v1` declara `tenant`, `platform` ou `public`; toda tabela de negócio usa `$table->tenantId()` + `Schema::enableTenantRls()` e o trait `BelongsToTenant`. Detalhes em `docs/funcionalidades/FND-005-base-multi-tenant/docs.md`. Após esta mudança, recrie o volume (`down -v`).
+- **Equipe da plataforma (PLT-001):** login com senha + TOTP em `/api/v1/platform/*` (tokens Sanctum de desafio e de acesso). Criar o primeiro super admin: `docker compose exec api php artisan platform:create-admin <email> "<nome>"` (pede a senha; em automação, variável `PLATFORM_ADMIN_PASSWORD`). Detalhes em `docs/funcionalidades/PLT-001-login-super-admin/docs.md`.
 - Os testes da API exigem PostgreSQL real; o `phpunit.xml` força `DB_DATABASE=app_test`, criado por `docker/postgres/init.sql` (só roda ao criar o volume; se faltar o banco, apague o volume com `down -v`).
 - O Larastan não analisa `tests/` (closures do Pest com `$this`); só `app`, `routes` e `bootstrap`.
 - O contrato por enquanto está em `docs/funcionalidades/FND-002-monorepo-e-agentes/openapi.yaml`; o `packages/api-client` é gerado a partir dele (orval, `fetch`). O contrato completo único (`docs/api/openapi.yaml`, montado no CI) ainda não existe.

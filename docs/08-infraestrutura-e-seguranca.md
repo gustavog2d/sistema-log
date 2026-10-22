@@ -52,3 +52,12 @@ Levantadas na revisão de segurança do FND-002 (o ambiente Docker atual é só 
 - `trustProxies` restrito aos IPs do balanceador e `trustHosts`; `sslmode=require` ou `verify-full` no banco.
 - Teste de registro de rotas cobre só `/api/v1`; rotas fora dele (`up`, `storage`) não declaram grupo.
 - Tabelas `jobs`, `cache` e `failed_jobs` ficam sem RLS (guardam payloads de tenants): revisar quando filas e cache entrarem em uso real.
+
+### Pendências levantadas na revisão de segurança do PLT-001
+
+- Bloqueio de conta permite negar serviço ao super admin (5 senhas erradas); avaliar bloqueio por par e-mail + IP ou entrada por IP confiável.
+- Primeiro acesso do 2FA é *trust on first use*; considerar ativar o 2FA já na criação do usuário.
+- Limite de tentativas só por IP: atrás de balanceador, configurar `trustProxies` (senão o limite vira global) e acrescentar limite por e-mail.
+- CORS: restringir a origem do painel nas rotas da plataforma (hoje o padrão do Laravel aceita qualquer origem; sem cookie, risco baixo).
+- `APP_DEBUG=false` fora do ambiente local; erros 500 em Problem Details quando o painel existir.
+- Verificação de código de recuperação faz até 8 bcrypts por tentativa; aceitável com o limite por IP, registrar.
