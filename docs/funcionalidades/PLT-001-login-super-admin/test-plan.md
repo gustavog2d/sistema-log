@@ -30,6 +30,8 @@ Testes de API em Pest com PostgreSQL real. O código TOTP dos testes é gerado c
 
 - Regressões encontradas em teste real com `curl` (cliente sem `Accept: application/json`): 401 e 403 em Problem Details, nunca redirect nem 500. Cobertas em `AuthFlowTest`.
 
+| T-19 | RN-07, RN-12, RN-13 | API/Banco | `Feature/Platform/SecurityHardeningTest.php` (log sem segredos, bloqueio de e-mail inexistente, hash sempre conferido, TOTP sem replay, token de usuário inativo, cópias desatualizadas de contadores e códigos, host antes da autenticação, `no-store`, 405) | passando |
+
 ## Casos obrigatórios
 
 - [x] Sucesso do fluxo principal

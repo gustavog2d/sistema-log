@@ -19,7 +19,7 @@ Route::middleware('tenant')->group(function () {
 Route::middleware('platform')->prefix('platform')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:platform-login');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'platform.active'])->group(function () {
         Route::post('auth/2fa/verify', [AuthController::class, 'verify'])
             ->middleware(['abilities:'.AccessTokens::CHALLENGE_VERIFY, 'throttle:platform-verify']);
 

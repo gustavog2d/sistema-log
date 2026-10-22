@@ -3,6 +3,7 @@
 namespace App\Platform\Auth;
 
 use App\Models\PlatformUser;
+use SensitiveParameter;
 
 /**
  * Segunda etapa do login: troca o token de desafio por um token de acesso depois de um código válido.
@@ -22,9 +23,9 @@ class ChallengeCompletion
      * @throws AccountLocked
      * @throws InvalidCredentials
      */
-    public function verify(PlatformUser $user, string $code): array
+    public function verify(PlatformUser $user, #[SensitiveParameter] string $code): array
     {
-        $this->assertNotLocked($user);
+        $this->assertActiveAndUnlocked($user);
 
         if (! $this->twoFactor->verify($user, $code)) {
             $this->guard->registerFailure($user, 'wrong_code');
@@ -41,9 +42,9 @@ class ChallengeCompletion
      * @throws AccountLocked
      * @throws InvalidCredentials
      */
-    public function confirmSetup(PlatformUser $user, string $code): array
+    public function confirmSetup(PlatformUser $user, #[SensitiveParameter] string $code): array
     {
-        $this->assertNotLocked($user);
+        $this->assertActiveAndUnlocked($user);
 
         $recoveryCodes = $this->twoFactor->confirm($user, $code);
 
@@ -66,8 +67,12 @@ class ChallengeCompletion
         return $this->tokens->access($user);
     }
 
-    private function assertNotLocked(PlatformUser $user): void
+    private function assertActiveAndUnlocked(PlatformUser $user): void
     {
+        if (! $user->active) {
+            throw new InvalidCredentials;
+        }
+
         if ($user->isLocked()) {
             throw new AccountLocked;
         }

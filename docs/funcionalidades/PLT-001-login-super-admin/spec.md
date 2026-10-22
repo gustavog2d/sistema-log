@@ -30,7 +30,9 @@ Sucesso: um super admin criado por comando consegue ativar o 2FA, entrar com sen
 - **RN-08** — Após 5 falhas seguidas (senha ou código), a conta fica bloqueada por 15 minutos. Além disso, há limite de 10 tentativas por minuto por IP.
 - **RN-09** — Todo evento relevante (login, falha, bloqueio, 2FA ativado, código de recuperação usado, logout) gera um registro de auditoria da plataforma, sem guardar senha nem código.
 - **RN-10** — Logout revoga o token usado. Desativar o usuário revoga todos os tokens dele.
-- **RN-11** — Erros no formato Problem Details (RFC 9457).
+- **RN-11** — Erros no formato Problem Details (RFC 9457), incluindo 405; respostas da plataforma com `Cache-Control: no-store`.
+- **RN-12** — Falhas de login esperadas não vão para o log da aplicação (a pilha de chamadas carregaria senha e códigos). E-mail inexistente também acumula falhas e é bloqueado igual a uma conta real; a senha é sempre conferida (hash fictício com o custo configurado) para o tempo de resposta não revelar a conta.
+- **RN-13** — Token de usuário desativado é recusado mesmo que ainda exista; desativar por qualquer caminho revoga os tokens. O código TOTP, mesmo o primeiro, não é aceito duas vezes. Contadores e códigos de recuperação são atualizados com a linha travada.
 
 ## Critérios de aceite
 

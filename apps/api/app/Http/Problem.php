@@ -39,6 +39,7 @@ final class Problem
         return match ($exception->getStatusCode()) {
             403 => self::response(403, 'Forbidden', 'Acesso negado.'),
             404 => self::response(404, 'Not Found'),
+            405 => self::response(405, 'Method Not Allowed'),
             default => null,
         };
     }

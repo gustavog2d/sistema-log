@@ -14,7 +14,7 @@ class CreatePlatformAdmin extends Command
     protected $signature = 'platform:create-admin
         {email : E-mail de acesso}
         {name : Nome da pessoa}
-        {--password= : Senha (se omitida, é pedida sem eco)}';
+        ';
 
     protected $description = 'Cria um super admin da plataforma (o 2FA é ativado no primeiro acesso)';
 
@@ -22,11 +22,12 @@ class CreatePlatformAdmin extends Command
     {
         $email = mb_strtolower((string) $this->argument('email'));
         $minLength = Config::integer('platform.min_password_length');
-        $password = (string) ($this->option('password') ?: password('Senha (mínimo '.$minLength.' caracteres)'));
+        // A senha vem da variável PLATFORM_ADMIN_PASSWORD (automação) ou é pedida sem eco; nunca como argumento.
+        $password = (string) (getenv('PLATFORM_ADMIN_PASSWORD') ?: password('Senha (mínimo '.$minLength.' caracteres)'));
 
         $validator = Validator::make(
-            ['email' => $email, 'password' => $password],
-            ['email' => ['required', 'email', 'unique:platform_users,email'], 'password' => ['required', 'string', 'min:'.$minLength]],
+            ['email' => $email, 'name' => (string) $this->argument('name'), 'password' => $password],
+            ['name' => ['required', 'string', 'max:255'], 'email' => ['required', 'email', 'unique:platform_users,email'], 'password' => ['required', 'string', 'min:'.$minLength]],
         );
 
         if ($validator->fails()) {

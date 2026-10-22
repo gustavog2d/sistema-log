@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PragmaRX\Google2FA\Google2FA;
+use SensitiveParameter;
 
 class TwoFactor
 {
@@ -29,7 +30,7 @@ class TwoFactor
      *
      * @return list<string>|null null quando o código não confere
      */
-    public function confirm(PlatformUser $user, string $code): ?array
+    public function confirm(PlatformUser $user, #[SensitiveParameter] string $code): ?array
     {
         if (! $this->verifyTotp($user, $code)) {
             return null;
@@ -50,7 +51,7 @@ class TwoFactor
     }
 
     /** Aceita o código TOTP (uma vez por janela) ou um código de recuperação (uso único). */
-    public function verify(PlatformUser $user, string $code): bool
+    public function verify(PlatformUser $user, #[SensitiveParameter] string $code): bool
     {
         if ($this->verifyTotp($user, $code)) {
             return true;
@@ -59,29 +60,34 @@ class TwoFactor
         return $this->consumeRecoveryCode($user, $code);
     }
 
-    private function verifyTotp(PlatformUser $user, string $code): bool
+    private function verifyTotp(PlatformUser $user, #[SensitiveParameter] string $code): bool
     {
         if ($user->totp_secret === null || preg_match('/^\d{6}$/', $code) !== 1) {
             return false;
         }
 
-        $timestamp = $this->google2fa->verifyKeyNewer(
-            $user->totp_secret,
-            $code,
-            $user->totp_last_timestamp,
-            1,
-        );
+        // Linha travada: o mesmo código não é aceito duas vezes, nem em pedidos simultâneos.
+        return DB::transaction(function () use ($user, $code): bool {
+            $fresh = PlatformUser::query()->lockForUpdate()->findOrFail($user->id);
 
-        if ($timestamp === false) {
-            return false;
-        }
+            if ($fresh->totp_secret === null) {
+                return false;
+            }
 
-        $user->forceFill(['totp_last_timestamp' => $timestamp])->save();
+            $timestamp = $this->google2fa->verifyKeyNewer($fresh->totp_secret, $code, $fresh->totp_last_timestamp ?? 0, 1);
 
-        return true;
+            if (! is_int($timestamp)) {
+                return false;
+            }
+
+            $fresh->forceFill(['totp_last_timestamp' => $timestamp])->save();
+            $user->setRawAttributes($fresh->getAttributes(), true);
+
+            return true;
+        });
     }
 
-    private function consumeRecoveryCode(PlatformUser $user, string $code): bool
+    private function consumeRecoveryCode(PlatformUser $user, #[SensitiveParameter] string $code): bool
     {
         $used = DB::transaction(function () use ($user, $code): bool {
             // Linha travada: dois pedidos simultâneos não usam o mesmo código de recuperação.

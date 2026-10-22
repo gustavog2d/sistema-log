@@ -29,6 +29,16 @@ class PlatformUser extends Authenticatable
     /** @use HasFactory<PlatformUserFactory> */
     use HasApiTokens, HasFactory, HasUuids;
 
+    protected static function booted(): void
+    {
+        // Desativar por qualquer caminho revoga todos os tokens (RN-10).
+        static::saved(function (self $user): void {
+            if ($user->wasChanged('active') && ! $user->active) {
+                $user->tokens()->delete();
+            }
+        });
+    }
+
     protected $fillable = ['name', 'email', 'password', 'role', 'active'];
 
     /** @var list<string> */
@@ -62,6 +72,5 @@ class PlatformUser extends Authenticatable
     public function deactivate(): void
     {
         $this->forceFill(['active' => false])->save();
-        $this->tokens()->delete();
     }
 }

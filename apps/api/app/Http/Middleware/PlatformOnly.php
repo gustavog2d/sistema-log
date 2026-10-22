@@ -19,6 +19,8 @@ class PlatformOnly
 
         /** @var Response $response */
         $response = $next($request);
+        // Respostas com segredos (TOTP, códigos de recuperação, tokens) nunca ficam em cache.
+        $response->headers->set('Cache-Control', 'no-store');
 
         return $response;
     }
