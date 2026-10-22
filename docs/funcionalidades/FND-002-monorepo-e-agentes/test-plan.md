@@ -17,7 +17,7 @@
 | T-08 | CA-07 | Documental | comando de teste único documentado e executado uma vez | passando |
 | T-09 | CA-08 | Script de verificação | busca pelo nome provisório fora de config e docs | passando |
 | T-10 | CA-09 | Script de verificação | `.claude/` com 10 agentes e 11 skills; sem `setup/` | passando |
-| T-11 | CA-10 | Documental | cada comando do `CLAUDE.md` executado (ver verify-*.sh); clone limpo ainda não ensaiado | parcial |
+| T-11 | CA-10 | Documental | cada comando do `CLAUDE.md` executado (ver verify-*.sh); ensaiado em clone limpo em 2026-10-22 | passando |
 | T-12 | CA-11 | Script de verificação | nenhum `.env` rastreado | passando |
 | T-13 | RN-06 | Contrato | resposta de `/health` bate com `openapi.yaml` | passando |
 
