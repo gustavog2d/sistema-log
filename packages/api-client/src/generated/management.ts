@@ -142,6 +142,11 @@ export type updatePaymentMethodResponse409 = {
   status: 409
 }
 
+export type updatePaymentMethodResponse415 = {
+  data: ProblemResponse
+  status: 415
+}
+
 export type updatePaymentMethodResponse422 = {
   data: ProblemResponse
   status: 422
@@ -155,7 +160,7 @@ export type updatePaymentMethodResponse429 = {
 export type updatePaymentMethodResponseSuccess = (updatePaymentMethodResponse200) & {
   headers: Headers;
 };
-export type updatePaymentMethodResponseError = (updatePaymentMethodResponse401 | updatePaymentMethodResponse402 | updatePaymentMethodResponse403 | updatePaymentMethodResponse409 | updatePaymentMethodResponse422 | updatePaymentMethodResponse429) & {
+export type updatePaymentMethodResponseError = (updatePaymentMethodResponse401 | updatePaymentMethodResponse402 | updatePaymentMethodResponse403 | updatePaymentMethodResponse409 | updatePaymentMethodResponse415 | updatePaymentMethodResponse422 | updatePaymentMethodResponse429) & {
   headers: Headers;
 };
 

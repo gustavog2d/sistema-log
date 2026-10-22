@@ -22,6 +22,8 @@ class SubscriptionController extends Controller
             return Problem::response(404, 'Not Found', 'Este negócio não tem assinatura.');
         }
 
+        $summary = SubscriptionManager::summary($subscription);
+
         return response()->json([
             'status' => $subscription->status,
             'plan' => ['key' => $plan->key, 'name' => $plan->name],
@@ -33,8 +35,8 @@ class SubscriptionController extends Controller
             'next_charge_at' => SubscriptionAccess::nextChargeAt($subscription)?->toIso8601String(),
             'suspended_at' => $subscription->suspended_at?->toIso8601String(),
             'can_write' => SubscriptionAccess::canWrite($subscription->status),
-            'payment_method' => SubscriptionManager::summary($subscription)['payment_method'],
-            'cancel_at_period_end' => SubscriptionManager::summary($subscription)['cancel_at_period_end'],
+            'payment_method' => $summary['payment_method'],
+            'cancel_at_period_end' => $summary['cancel_at_period_end'],
         ]);
     }
 }

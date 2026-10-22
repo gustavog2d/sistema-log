@@ -20,6 +20,7 @@ it('CA-08 registers the cancellation during the trial, keeps access and never ch
         ->assertJsonPath('cancel_at_period_end', true)
         ->assertJsonPath('can_write', true);
 
+    manage($this, $token, 'GET', 'neg', 'subscription')->assertOk()->assertJsonPath('can_write', true);
     billingAsOf($this, '2026-12-01T10:00:00Z');
 
     expect(subscriptionOf($ws)->status)->toBe('canceled')

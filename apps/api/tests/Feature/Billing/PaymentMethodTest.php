@@ -53,8 +53,8 @@ it('CA-03 charges a suspended subscription now and gives access back', function 
         ->and($invoices[0]->status)->toBe('paid')
         ->and($invoices[0]->amount_cents)->toBe(5000);
 
-    // A escrita volta na hora (usa a própria rota de cancelamento como rota de escrita).
-    manage($this, $token, 'POST', 'neg', 'subscription/cancel')->assertOk();
+    // A escrita volta na hora, sem esperar nada.
+    manage($this, $token, 'GET', 'neg', 'subscription')->assertOk()->assertJsonPath('status', 'active')->assertJsonPath('can_write', true);
 });
 
 it('CA-04 keeps the subscription suspended and the old method when the new charge is refused', function () {
@@ -95,6 +95,7 @@ it('CA-07 charges only once when the same Idempotency-Key is repeated', function
 
     $first->assertOk();
     $second->assertOk()->assertHeader('Idempotent-Replayed', 'true');
+    expect($second->json())->toBe($first->json());
     expect(DB::connection('pgsql_admin')->table('invoices')->where('tenant_id', $ws->tenant_id)->count())->toBe(1);
 });
 
@@ -121,4 +122,13 @@ it('CA-02 audits the change and never exposes the gateway reference', function (
 
     expect(json_encode($response->json()))->not->toContain('pm_fake')
         ->and(DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'subscription.payment_method_changed')->count())->toBe(1);
+});
+
+it('does not charge again when a second request with another Idempotency-Key arrives after the first regularized', function () {
+    [$ws, $token] = ownerOf($this, 'neg', 'suspended', ['suspended_at' => now()->subDay()]);
+
+    manage($this, $token, 'PUT', 'neg', 'subscription/payment-method', ['payment_method_token' => 'tok_ok'], 'a')->assertOk();
+    manage($this, $token, 'PUT', 'neg', 'subscription/payment-method', ['payment_method_token' => 'tok_ok'], 'b')->assertOk();
+
+    expect(DB::connection('pgsql_admin')->table('invoices')->where('tenant_id', $ws->tenant_id)->count())->toBe(1);
 });

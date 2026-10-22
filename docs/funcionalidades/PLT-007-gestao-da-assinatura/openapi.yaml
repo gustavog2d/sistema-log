@@ -32,6 +32,7 @@ paths:
         "402": { $ref: "#/components/responses/PaymentFailed" }
         "403": { $ref: "#/components/responses/Problem" }
         "409": { $ref: "#/components/responses/Problem" }
+        "415": { $ref: "#/components/responses/Problem" }
         "422": { $ref: "#/components/responses/Problem" }
         "429": { $ref: "#/components/responses/Problem" }
   /subscription/cancel:

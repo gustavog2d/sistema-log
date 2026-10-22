@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
+
 beforeEach(function () {
     $this->seedBillingCatalog();
 });
@@ -13,7 +15,6 @@ const MANAGE_ROUTES = [
 
 it('CA-01 refuses every role but the owner', function (string $role) {
     $this->workspace('neg', 'dona@exemplo.com');
-    $this->workspace('neg2', 'outra@exemplo.com'); // só para garantir que existe mais de um negócio
     $this->workspace('neg3', 'papel@exemplo.com', $role);
     $token = $this->tokenFor('neg3', 'papel@exemplo.com');
 
@@ -54,3 +55,23 @@ it('lets the owner manage a suspended and a canceled subscription (routes are ex
     manage($this, $token, 'GET', 'neg', 'subscription/invoices')->assertOk();
     manage($this, $token, 'POST', 'neg', 'subscription/reactivate')->assertStatus(409); // chegou na regra, não no bloqueio 403
 })->with(['suspended', 'canceled']);
+
+it('keeps the payment method view read-only for the API role', function () {
+    foreach (['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE'] as $privilege) {
+        $allowed = DB::connection('pgsql_admin')->selectOne("select has_table_privilege('app_runtime', 'payment_method_summaries', ?) as ok", [$privilege]);
+        expect($allowed->ok)->toBeFalse("{$privilege} deveria estar negado");
+    }
+
+    expect(DB::connection('pgsql_admin')->selectOne("select has_table_privilege('app_runtime', 'payment_method_summaries', 'SELECT') as ok")->ok)->toBeTrue();
+});
+
+it('does not replay the answer of one business to another that uses the same Idempotency-Key from the same address', function () {
+    [$a, $tokenA] = ownerOf($this, 'negocioa', 'active');
+    [$b, $tokenB] = ownerOf($this, 'negociob', 'active');
+
+    manage($this, $tokenA, 'PUT', 'negocioa', 'subscription/payment-method', ['payment_method_token' => 'tok_ok'], 'mesma-chave')->assertOk();
+    $second = manage($this, $tokenB, 'PUT', 'negociob', 'subscription/payment-method', ['payment_method_token' => 'tok_ok'], 'mesma-chave')->assertOk();
+
+    expect($second->headers->has('Idempotent-Replayed'))->toBeFalse()
+        ->and(subscriptionOf($b)->payment_method_id)->not->toBe(DB::connection('pgsql_admin')->table('payment_methods')->where('tenant_id', $b->tenant_id)->orderBy('created_at')->value('id'));
+});

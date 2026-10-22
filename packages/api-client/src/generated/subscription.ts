@@ -51,7 +51,7 @@ export interface Subscription {
   /** @nullable */
   current_period_end: string | null;
   /**
-     * Quando a próxima cobrança será tentada; nulo se suspensa ou cancelada
+     * Quando a próxima cobrança será tentada; nulo se suspensa, cancelada ou com cancelamento pedido
      * @nullable
      */
   next_charge_at: string | null;

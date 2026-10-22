@@ -29,14 +29,18 @@ class SubscriptionManager
      * @throws PaymentFailed
      * @throws ValidationException
      */
-    public function changePaymentMethod(string $tenantId, string $token): void
+    public function changePaymentMethod(string $tenantId, string $token, string $actor): void
     {
-        $events = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($tenantId, $token): array {
+        $events = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($tenantId, $token, $actor): array {
             $sub = $this->lock($db, $tenantId);
             $this->refuseIfCanceled($sub);
 
+            if (! is_string($sub->gateway_customer_ref) || $sub->gateway_customer_ref === '') {
+                throw new SubscriptionConflict('A assinatura não tem cliente no gateway de pagamento.', 'no_gateway_customer');
+            }
+
             try {
-                $method = $this->gateway->attachPaymentMethod(is_string($sub->gateway_customer_ref) ? $sub->gateway_customer_ref : '', $token);
+                $method = $this->gateway->attachPaymentMethod($sub->gateway_customer_ref, $token);
             } catch (PaymentMethodRejected) {
                 throw ValidationException::withMessages(['payment_method_token' => 'O meio de pagamento foi recusado.']);
             }
@@ -49,8 +53,8 @@ class SubscriptionManager
 
             if ($suspended && $price > 0) {
                 $charge = $this->gateway->charge(
-                    is_string($sub->gateway_customer_ref) ? $sub->gateway_customer_ref : '', $method->ref, $price, $currency,
-                    'reg:'.$this->text($sub->id).':'.hash('sha256', $method->ref),
+                    $sub->gateway_customer_ref, $method->ref, $price, $currency,
+                    'reg:'.$this->text($sub->id).':'.$this->text($sub->suspended_at).':'.hash('sha256', $method->ref),
                 );
 
                 if (! $charge->paid) {
@@ -68,7 +72,7 @@ class SubscriptionManager
             if (! $suspended) {
                 $db->table('subscriptions')->where('id', $sub->id)->update(['payment_method_id' => $methodId, 'updated_at' => now()]);
 
-                return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId]]];
+                return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]]];
             }
 
             $end = $sub->cycle === 'yearly' ? $now->copy()->addYearNoOverflow() : $now->copy()->addMonthNoOverflow();
@@ -83,7 +87,7 @@ class SubscriptionManager
                 'current_period_start' => $now, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
 
-            return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId]], ['subscription.regularized', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'amount_cents' => $price]]];
+            return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]], ['subscription.regularized', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor, 'amount_cents' => $price]]];
         });
 
         $this->record($events);
@@ -94,12 +98,12 @@ class SubscriptionManager
      *
      * @throws SubscriptionConflict
      */
-    public function cancel(string $tenantId): void
+    public function cancel(string $tenantId, string $actor): void
     {
-        $events = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($tenantId): array {
+        $events = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($tenantId, $actor): array {
             $sub = $this->lock($db, $tenantId);
             $this->refuseIfCanceled($sub);
-            $context = ['subscription' => $this->text($sub->id), 'tenant' => $tenantId];
+            $context = ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor];
 
             if ($sub->status === 'suspended') {
                 $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'canceled', 'canceled_at' => now(), 'updated_at' => now()]);
@@ -120,9 +124,9 @@ class SubscriptionManager
     }
 
     /** @throws SubscriptionConflict */
-    public function reactivate(string $tenantId): void
+    public function reactivate(string $tenantId, string $actor): void
     {
-        $events = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($tenantId): array {
+        $events = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($tenantId, $actor): array {
             $sub = $this->lock($db, $tenantId);
             $this->refuseIfCanceled($sub);
 
@@ -132,7 +136,7 @@ class SubscriptionManager
 
             $db->table('subscriptions')->where('id', $sub->id)->update(['canceled_at' => null, 'updated_at' => now()]);
 
-            return [['subscription.reactivated', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId]]];
+            return [['subscription.reactivated', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]]];
         });
 
         $this->record($events);

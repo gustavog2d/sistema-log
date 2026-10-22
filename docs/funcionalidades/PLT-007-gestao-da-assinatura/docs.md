@@ -16,6 +16,9 @@ Deixa a dona do negócio cuidar da própria assinatura pela API: trocar o cartã
 - `GET /subscription` mostra também `payment_method` (tipo, bandeira, final) e `cancel_at_period_end`. A API nunca lê a referência do gateway: usa a visão `payment_method_summaries`.
 - Auditoria: `subscription.payment_method_changed`, `subscription.regularized`, `subscription.cancel_requested`, `subscription.canceled`, `subscription.reactivated`.
 
+- A cobrança da regularização usa a chave `reg:{assinatura}:{suspensão}:{meio}` e a chave `Idempotency-Key` vale por negócio e pessoa.
+- Pendentes de segurança (antes do gateway real): limite de tentativas de troca por negócio, confirmação por senha ou 2FA para cancelar, auditoria das recusas, expurgo das chaves de idempotência e `trustProxies`.
+
 ## Limitações
 
 - Sem troca de plano (PLT-013), sem e-mails de aviso (PLT-010), sem tela (painel web).

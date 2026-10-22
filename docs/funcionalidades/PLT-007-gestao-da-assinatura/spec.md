@@ -27,7 +27,7 @@ A dona do negócio precisa cuidar da própria assinatura sem falar com ninguém:
 - **RN-05** — A cobrança (`billing:run`) não cobra uma assinatura com cancelamento pendente: no vencimento ela passa a `canceled`, sem fatura, e a auditoria registra o evento.
 - **RN-06** — `GET /subscription/invoices` lista as faturas do negócio, das mais novas para as mais antigas, com paginação por cursor (`limit` de 1 a 50, padrão 20).
 - **RN-07** — `GET /subscription` passa a mostrar também `payment_method` (tipo, bandeira e final; nunca a referência do gateway) e `cancel_at_period_end` (verdadeiro quando há cancelamento pendente).
-- **RN-08** — Auditoria (`platform_audit_logs`, sem pessoa): `subscription.payment_method_changed`, `subscription.regularized`, `subscription.cancel_requested`, `subscription.canceled`, `subscription.reactivated`. A cobrança da regularização usa chave de idempotência determinística (assinatura + meio de pagamento): repetir não cobra duas vezes.
+- **RN-08** — Auditoria (`platform_audit_logs`, sem pessoa): `subscription.payment_method_changed`, `subscription.regularized`, `subscription.cancel_requested`, `subscription.canceled`, `subscription.reactivated`. Repetir o pedido com a mesma `Idempotency-Key` devolve a mesma resposta sem cobrar de novo; com outra chave, a assinatura já ativa (linha travada) não é cobrada outra vez.
 - **RN-09** — Cada negócio só enxerga e altera a própria assinatura. Limites: 30 pedidos por minuto por IP nestas rotas.
 
 ## Critérios de aceite
@@ -48,7 +48,7 @@ A dona do negócio precisa cuidar da própria assinatura sem falar com ninguém:
 | CA-12 | RN-04 | Cancelamento pendente | `POST /subscription/reactivate` | 200; deixa de estar pendente; a cobrança segue normal |
 | CA-13 | RN-04 | Sem pedido pendente; cancelada | reativar | 409 |
 | CA-14 | RN-06 | Várias faturas e outro negócio | `GET /subscription/invoices` | Só as do negócio, novas primeiro; cursor funciona; `limit` fora de 1-50 dá 422 |
-| CA-15 | RN-07 | Assinatura com meio de pagamento | `GET /subscription` | `payment_method` sem referência do gateway; `cancel_at_period_end` |
+| CA-15 | RN-07 | Assinatura com meio de pagamento; com cancelamento pendente | `GET /subscription` | `payment_method` sem referência do gateway; `cancel_at_period_end`; `next_charge_at` nulo se há cancelamento pendente |
 | CA-16 | RN-09 | Dois negócios | Qualquer rota nova | Cada um altera só o seu; token de um não vale no outro |
 | CA-17 | contrato | Respostas reais | Todas as rotas | Batem com o `openapi.yaml` |
 

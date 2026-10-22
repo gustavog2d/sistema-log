@@ -20,6 +20,8 @@ return new class extends Migration
             DO $$
             BEGIN
                 IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_runtime') THEN
+                    -- Os privilégios padrão do papel valem para visões: só leitura.
+                    REVOKE ALL ON payment_method_summaries FROM app_runtime;
                     GRANT SELECT ON payment_method_summaries TO app_runtime;
                 END IF;
             END

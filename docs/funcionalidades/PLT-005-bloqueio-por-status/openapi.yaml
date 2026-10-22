@@ -59,7 +59,7 @@ components:
         currency: { type: string }
         trial_ends_at: { type: [string, "null"], format: date-time }
         current_period_end: { type: [string, "null"], format: date-time }
-        next_charge_at: { type: [string, "null"], format: date-time, description: Quando a próxima cobrança será tentada; nulo se suspensa ou cancelada }
+        next_charge_at: { type: [string, "null"], format: date-time, description: "Quando a próxima cobrança será tentada; nulo se suspensa, cancelada ou com cancelamento pedido" }
         suspended_at: { type: [string, "null"], format: date-time }
         can_write: { type: boolean, description: Falso quando a assinatura está suspensa ou cancelada (somente leitura) }
         payment_method:
