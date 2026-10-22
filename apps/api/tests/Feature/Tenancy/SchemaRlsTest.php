@@ -6,7 +6,8 @@ use Illuminate\Support\Facades\Schema;
 /** Tabelas de plataforma ou do framework: as únicas que podem existir sem tenant_id. */
 function platformTables(): array
 {
-    return ['migrations', 'tenants', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks'];
+    return ['migrations', 'tenants', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks',
+        'platform_users', 'platform_audit_logs', 'personal_access_tokens'];
 }
 
 /** @return list<string> */
