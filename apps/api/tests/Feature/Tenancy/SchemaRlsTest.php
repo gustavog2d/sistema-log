@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 function platformTables(): array
 {
     return ['migrations', 'tenants', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks',
-        'platform_users', 'platform_audit_logs', 'personal_access_tokens'];
+        'platform_users', 'platform_audit_logs', 'personal_access_tokens',
+        'plans', 'features', 'plan_features'];
 }
 
 /** @return list<string> */

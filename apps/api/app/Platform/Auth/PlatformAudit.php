@@ -10,7 +10,7 @@ class PlatformAudit
 {
     public function __construct(private readonly Request $request) {}
 
-    /** @param  array<string, scalar|null>  $metadata */
+    /** @param  array<string, mixed>  $metadata  nunca senha, segredo ou código */
     public function record(string $event, ?PlatformUser $user = null, array $metadata = []): void
     {
         PlatformAuditLog::create([
