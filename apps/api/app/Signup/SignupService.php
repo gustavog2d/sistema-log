@@ -57,7 +57,7 @@ class SignupService
             $this->compensate($customerRef);
 
             throw ValidationException::withMessages(
-                str_contains($e->getMessage(), 'users') ? ['owner_email' => 'Este e-mail já está cadastrado.'] : ['slug' => 'Este endereço não está disponível.'],
+                str_contains($e->getMessage(), 'users_email_unique') ? ['owner_email' => 'Este e-mail já está cadastrado.'] : ['slug' => 'Este endereço não está disponível.'],
             );
         } catch (Throwable $e) {
             $this->compensate($customerRef);
