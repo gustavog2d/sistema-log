@@ -13,7 +13,8 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | FND-005 | Base multi-tenant: resolução por subdomínio e token, RLS, suíte de isolamento | FND-002 | Tenant A não acessa dado do tenant B | Entregue |
 | FND-006 | Design system base (tokens, componentes, layout do painel) | FND-001 | Componentes com testes de acessibilidade | A especificar |
 | FND-007 | Deploy em homologação com Docker Compose no servidor escolhido (inclui backup/restauração e Cloudflare) | FND-003, FND-004 | Deploy e rollback ensaiados | Adiado (primeiro roda só local; ADR 0004) |
-| PLT-001 | Login do super admin com 2FA e painel da plataforma | FND-005 | Rota de plataforma inacessível a usuário de tenant | A especificar |
+| PLT-001 | Login do super admin com 2FA (API); o painel web vira PLT-001b | FND-005 | Rota de plataforma inacessível a usuário de tenant | Em revisão |
+| PLT-001b | Painel web do super admin (login, 2FA e navegação) consumindo a API do PLT-001 | PLT-001, FND-006 | Rota de plataforma inacessível a usuário de tenant | A especificar |
 | PLT-002 | Catálogo de planos e funcionalidades (entitlements) gerido pelo super admin | PLT-001 | Funcionalidade fora do plano devolve 403 | A especificar |
 | PLT-003 | Cadastro self-service: dados do negócio, escolha do subdomínio, nicho, teste grátis | PLT-002 | Subdomínio único e reservado; provisionamento idempotente | A especificar |
 | PLT-004 | Assinatura e cobrança recorrente pelo gateway (checkout, webhooks, reconciliação) | PLT-003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | A especificar |

@@ -3,10 +3,20 @@
 use App\Http\Middleware\PlatformOnly;
 use App\Http\Middleware\PublicRoute;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Problem;
+use App\Platform\Auth\AccountLocked;
+use App\Platform\Auth\InvalidCredentials;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Laravel\Sanctum\Exceptions\MissingAbilityException;
+use Laravel\Sanctum\Http\Middleware\CheckAbilities;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,13 +26,30 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // API sem redirecionamentos: quem não está autenticado recebe 401, nunca um redirect para /login.
+        $middleware->redirectGuestsTo(fn () => null);
+
         $middleware->alias([
             'tenant' => ResolveTenant::class,
             'platform' => PlatformOnly::class,
             'public' => PublicRoute::class,
+            'abilities' => CheckAbilities::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Erros da API em Problem Details (RFC 9457).
+        $isApi = fn (Request $request): bool => $request->is('api/*');
+        $exceptions->render(fn (InvalidCredentials $e, Request $r) => $isApi($r) ? Problem::response(401, 'Unauthorized', 'Credenciais inválidas.') : null);
+        $exceptions->render(fn (AccountLocked $e, Request $r) => $isApi($r) ? Problem::response(423, 'Locked', 'Conta temporariamente bloqueada.') : null);
+        $exceptions->render(fn (AuthenticationException $e, Request $r) => $isApi($r) ? Problem::response(401, 'Unauthorized', 'Autenticação necessária.') : null);
+        $exceptions->render(fn (MissingAbilityException $e, Request $r) => $isApi($r) ? Problem::response(403, 'Forbidden', 'Este token não permite a operação.') : null);
+        $exceptions->render(fn (AuthorizationException $e, Request $r) => $isApi($r) ? Problem::response(403, 'Forbidden', 'Acesso negado.') : null);
+        $exceptions->render(fn (ValidationException $e, Request $r) => $isApi($r) ? Problem::response(422, 'Unprocessable Entity', 'Dados inválidos.', ['errors' => $e->errors()]) : null);
+        $exceptions->render(fn (ThrottleRequestsException $e, Request $r) => $isApi($r) ? Problem::tooManyRequests($e) : null);
+        $exceptions->render(fn (HttpExceptionInterface $e, Request $r) => $isApi($r) && in_array($e->getStatusCode(), [403, 404], true)
+            ? Problem::response($e->getStatusCode(), $e->getStatusCode() === 403 ? 'Forbidden' : 'Not Found', $e->getStatusCode() === 403 ? 'Acesso negado.' : null)
+            : null);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
