@@ -9,6 +9,20 @@ O que cada assinante pode usar é decidido por um serviço de *entitlements* na 
 - `tenant_feature_overrides`: exceções dadas pelo super admin (cortesia, add-on, piloto).
 - Na API, um middleware `feature:integracao.google_calendar` devolve 403 com código `feature_not_in_plan`. A web e o app leem `GET /api/v1/me/entitlements` para mostrar o que está liberado e oferecer upgrade.
 
+## Decisões de negócio (Gustavo, 2026-10-22)
+
+- **Planos de lançamento:** Essencial, Profissional e Estúdio. Preços, limites e o que cada um inclui **ainda não estão definidos**; o sistema nasce sem regra fixa e o catálogo é configurável.
+- **Teste grátis:** 7 dias.
+- **Ciclos:** mensal ou anual. O anual tem desconto (percentual por plano, a definir).
+- **Funcionalidades por plano:** cada funcionalidade pode estar **liberada, limitada (com número) ou oculta** conforme o plano. O modelo já prevê as três situações; as regras de cada plano entram depois, sem mudar código (só dados do catálogo).
+- **Assinatura de cortesia (teste interno):** é possível assinar sem pagar, por **cupom de desconto** de 100% (cortesia) ou proporcional. O cupom é do nosso domínio (o gateway não o fornece para assinaturas): ele define o valor que será cobrado.
+- **Cancelamento:** em até 7 dias sem custo, conforme o direito de arrependimento do Código de Defesa do Consumidor (art. 49). Regra adotada (a mais favorável ao cliente): cancelar durante o teste não gera cobrança; depois da primeira cobrança, o cliente tem 7 dias para cancelar com estorno integral.
+- **Meios de pagamento:** Pix e cartão de crédito, com recorrência automática no cartão.
+
+## Modelo de funcionalidades por plano
+
+`plan_features` guarda, para cada par plano × funcionalidade: `enabled` (liberada ou não), `limit` (número, ou vazio para ilimitado) e `visible` (se a funcionalidade aparece na interface mesmo quando bloqueada, para oferecer upgrade, ou fica oculta). O serviço de entitlements devolve esse resultado e a interface apenas o reflete.
+
 ## Planos iniciais (nomes, preços e limites provisórios)
 
 | Plano | Usuários | Inclui |

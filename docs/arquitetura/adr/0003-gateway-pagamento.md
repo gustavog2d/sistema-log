@@ -33,6 +33,22 @@ Fontes: [Mind Group (jul/2026)](https://mindconsulting.com.br/2026/07/gateways-p
 - **Stripe** ([assinatura com Pix](https://docs.stripe.com/billing/subscriptions/pix), [preços BR](https://stripe.com/en-br/pricing)): suporta Pix Automático e boleto em assinaturas, mas o Pix está **somente por convite** para negócios no Brasil; boleto listado a R$ 3,45 por boleto pago (página de preços possivelmente desatualizada).
 - **Pagar.me e Mercado Pago:** não consultados na documentação oficial; sem sinal que os coloque à frente.
 
+## Aderência do Asaas às necessidades do produto (documentação oficial, 2026-10-22)
+
+| Necessidade | Asaas | Observação |
+| --- | --- | --- |
+| Assinatura mensal e anual | Sim, ciclos de semanal a anual ([assinaturas](https://docs.asaas.com/docs/assinaturas)) | |
+| Cartão de crédito recorrente | Sim; cobra sozinho a cada ciclo; token reutilizável ([cartão](https://docs.asaas.com/docs/criando-assinatura-com-cartao-de-credito), [tokenização](https://docs.asaas.com/reference/tokenizacao-de-cartao-de-credito)) | Em produção, a tokenização depende de habilitação e análise do Asaas |
+| Pix | Sim (cobrança por ciclo e Pix Automático) | Num Pix comum o cliente paga cada ciclo; débito automático é o Pix Automático, com autorização do cliente. Confirmar o fluxo no sandbox |
+| Teste de 7 dias | Sem campo próprio: o primeiro vencimento (`nextDueDate`) é empurrado 7 dias; no cartão, a validação ocorre na criação e a cobrança no vencimento ([criar assinatura](https://docs.asaas.com/reference/create-new-subscription)) | O controle do teste fica no nosso domínio |
+| Cupom 100% ou proporcional | Não há cupom de assinatura; existe desconto por cobrança | Cupom é nosso: define o valor da assinatura; 100% = assinatura de cortesia sem cobrança no Asaas |
+| Cancelar em 7 dias com devolução | Sim: remover assinatura e estornar a cobrança ([estorno](https://docs.asaas.com/reference/estornar-cobranca)) | Cartão: até 365 dias e devolve a taxa em estorno total; Pix: estorno integral exige saldo na conta; boleto tem endpoint próprio |
+| Nota fiscal | Sim, NFS-e automática para assinaturas ([notas fiscais](https://docs.asaas.com/docs/emitir-notas-fiscais-automaticamente-para-assinaturas)) | Depende da prefeitura e dos dados fiscais da conta |
+| Webhooks | Entrega *at least once* com id para idempotência ([eventos](https://docs.asaas.com/docs/eventos-para-assinaturas)) | Combina com o nosso `BillingEvent` |
+| Sandbox | Sim | Notas fiscais podem diferir de produção por município |
+
+Conclusão: o Asaas cobre o que o produto precisa. Os pontos que dependem de confirmação no sandbox ou do Asaas são o fluxo do Pix recorrente, a habilitação da tokenização em produção e as tarifas. Teste de 7 dias e cupom ficam no nosso domínio, o que nos mantém independentes do gateway.
+
 ## Decisão
 
 Pendente. Pela documentação, **Asaas** é o candidato mais forte (assinaturas, Pix Automático com retentativas e webhooks idempotentes documentados), seguido de **iugu**; **Stripe** perde força enquanto o Pix for por convite no Brasil. Antes de aceitar, falta confirmar nas páginas oficiais: tarifas atuais, emissão de nota fiscal, sandbox, prazo de repasse e regras de contestação, e rodar uma prova de conceito do ciclo de assinatura no sandbox do Asaas.
