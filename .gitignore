@@ -9,3 +9,4 @@ storage/*.key
 .pnpm-store/
 tsconfig.tsbuildinfo
 apps/web/next-env.d.ts
+.claude/settings.local.json

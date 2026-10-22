@@ -1,7 +1,7 @@
 # ADR 0002 · Modelo de isolamento multi-tenant
 
-- **Status:** proposto
-- **Data:** 2026-10-20
+- **Status:** aceito
+- **Data:** 2026-10-22
 - **Decisores:** Gustavo
 
 ## Contexto
@@ -14,7 +14,7 @@ O Tatulog usa um banco MariaDB por tenant (stancl/tenancy). O sistema-log prevê
 2. Schema por tenant no PostgreSQL.
 3. Banco por tenant (modelo atual).
 
-## Decisão (proposta)
+## Decisão
 
 Opção 1. Filtro de tenant na aplicação (escopo global) **e** RLS no banco como segunda barreira. Suíte de isolamento obrigatória em todo PR.
 
