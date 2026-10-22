@@ -8,7 +8,8 @@ paths:
   /subscription:
     get:
       operationId: getSubscription
-      summary: Status da assinatura do negócio (sempre permitido, mesmo suspenso)
+      summary: Status da assinatura do negócio (exige login; permitido mesmo suspenso)
+      security: [{ bearerAuth: [] }]
       responses:
         "200":
           description: Assinatura do negócio
@@ -16,9 +17,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Subscription"
+        "401":
+          $ref: "#/components/responses/Problem"
         "404":
           $ref: "#/components/responses/Problem"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token de acesso do assinante (PLT-006).
   responses:
     SubscriptionBlocked:
       description: >-

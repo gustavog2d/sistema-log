@@ -58,6 +58,8 @@ jobs:
       DB_PASSWORD: app_runtime
       DB_PLATFORM_USERNAME: app_platform
       DB_PLATFORM_PASSWORD: app_platform
+      DB_AUTH_USERNAME: app_auth
+      DB_AUTH_PASSWORD: app_auth
       BILLING_GATEWAY: fake
       DB_ADMIN_USERNAME: app
       DB_ADMIN_PASSWORD: app

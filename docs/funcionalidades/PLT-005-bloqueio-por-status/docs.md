@@ -16,7 +16,7 @@ Faz a API do assinante respeitar o status da assinatura: em teste ou ativa, tudo
 
 ## Limitações
 
-- Sem login ainda (PLT-006): `GET /subscription` responde só pelo subdomínio; depois do login passa a exigir autenticação.
+- `GET /subscription` exige login (PLT-006) e é isento do bloqueio por status (`subscription.exempt`).
 - A regularização (novo meio de pagamento) e o cancelamento são do PLT-007.
 
 ## Changelog

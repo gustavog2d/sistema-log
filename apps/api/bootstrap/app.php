@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AuthenticateTenantUser;
 use App\Http\Middleware\EnsurePlatformRole;
 use App\Http\Middleware\EnsurePlatformUserActive;
 use App\Http\Middleware\EnsureSubscriptionAllowsWrites;
@@ -7,9 +8,12 @@ use App\Http\Middleware\IdempotentRequest;
 use App\Http\Middleware\PlatformOnly;
 use App\Http\Middleware\PublicRoute;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SubscriptionExempt;
 use App\Http\Problem;
 use App\Platform\Auth\AccountLocked;
 use App\Platform\Auth\InvalidCredentials;
+use App\TenantAuth\AccountIsLocked;
+use App\TenantAuth\LoginFailed;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -46,15 +50,19 @@ return Application::configure(basePath: dirname(__DIR__))
             'platform.role' => EnsurePlatformRole::class,
             'idempotent' => IdempotentRequest::class,
             'subscription.access' => EnsureSubscriptionAllowsWrites::class,
+            'subscription.exempt' => SubscriptionExempt::class,
+            'auth.tenant' => AuthenticateTenantUser::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Falhas de login são esperadas e a pilha de chamadas carregaria senha e códigos: não vão para o log.
-        $exceptions->dontReport([InvalidCredentials::class, AccountLocked::class]);
+        $exceptions->dontReport([InvalidCredentials::class, AccountLocked::class, LoginFailed::class, AccountIsLocked::class]);
 
         // Erros da API em Problem Details (RFC 9457).
         $isApi = fn (Request $request): bool => $request->is('api/*');
         $exceptions->render(fn (InvalidCredentials $e, Request $r) => $isApi($r) ? Problem::response(401, 'Unauthorized', 'Credenciais inválidas.') : null);
+        $exceptions->render(fn (LoginFailed $e, Request $r) => $isApi($r) ? Problem::response(401, 'Unauthorized', 'Credenciais inválidas.') : null);
+        $exceptions->render(fn (AccountIsLocked $e, Request $r) => $isApi($r) ? Problem::response(423, 'Locked', 'Conta temporariamente bloqueada.') : null);
         $exceptions->render(fn (AccountLocked $e, Request $r) => $isApi($r) ? Problem::response(423, 'Locked', 'Conta temporariamente bloqueada.') : null);
         $exceptions->render(fn (AuthenticationException $e, Request $r) => $isApi($r) ? Problem::response(401, 'Unauthorized', 'Autenticação necessária.') : null);
         $exceptions->render(fn (MissingAbilityException $e, Request $r) => $isApi($r) ? Problem::response(403, 'Forbidden', 'Este token não permite a operação.') : null);

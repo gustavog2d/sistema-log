@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- PLT-006: login do assinante (API) com e-mail e senha, token opaco por negócio (RLS), sair e sair de todos, recuperação e troca de senha, 2FA (TOTP) opcional, bloqueio por falhas e papel de banco `app_auth`.
 - PLT-004: cobrança do fim do teste e das renovações com o meio de pagamento de teste (`billing:run`, a cada 5 minutos), faturas com RLS, suspensão imediata em caso de falha e simulação de tempo com `--as-of`.
 - PLT-005: bloqueio por status da assinatura (somente leitura quando suspensa ou cancelada, código `subscription_suspended`/`subscription_canceled`) e `GET /api/v1/subscription`.
 - PLT-003: cadastro do assinante com teste de 7 dias (API): negócio, dona, vínculo com RLS, meio de pagamento de teste, assinatura em teste com preço congelado, idempotência e papel de banco de plataforma.

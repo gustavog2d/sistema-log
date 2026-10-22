@@ -86,7 +86,7 @@ it('A1 applies subscription.access to every non read route of the real tenant gr
     $offenders = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1') && in_array('tenant', $route->gatherMiddleware(), true))
         ->filter(fn ($route) => array_diff($route->methods(), ['GET', 'HEAD', 'OPTIONS']) !== [])
-        ->reject(fn ($route) => in_array('subscription.access', $route->gatherMiddleware(), true))
+        ->reject(fn ($route) => in_array('subscription.access', $route->gatherMiddleware(), true) || in_array('subscription.exempt', $route->gatherMiddleware(), true))
         ->map(fn ($route) => implode('|', $route->methods()).' '.$route->uri())
         ->values()
         ->all();
@@ -106,8 +106,9 @@ it('A1 would flag a tenant write route that forgot the middleware', function () 
 it('B2 limits the public subscription status per address', function () {
     $this->subscription(['status' => 'active'], 'pm_fake_ok_x', 'neg');
 
+    // O limite conta também os pedidos sem login (o 401 é mais barato, mas continua contando).
     foreach (range(1, 60) as $_) {
-        $this->getJson('http://neg.app.test/api/v1/subscription')->assertOk();
+        $this->getJson('http://neg.app.test/api/v1/subscription')->assertUnauthorized();
     }
 
     $this->getJson('http://neg.app.test/api/v1/subscription')->assertStatus(429);
@@ -125,4 +126,16 @@ it('fails loudly when the middleware is used without the tenant middleware', fun
     $this->withoutExceptionHandling();
 
     expect(fn () => $this->postJson('http://neg.app.test/api/v1/_probe/sem-tenant'))->toThrow(LogicException::class);
+});
+
+it('A1 lists exactly the tenant routes that are allowed to work with a suspended subscription', function () {
+    $exempt = collect(Route::getRoutes()->getRoutes())
+        ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1') && in_array('subscription.exempt', $route->gatherMiddleware(), true))
+        ->map(fn ($route) => $route->uri())->sort()->values()->all();
+
+    expect($exempt)->toBe([
+        'api/v1/auth/2fa/confirm', 'api/v1/auth/2fa/disable', 'api/v1/auth/2fa/setup', 'api/v1/auth/2fa/verify',
+        'api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/logout-all', 'api/v1/auth/me',
+        'api/v1/auth/password/change', 'api/v1/auth/password/forgot', 'api/v1/auth/password/reset',
+    ]);
 });
