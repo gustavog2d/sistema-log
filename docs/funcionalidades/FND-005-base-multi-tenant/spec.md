@@ -29,6 +29,7 @@ Toda a plataforma depende de nunca misturar dados de assinantes. Esta funcionali
 - **RN-08** — O contexto de tenant é aplicado ao banco no início da requisição (`set_config('app.tenant_id', …)`) e **sempre** limpo ao final, mesmo em erro, para que uma conexão reaproveitada nunca carregue o tenant anterior.
 - **RN-09** — Modelos de tenant usam o trait `BelongsToTenant`: escopo global por `tenant_id`, preenchimento automático do `tenant_id` ao criar e erro explícito se houver consulta sem tenant em contexto (falha fechada também na aplicação).
 - **RN-10** — Existe um helper de migration (`$table->tenantId()` e `Schema::enableTenantRls('tabela')`) que cria a coluna, a FK, o índice e a política. Uma tabela com `tenant_id` sem política RLS faz o teste de esquema falhar.
+- **RN-12** — `tenants` é somente leitura para o papel de runtime (sem INSERT, UPDATE, DELETE nem TRUNCATE): apagar um tenant removeria os dados dele em cascata por cima do RLS, e trocar o slug sequestraria o subdomínio. Escritas de plataforma usam um papel próprio, a criar no PLT-003. O `slug` também é validado por `CHECK` no banco e o resolvedor ignora slug reservado.
 - **RN-11** — O limite de conexão do pool: com PgBouncer em modo transação o `set_config` de sessão não é seguro. Fica registrado como restrição: não usar PgBouncer em modo transação sem trocar para `SET LOCAL` dentro de transação (decisão a revisar na migração para AWS).
 
 ## Critérios de aceite
@@ -50,6 +51,7 @@ Toda a plataforma depende de nunca misturar dados de assinantes. Esta funcionali
 | CA-13 | RN-09 | Sem contexto | Consulta ao modelo | Exceção explícita |
 | CA-14 | RN-10 | Todas as tabelas com `tenant_id` no esquema | Teste de esquema | Todas têm RLS ativo e forçado, e política `USING`/`WITH CHECK` |
 | CA-15 | RN-02 | Slugs inválidos e reservados | Validação do slug | Rejeitados |
+| CA-16 | RN-12 | Conexão de runtime | `INSERT`, `UPDATE` ou `DELETE` em `tenants` | Negado pelo banco; `SELECT` permitido |
 
 ## Permissões
 
@@ -88,4 +90,5 @@ O app resolverá o tenant pelo token (PLT-006) usando a mesma interface `TenantR
 ## Riscos e perguntas em aberto
 
 - Lista de subdomínios reservados é provisória (revisar com o produto no PLT-003).
+- Pendências de segurança registradas em `docs/08` (papel dono fora do runtime, jobs de fila, rate limit, `trustProxies`, `sslmode`).
 - `app_runtime` precisa existir em todos os ambientes (local, CI, homologação); o script de criação do papel fica em `docker/postgres/init.sql` e no workflow de CI.

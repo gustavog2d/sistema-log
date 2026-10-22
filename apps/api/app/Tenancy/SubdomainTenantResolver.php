@@ -12,7 +12,7 @@ class SubdomainTenantResolver implements TenantResolver
     {
         $slug = $this->slugFrom($request->getHost());
 
-        if ($slug === null) {
+        if ($slug === null || ! Slug::isValid($slug)) {
             return null;
         }
 

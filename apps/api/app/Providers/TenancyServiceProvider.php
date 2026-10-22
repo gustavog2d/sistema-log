@@ -22,7 +22,7 @@ class TenancyServiceProvider extends ServiceProvider
         // $table->tenantId(): coluna, FK e índice do tenant em tabelas de negócio.
         Blueprint::macro('tenantId', function () {
             /** @var Blueprint $this */
-            $this->foreignUuid('tenant_id')->constrained('tenants')->cascadeOnDelete();
+            $this->foreignUuid('tenant_id')->index()->constrained('tenants')->cascadeOnDelete();
         });
 
         // Schema::enableTenantRls('tabela'): liga e força o RLS com política USING e WITH CHECK.

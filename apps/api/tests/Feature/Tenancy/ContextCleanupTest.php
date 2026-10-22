@@ -10,7 +10,7 @@ function currentDatabaseTenant(): ?string
     return $value === null ? null : (string) $value;
 }
 
-it('clears the database tenant after a request', function () {
+it('CA-11 clears the database tenant after a request', function () {
     $this->makeTenant('acme');
 
     $this->getJson('http://acme.app.test/api/v1/tenant/current')->assertOk();
@@ -18,7 +18,7 @@ it('clears the database tenant after a request', function () {
     expect(currentDatabaseTenant())->toBeNull();
 });
 
-it('clears the database tenant even when the request fails', function () {
+it('CA-11 clears the database tenant even when the request fails', function () {
     Route::middleware('tenant')->get('api/v1/_probe/explode', fn () => throw new RuntimeException('boom'));
     $this->makeTenant('acme');
 

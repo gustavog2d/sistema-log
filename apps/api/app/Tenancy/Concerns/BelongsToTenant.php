@@ -4,6 +4,7 @@ namespace App\Tenancy\Concerns;
 
 use App\Models\Tenant;
 use App\Tenancy\Exceptions\TenantContextMissing;
+use App\Tenancy\Exceptions\TenantMismatch;
 use App\Tenancy\TenantContext;
 use App\Tenancy\TenantScope;
 use Illuminate\Database\Eloquent\Model;
@@ -22,14 +23,16 @@ trait BelongsToTenant
         static::addGlobalScope(new TenantScope);
 
         static::creating(function (Model $model): void {
-            if ($model->getAttribute('tenant_id') !== null) {
-                return;
-            }
-
             $tenantId = app(TenantContext::class)->id();
 
             if ($tenantId === null) {
                 throw TenantContextMissing::forModel($model::class);
+            }
+
+            $informed = $model->getAttribute('tenant_id');
+
+            if ($informed !== null && $informed !== $tenantId) {
+                throw TenantMismatch::forModel($model::class);
             }
 
             $model->setAttribute('tenant_id', $tenantId);

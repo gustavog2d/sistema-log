@@ -1,46 +1,94 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /** Tabelas de plataforma ou do framework: as únicas que podem existir sem tenant_id. */
-const PLATFORM_TABLES = [
-    'migrations', 'tenants', 'jobs', 'job_batches', 'failed_jobs',
-    'cache', 'cache_locks', 'users', 'password_reset_tokens', 'sessions',
-];
+function platformTables(): array
+{
+    return ['migrations', 'tenants', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks'];
+}
 
-it('has rls forced on every table outside the platform allowlist', function () {
-    $tables = collect(DB::connection('pgsql_admin')->select(
-        "select c.relname, c.relrowsecurity, c.relforcerowsecurity
-           from pg_class c join pg_namespace n on n.oid = c.relnamespace
+/** @return list<string> */
+function publicTables(): array
+{
+    return collect(DB::connection('pgsql_admin')->select(
+        "select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
           where n.nspname = 'public' and c.relkind = 'r'",
-    ))->reject(fn ($t) => in_array($t->relname, PLATFORM_TABLES, true));
+    ))->pluck('relname')->all();
+}
 
-    expect($tables->isNotEmpty())->toBeTrue();
+/**
+ * Descreve cada tabela de negócio que não cumpre o isolamento: RLS ligado e forçado,
+ * coluna tenant_id e política com USING e WITH CHECK.
+ *
+ * @return list<string>
+ */
+function isolationProblems(): array
+{
+    $problems = [];
 
-    foreach ($tables as $table) {
-        expect($table->relrowsecurity)->toBeTrue("{$table->relname} sem RLS");
-        expect($table->relforcerowsecurity)->toBeTrue("{$table->relname} sem FORCE RLS");
+    foreach (array_diff(publicTables(), platformTables()) as $table) {
+        $flags = DB::connection('pgsql_admin')->selectOne(
+            'select relrowsecurity, relforcerowsecurity from pg_class where oid = ?::regclass',
+            [$table],
+        );
+        $hasColumn = Schema::connection('pgsql_admin')->hasColumn($table, 'tenant_id');
+        $policies = DB::connection('pgsql_admin')->select(
+            'select qual, with_check from pg_policies where tablename = ?',
+            [$table],
+        );
+        $hasPolicy = count($policies) === 1
+            && str_contains((string) $policies[0]->qual, 'app.tenant_id')
+            && str_contains((string) $policies[0]->with_check, 'app.tenant_id');
+
+        if (! $flags->relrowsecurity) {
+            $problems[] = "{$table}: RLS desligado";
+        }
+        if (! $flags->relforcerowsecurity) {
+            $problems[] = "{$table}: FORCE RLS desligado";
+        }
+        if (! $hasColumn) {
+            $problems[] = "{$table}: sem tenant_id";
+        }
+        if (! $hasPolicy) {
+            $problems[] = "{$table}: sem exatamente uma política USING e WITH CHECK por app.tenant_id";
+        }
+    }
+
+    return $problems;
+}
+
+it('CA-14 has isolation on every table outside the platform allowlist', function () {
+    expect(publicTables())->toContain('probe_items');
+    expect(isolationProblems())->toBe([]);
+});
+
+it('CA-14 detects a business table created without isolation', function () {
+    Schema::connection('pgsql_admin')->create('vazando', function ($table) {
+        $table->id();
+        $table->string('nome');
+    });
+
+    try {
+        expect(isolationProblems())->toContain(
+            'vazando: RLS desligado',
+            'vazando: sem tenant_id',
+            'vazando: sem exatamente uma política USING e WITH CHECK por app.tenant_id',
+        );
+    } finally {
+        Schema::connection('pgsql_admin')->dropIfExists('vazando');
     }
 });
 
-it('requires tenant_id and a using/with check policy on those tables', function () {
-    $tables = collect(DB::connection('pgsql_admin')->select(
-        "select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
-          where n.nspname = 'public' and c.relkind = 'r'",
-    ))->pluck('relname')->reject(fn ($name) => in_array($name, PLATFORM_TABLES, true));
+it('CA-14 keeps the platform allowlist free of stale names', function () {
+    expect(array_diff(platformTables(), publicTables()))->toBe([]);
+});
 
-    foreach ($tables as $name) {
-        $column = DB::connection('pgsql_admin')->selectOne(
-            "select 1 as ok from information_schema.columns where table_name = ? and column_name = 'tenant_id'",
-            [$name],
-        );
-        $policy = DB::connection('pgsql_admin')->selectOne(
-            'select qual, with_check from pg_policies where tablename = ?',
-            [$name],
-        );
+it('RN-06 indexes tenant_id on tables created with the helper', function () {
+    $indexes = DB::connection('pgsql_admin')->select(
+        "select indexdef from pg_indexes where tablename = 'probe_items'",
+    );
 
-        expect($column)->not->toBeNull("{$name} sem tenant_id");
-        expect($policy->qual ?? null)->not->toBeNull("{$name} sem USING");
-        expect($policy->with_check ?? null)->not->toBeNull("{$name} sem WITH CHECK");
-    }
+    expect(collect($indexes)->contains(fn ($i) => str_contains($i->indexdef, '(tenant_id)')))->toBeTrue();
 });

@@ -47,7 +47,12 @@ trait ResetsTenancyDatabase
 
     protected function makeTenant(string $slug): Tenant
     {
-        return Tenant::factory()->create(['slug' => $slug, 'name' => ucfirst($slug)]);
+        // O papel de runtime só lê `tenants`; o cenário é montado com o papel dono.
+        $tenant = new Tenant(['slug' => $slug, 'name' => ucfirst($slug), 'status' => 'active']);
+        $tenant->setConnection('pgsql_admin');
+        $tenant->save();
+
+        return $tenant;
     }
 
     /** Insere uma sonda ignorando o RLS (papel dono), para montar o cenário. */

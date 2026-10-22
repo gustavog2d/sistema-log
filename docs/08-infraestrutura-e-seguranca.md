@@ -42,3 +42,13 @@ Levantadas na revisão de segurança do FND-002 (o ambiente Docker atual é só 
 - Allowlist explícita de CORS, cookies de sessão `secure`/`same_site`, e headers de segurança (HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`) na web e na borda.
 - `/api/v1/health` detalhado restrito à rede interna ou autenticado; só liveness (`/up`) público. Rate limiting nas rotas públicas.
 - `composer audit` e `pnpm audit` no CI (FND-003).
+
+### Pendências levantadas na revisão de segurança do FND-005
+
+- Rodar migrations em um job separado, sem expor as credenciais do papel dono (`DB_ADMIN_*`) ao runtime; em produção o dono não deve ser superusuário.
+- Papel de plataforma (`app_platform`) para escrever em `tenants` (cadastro, suspensão), a criar no PLT-003.
+- Primeiro job de fila: tenant explícito no payload, aplicado e limpo por um middleware de job; hoje o `TenantScope` falha fechado.
+- Rate limit nas rotas do grupo `tenant` (enumeração de tenants pelo 404) e avaliar não expor o `id` interno.
+- `trustProxies` restrito aos IPs do balanceador e `trustHosts`; `sslmode=require` ou `verify-full` no banco.
+- Teste de registro de rotas cobre só `/api/v1`; rotas fora dele (`up`, `storage`) não declaram grupo.
+- Tabelas `jobs`, `cache` e `failed_jobs` ficam sem RLS (guardam payloads de tenants): revisar quando filas e cache entrarem em uso real.
