@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Http\Problem;
+use App\Tenancy\TenantContext;
+use App\TenantAuth\AuthenticatedPerson;
 use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -38,7 +40,7 @@ class IdempotentRequest
         $hash = hash('sha256', (string) json_encode($this->normalized($request->json()->all())));
         $db = DB::connection('pgsql_platform');
         // A chave vale só para quem a criou (mesmo IP): adivinhar a chave de outra pessoa não devolve a resposta dela.
-        $where = ['scope' => $scope.':'.substr(hash('sha256', (string) $request->ip()), 0, 16), 'key' => $key];
+        $where = ['scope' => $scope.':'.substr(hash('sha256', $request->ip().$this->owner($request)), 0, 16), 'key' => $key];
 
         // Reserva a chave. Um pedido que morreu no meio (sem resposta gravada) libera a chave após o prazo.
         $db->table('idempotency_keys')->where($where)->whereNull('response_body')
@@ -69,6 +71,14 @@ class IdempotentRequest
         }
 
         return $response;
+    }
+
+    /** Quem é dono da chave: o negócio e a pessoa quando há login; nas rotas públicas, só o endereço. */
+    private function owner(Request $request): string
+    {
+        $person = $request->attributes->get('tenant_person');
+
+        return $person instanceof AuthenticatedPerson ? '|'.app(TenantContext::class)->id().'|'.$person->id : '';
     }
 
     /**
