@@ -21,6 +21,8 @@ Testes de API e de unidade em Pest, PostgreSQL real. O ID do critério aparece n
 | T-10 | isolamento | Esquema | `SchemaRlsTest` com as novas tabelas de plataforma | passando |
 | T-11 | RN-11 | Varredura | `Feature/Plans/NoPlanRulesInCodeTest.php` (nenhuma comparação com chave de plano no código) | passando |
 
+- Cobertura adicionada após as revisões: validação também no `PATCH` de plano e de funcionalidade; chave imutável; tetos numéricos; arquivado definitivo; plano ativo sem preço recusado também pelo banco; auditoria só do que mudou e fiel ao gravado; atomicidade da auditoria (reversão se falhar); decisão sobre a linha atual e não sobre cópia desatualizada; limite e cache da rota pública; erro inesperado sem detalhes.
+
 ## Casos obrigatórios
 
 - [x] Sucesso do fluxo principal

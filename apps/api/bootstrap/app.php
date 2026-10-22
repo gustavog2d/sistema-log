@@ -59,6 +59,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(fn (ThrottleRequestsException $e, Request $r) => $isApi($r) ? Problem::tooManyRequests($e) : null);
         $exceptions->render(fn (HttpExceptionInterface $e, Request $r) => $isApi($r) ? Problem::fromHttpException($e) : null);
 
+        // Erro inesperado: sem detalhes (SQL, caminhos, pilha) fora do modo de depuração.
+        $exceptions->render(fn (Throwable $e, Request $r) => $isApi($r) && ! config('app.debug') && ! $e instanceof HttpExceptionInterface
+            ? Problem::response(500, 'Internal Server Error')
+            : null);
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

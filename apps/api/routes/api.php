@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 // Todo grupo de rota declara seu isolamento: `public`, `platform` ou `tenant` (ver FND-005).
 Route::middleware('public')->group(function () {
     Route::get('/health', HealthController::class);
-    Route::get('/plans', PublicPlanController::class);
+    Route::get('/plans', PublicPlanController::class)->middleware('throttle:public-catalog');
 });
 
 Route::middleware('tenant')->group(function () {

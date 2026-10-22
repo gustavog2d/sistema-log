@@ -37,6 +37,9 @@ export interface PublicEntitlement {
   limit: number | null;
 }
 
+/**
+ * Só planos ativos, que sempre têm preço mensal e desconto anual definidos.
+ */
 export interface PublicPlan {
   key: string;
   name: string;
@@ -48,24 +51,88 @@ export interface PublicPlan {
   features: PublicEntitlement[];
 }
 
-export type PlanInputStatus = typeof PlanInputStatus[keyof typeof PlanInputStatus];
+export type PlanCreateInputStatus = typeof PlanCreateInputStatus[keyof typeof PlanCreateInputStatus];
 
 
-export const PlanInputStatus = {
+export const PlanCreateInputStatus = {
   draft: 'draft',
   active: 'active',
   archived: 'archived',
 } as const;
 
-export interface PlanInput {
-  key?: string;
-  name?: string;
+/**
+ * A moeda (currency) é sempre BRL e não é editável. A chave não muda depois de criada.
+ */
+export interface PlanCreateInput {
+  /**
+     * @maxLength 40
+     * @pattern ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+     */
+  key: string;
+  /** @maxLength 100 */
+  name: string;
+  /**
+     * @minimum 0
+     * @maximum 32767
+     */
   position?: number;
-  status?: PlanInputStatus;
+  status?: PlanCreateInputStatus;
+  /**
+     * @minimum 0
+     * @maximum 365
+     */
   trial_days?: number;
-  /** @nullable */
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     * @nullable
+     */
   monthly_price_cents?: number | null;
-  /** @nullable */
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
+  yearly_discount_percent?: number | null;
+}
+
+export type PlanUpdateInputStatus = typeof PlanUpdateInputStatus[keyof typeof PlanUpdateInputStatus];
+
+
+export const PlanUpdateInputStatus = {
+  draft: 'draft',
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+/**
+ * Plano arquivado não volta a rascunho nem a ativo. Ativar exige preço mensal e desconto anual.
+ */
+export interface PlanUpdateInput {
+  /** @maxLength 100 */
+  name?: string;
+  /**
+     * @minimum 0
+     * @maximum 32767
+     */
+  position?: number;
+  status?: PlanUpdateInputStatus;
+  /**
+     * @minimum 0
+     * @maximum 365
+     */
+  trial_days?: number;
+  /**
+     * @minimum 0
+     * @maximum 100000000
+     * @nullable
+     */
+  monthly_price_cents?: number | null;
+  /**
+     * @minimum 0
+     * @maximum 100
+     * @nullable
+     */
   yearly_discount_percent?: number | null;
 }
 
@@ -90,29 +157,75 @@ export interface Feature {
   default_visible: boolean;
 }
 
-export type FeatureInputKind = typeof FeatureInputKind[keyof typeof FeatureInputKind];
+export type FeatureCreateInputKind = typeof FeatureCreateInputKind[keyof typeof FeatureCreateInputKind];
 
 
-export const FeatureInputKind = {
+export const FeatureCreateInputKind = {
   toggle: 'toggle',
   limit: 'limit',
 } as const;
 
-export interface FeatureInput {
-  key?: string;
-  name?: string;
-  /** @nullable */
+export interface FeatureCreateInput {
+  /**
+     * @maxLength 60
+     * @pattern ^[a-z0-9]+([._-][a-z0-9]+)*$
+     */
+  key: string;
+  /** @maxLength 100 */
+  name: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
   description?: string | null;
-  kind?: FeatureInputKind;
+  kind: FeatureCreateInputKind;
+  default_enabled: boolean;
+  /**
+     * @minimum 0
+     * @maximum 1000000
+     * @nullable
+     */
+  default_limit?: number | null;
+  default_visible: boolean;
+}
+
+export type FeatureUpdateInputKind = typeof FeatureUpdateInputKind[keyof typeof FeatureUpdateInputKind];
+
+
+export const FeatureUpdateInputKind = {
+  toggle: 'toggle',
+  limit: 'limit',
+} as const;
+
+/**
+ * A chave não muda. Funcionalidade do tipo toggle não aceita limite; ao virar toggle, os limites das regras são zerados.
+ */
+export interface FeatureUpdateInput {
+  /** @maxLength 100 */
+  name?: string;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  description?: string | null;
+  kind?: FeatureUpdateInputKind;
   default_enabled?: boolean;
-  /** @nullable */
+  /**
+     * @minimum 0
+     * @maximum 1000000
+     * @nullable
+     */
   default_limit?: number | null;
   default_visible?: boolean;
 }
 
 export interface PlanFeatureInput {
   enabled: boolean;
-  /** @nullable */
+  /**
+     * @minimum 0
+     * @maximum 1000000
+     * @nullable
+     */
   limit?: number | null;
   visible: boolean;
 }
@@ -126,6 +239,9 @@ export const EntitlementSource = {
   override: 'override',
 } as const;
 
+/**
+ * Uma funcionalidade liberada sempre sai com visible verdadeiro, mesmo que a regra guardada diga o contrário.
+ */
 export interface Entitlement {
   feature: string;
   enabled: boolean;
@@ -287,7 +403,7 @@ export const getPlatformCreatePlanUrl = () => {
 /**
  * @summary Cria plano
  */
-export const platformCreatePlan = async (planInput: PlanInput, options?: Parameters<typeof customFetch>[1]): Promise<platformCreatePlanResponse> => {
+export const platformCreatePlan = async (planCreateInput: PlanCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<platformCreatePlanResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -308,7 +424,7 @@ return customFetch<platformCreatePlanResponse>(getPlatformCreatePlanUrl(),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(planInput)
+    body: JSON.stringify(planCreateInput)
   }
 );}
 
@@ -408,7 +524,7 @@ export const getPlatformUpdatePlanUrl = (plan: string,) => {
  * @summary Altera o plano
  */
 export const platformUpdatePlan = async (plan: string,
-    planInput: PlanInput, options?: Parameters<typeof customFetch>[1]): Promise<platformUpdatePlanResponse> => {
+    planUpdateInput: PlanUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<platformUpdatePlanResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -429,7 +545,7 @@ return customFetch<platformUpdatePlanResponse>(getPlatformUpdatePlanUrl(plan),
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(planInput)
+    body: JSON.stringify(planUpdateInput)
   }
 );}
 
@@ -696,7 +812,7 @@ export const getPlatformCreateFeatureUrl = () => {
 /**
  * @summary Cria funcionalidade
  */
-export const platformCreateFeature = async (featureInput: FeatureInput, options?: Parameters<typeof customFetch>[1]): Promise<platformCreateFeatureResponse> => {
+export const platformCreateFeature = async (featureCreateInput: FeatureCreateInput, options?: Parameters<typeof customFetch>[1]): Promise<platformCreateFeatureResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -717,7 +833,7 @@ return customFetch<platformCreateFeatureResponse>(getPlatformCreateFeatureUrl(),
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(featureInput)
+    body: JSON.stringify(featureCreateInput)
   }
 );}
 
@@ -769,7 +885,7 @@ export const getPlatformUpdateFeatureUrl = (feature: string,) => {
  * @summary Altera a funcionalidade
  */
 export const platformUpdateFeature = async (feature: string,
-    featureInput: FeatureInput, options?: Parameters<typeof customFetch>[1]): Promise<platformUpdateFeatureResponse> => {
+    featureUpdateInput: FeatureUpdateInput, options?: Parameters<typeof customFetch>[1]): Promise<platformUpdateFeatureResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -790,6 +906,6 @@ return customFetch<platformUpdateFeatureResponse>(getPlatformUpdateFeatureUrl(fe
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(featureInput)
+    body: JSON.stringify(featureUpdateInput)
   }
 );}

@@ -1,7 +1,9 @@
 <?php
 
+use App\Models\PlanFeature;
 use Database\Factories\FeatureFactory;
 use Database\Factories\PlanFactory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 beforeEach(function () {
@@ -89,3 +91,58 @@ it('CA-14 validates the feature fields', function (array $payload) {
     'tipo inválido' => [['kind' => 'misto']],
     'limite padrão em toggle' => [['default_limit' => 3]],
 ]);
+
+it('CA-14 validates the feature fields on update', function (array $payload) {
+    $feature = FeatureFactory::new()->create(['key' => 'qualquer.coisa', 'kind' => 'toggle']);
+
+    $this->asToken($this->adminToken(), 'PATCH', "features/{$feature->id}", $payload)->assertStatus(422);
+})->with([
+    'limite padrão em toggle' => [['default_limit' => 3]],
+    'chave não pode mudar' => [['key' => 'outra.chave']],
+    'tipo inválido' => [['kind' => 'misto']],
+    'limite acima do máximo' => [['kind' => 'limit', 'default_limit' => 1_000_001]],
+]);
+
+it('RN-07 refuses to turn a limited feature into a toggle while it keeps a default limit', function () {
+    $feature = FeatureFactory::new()->create(['key' => 'usuarios.max2', 'kind' => 'limit', 'default_limit' => 10]);
+
+    $this->asToken($this->adminToken(), 'PATCH', "features/{$feature->id}", ['kind' => 'toggle'])->assertStatus(422);
+
+    $this->asToken($this->adminToken(), 'PATCH', "features/{$feature->id}", ['kind' => 'toggle', 'default_limit' => null])
+        ->assertOk()->assertJson(['kind' => 'toggle', 'default_limit' => null]);
+});
+
+it('CA-14 refuses a rule limit above the maximum', function () {
+    $this->asToken($this->adminToken(), 'PUT', "plans/{$this->plan->id}/features/{$this->limit->id}", ['enabled' => true, 'limit' => 1_000_001, 'visible' => true])
+        ->assertStatus(422);
+});
+
+it('CA-13 audits the rule exactly as stored, with a null limit when none is sent', function () {
+    $token = $this->adminToken();
+    $this->asToken($token, 'PUT', "plans/{$this->plan->id}/features/{$this->limit->id}", ['enabled' => true, 'limit' => 5, 'visible' => true]);
+    $this->asToken($token, 'PUT', "plans/{$this->plan->id}/features/{$this->limit->id}", ['enabled' => true, 'visible' => true]);
+
+    $metadata = DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'plan_feature.set')->orderBy('id')->pluck('metadata')->map(fn ($m) => json_decode($m, true));
+
+    expect($metadata[1]['before']['limit'])->toBe(5)->and($metadata[1]['after'])->toBe(['enabled' => true, 'limit' => null, 'visible' => true]);
+});
+
+it('RN-07 clears stored limits when a feature becomes a toggle', function () {
+    $token = $this->adminToken();
+    $this->asToken($token, 'PUT', "plans/{$this->plan->id}/features/{$this->limit->id}", ['enabled' => true, 'limit' => 5, 'visible' => true])->assertOk();
+
+    $this->asToken($token, 'PATCH', "features/{$this->limit->id}", ['kind' => 'toggle'])->assertOk();
+    $this->asToken($token, 'PATCH', "features/{$this->limit->id}", ['kind' => 'limit'])->assertOk();
+
+    $this->asToken($token, 'GET', "plans/{$this->plan->id}/entitlements")->assertJsonFragment(['feature' => 'usuarios.max', 'limit' => null]);
+});
+
+it('does not fail when the same rule is set twice in a row', function () {
+    $token = $this->adminToken();
+
+    foreach (range(1, 3) as $_) {
+        $this->asToken($token, 'PUT', "plans/{$this->plan->id}/features/{$this->limit->id}", ['enabled' => true, 'limit' => 2, 'visible' => true])->assertOk();
+    }
+
+    expect(PlanFeature::count())->toBe(1);
+});

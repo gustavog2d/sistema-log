@@ -42,6 +42,10 @@ Use `App\Plans\EntitlementResolver::forPlan($plano, $excecoesDoAssinante)`. Ele 
 
 ## Limitações
 
+- Listagens sem paginação por cursor: o catálogo é pequeno e limitado (exceção consciente à convenção).
+- A varredura `NoPlanRulesInCodeTest` só pega os três nomes de lançamento em `app/`; não pega planos criados depois nem comparação por nome. Vale revisão humana.
+- Uma funcionalidade liberada sempre aparece (visível), mesmo se a regra tiver `visible: false`.
+- Plano arquivado é definitivo; a chave de plano e de funcionalidade não muda depois de criada.
 - Ainda não há assinante ligado a plano (PLT-003/004), nem exceções por assinante (PLT-009), nem `GET /me/entitlements`.
 - Padrão "liberado e ilimitado" é provisório.
 

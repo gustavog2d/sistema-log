@@ -41,3 +41,15 @@ it('CA-12 returns an empty list when nothing is active', function () {
 
     $this->getJson('http://app.test/api/v1/plans')->assertOk()->assertExactJson(['data' => []]);
 });
+
+it('limits the public catalog per ip and allows short caching', function () {
+    PlanFactory::new()->active()->create();
+
+    $this->getJson('http://app.test/api/v1/plans')->assertOk()->assertHeader('Cache-Control', 'max-age=60, public');
+
+    foreach (range(2, 60) as $_) {
+        $this->getJson('http://app.test/api/v1/plans')->assertOk();
+    }
+
+    $this->getJson('http://app.test/api/v1/plans')->assertStatus(429)->assertHeader('Content-Type', 'application/problem+json');
+});

@@ -14,13 +14,14 @@ class EntitlementResolver
 {
     /**
      * @param  array<string, array{enabled: bool, limit?: int|null, visible: bool}>  $overrides  indexadas pela chave da funcionalidade
+     * @param  Collection<int, Feature>|null  $features  catálogo já carregado, para evitar consultas repetidas
      * @return Collection<int, Entitlement>
      */
-    public function forPlan(Plan $plan, array $overrides = []): Collection
+    public function forPlan(Plan $plan, array $overrides = [], ?Collection $features = null): Collection
     {
         $rules = $plan->featureRules()->get()->keyBy('feature_id');
 
-        return Feature::query()->orderBy('key')->get()->map(function (Feature $feature) use ($rules, $overrides): Entitlement {
+        return ($features ?? Feature::query()->orderBy('key')->get())->map(function (Feature $feature) use ($rules, $overrides): Entitlement {
             if (isset($overrides[$feature->key])) {
                 $o = $overrides[$feature->key];
 

@@ -21,15 +21,17 @@ O produto tem três planos (Essencial, Profissional e Estúdio), teste de 7 dias
 
 - **RN-01** — `plans` (tabela de plataforma): `key` único (ex.: `essencial`), `name`, `position`, `status` (`draft`, `active`, `archived`), `trial_days` (padrão 7), `monthly_price_cents` (nulo até definir), `yearly_discount_percent` (0 a 100, nulo até definir), `currency` (padrão `BRL`). Dinheiro em centavos, inteiro.
 - **RN-02** — O preço anual é calculado: `round(mensal × 12 × (100 − desconto) / 100)` centavos. Sem mensalidade ou sem desconto definidos, o preço anual não existe.
-- **RN-03** — Um plano só fica `active` se tiver `monthly_price_cents` e `yearly_discount_percent` definidos. Plano `archived` não volta a `active` com assinantes ativos nele (a regra de assinantes entra no PLT-003/004).
+- **RN-03** — Um plano só fica `active` se tiver `monthly_price_cents` e `yearly_discount_percent` definidos. Plano `archived` é definitivo: não volta a `draft` nem a `active`. A `key` do plano e da funcionalidade não muda depois de criada. O banco também recusa plano ativo sem preço.
 - **RN-04** — Entram como dados iniciais os três planos em `draft`, sem preço e sem regras: Essencial, Profissional e Estúdio.
 - **RN-05** — `features` (catálogo): `key` único (ex.: `agenda.publica`), `name`, `description`, `kind` (`toggle` ou `limit`), `default_enabled`, `default_limit` (nulo = ilimitado), `default_visible`. Dados iniciais: as chaves previstas em `docs/05` (agenda pública, integração com Google Calendar, orçamento, relatórios com exportação, máximo de usuários), com padrão **liberado, ilimitado e visível**, para o sistema funcionar enquanto as regras não existem.
 - **RN-06** — `plan_features` guarda a regra de um plano para uma funcionalidade: `enabled`, `limit` (nulo = ilimitado) e `visible`. **Sem linha, vale o padrão da funcionalidade.**
-- **RN-07** — Resultado para cada funcionalidade de um plano (`Entitlement`): `enabled` (bool), `limit` (inteiro ou nulo) e `visible`. Estados: **liberada** (`enabled`), **limitada** (`enabled` com `limit`), **bloqueada visível** (não `enabled` e `visible`, a interface mostra e oferece upgrade) e **oculta** (não `enabled` e não `visible`, a interface não mostra). Funcionalidade `toggle` não aceita `limit`.
+- **RN-07** — Resultado para cada funcionalidade de um plano (`Entitlement`): `enabled` (bool), `limit` (inteiro ou nulo) e `visible`. Estados: **liberada** (`enabled`), **limitada** (`enabled` com `limit`), **bloqueada visível** (não `enabled` e `visible`, a interface mostra e oferece upgrade) e **oculta** (não `enabled` e não `visible`, a interface não mostra). Funcionalidade `toggle` não aceita `limit`; ao virar `toggle`, os limites já gravados nas regras são zerados. Uma funcionalidade liberada sempre sai como visível, mesmo que a regra guardada diga o contrário.
 - **RN-08** — Apenas `super_admin` altera planos, funcionalidades e regras; `suporte` só lê. A listagem pública mostra só planos `active`, com preços e funcionalidades visíveis, e não expõe campos internos.
 - **RN-09** — Toda alteração gera registro de auditoria (`platform_audit_logs`) com o antes e o depois dos campos de negócio.
 - **RN-10** — Exceções por assinante (cortesia, add-on, piloto) e a ligação de um assinante a um plano entram com a assinatura (PLT-003/004/009); o serviço já aceita um resultado de exceção para sobrepor o do plano.
 - **RN-11** — Nenhuma regra de plano fica no código: nada de `if plano == 'x'`.
+- **RN-12** — Valores numéricos têm teto compatível com o banco (preço até R$ 1.000.000,00; limites até 1.000.000; posição até 32767), para nunca virar erro 500. Erro inesperado sai como Problem Details sem detalhes fora do modo de depuração.
+- **RN-13** — A rota pública tem limite de 60 requisições por minuto por IP e `Cache-Control: public, max-age=60`. Alterações simultâneas no mesmo plano ou regra são serializadas (linha travada e *upsert*).
 
 ## Critérios de aceite
 

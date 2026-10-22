@@ -4,13 +4,12 @@ namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Plans\Actions\SavePlan;
 use App\Plans\EntitlementResolver;
 use App\Platform\Auth\AuthenticatedPlatformUser;
-use App\Platform\Auth\PlatformAudit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 
 class PlanController extends Controller
 {
@@ -24,34 +23,23 @@ class PlanController extends Controller
         return response()->json($plan->toApi());
     }
 
-    public function store(Request $request, PlatformAudit $audit): JsonResponse
+    public function store(Request $request, SavePlan $savePlan): JsonResponse
     {
         /** @var array<string, mixed> $data */
-        $data = $request->validate($this->rules(null) + ['key' => ['required', 'string', 'max:40', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/', 'unique:plans,key']]);
-        $this->assertCanBeActive($data + ['status' => 'draft']);
-
-        $plan = Plan::create($data);
-        $audit->record('plan.created', AuthenticatedPlatformUser::from($request), ['plan' => $plan->id, 'after' => $plan->toApi()]);
-
-        return response()->json($plan->refresh()->toApi(), 201);
-    }
-
-    public function update(Request $request, Plan $plan, PlatformAudit $audit): JsonResponse
-    {
-        /** @var array<string, mixed> $data */
-        $data = $request->validate($this->rules($plan) + ['key' => ['sometimes', 'string', 'max:40', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/', Rule::unique('plans', 'key')->ignore($plan->id)]]);
-        $this->assertCanBeActive($data + $plan->only(['status', 'monthly_price_cents', 'yearly_discount_percent']));
-
-        $before = $plan->only(array_keys($data));
-        $plan->fill($data)->save();
-
-        $audit->record('plan.updated', AuthenticatedPlatformUser::from($request), [
-            'plan' => $plan->id,
-            'before' => $before,
-            'after' => $plan->only(array_keys($data)),
+        $data = $request->validate($this->rules(creating: true) + [
+            'key' => ['required', 'string', 'max:40', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/', 'unique:plans,key'],
         ]);
 
-        return response()->json($plan->toApi());
+        return response()->json($savePlan->create(AuthenticatedPlatformUser::from($request), $data)->toApi(), 201);
+    }
+
+    public function update(Request $request, Plan $plan, SavePlan $savePlan): JsonResponse
+    {
+        // A chave identifica o plano em integrações e assinaturas: não muda depois de criada.
+        /** @var array<string, mixed> $data */
+        $data = $request->validate($this->rules(creating: false) + ['key' => ['prohibited']]);
+
+        return response()->json($savePlan->update(AuthenticatedPlatformUser::from($request), $plan, $data)->toApi());
     }
 
     public function entitlements(Plan $plan, EntitlementResolver $resolver): JsonResponse
@@ -60,31 +48,15 @@ class PlanController extends Controller
     }
 
     /** @return array<string, list<mixed>> */
-    private function rules(?Plan $plan): array
+    private function rules(bool $creating): array
     {
-        $required = $plan === null ? 'required' : 'sometimes';
-
         return [
-            'name' => [$required, 'string', 'min:1', 'max:100'],
-            'position' => ['sometimes', 'integer', 'min:0', 'max:65535'],
+            'name' => [$creating ? 'required' : 'sometimes', 'string', 'min:1', 'max:100'],
+            'position' => ['sometimes', 'integer', 'min:0', 'max:32767'],
             'status' => ['sometimes', Rule::in(Plan::STATUSES)],
             'trial_days' => ['sometimes', 'integer', 'min:0', 'max:365'],
-            'monthly_price_cents' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'monthly_price_cents' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100000000'],
             'yearly_discount_percent' => ['sometimes', 'nullable', 'integer', 'between:0,100'],
         ];
-    }
-
-    /** @param  array<string, mixed>  $state */
-    private function assertCanBeActive(array $state): void
-    {
-        if (($state['status'] ?? null) !== 'active') {
-            return;
-        }
-
-        if (($state['monthly_price_cents'] ?? null) === null || ($state['yearly_discount_percent'] ?? null) === null) {
-            throw ValidationException::withMessages([
-                'status' => 'Um plano só pode ficar ativo com preço mensal e desconto anual definidos.',
-            ]);
-        }
     }
 }

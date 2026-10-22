@@ -9,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
 
 /**
  * Prepara um banco PostgreSQL real para os testes de isolamento.
@@ -22,6 +23,15 @@ trait ResetsTenancyDatabase
 
     protected function setUpResetsTenancyDatabase(): void
     {
+        // Trava: esta suíte recria e trunca tabelas e jamais pode tocar o banco de desenvolvimento.
+        foreach (['pgsql', 'pgsql_admin'] as $connection) {
+            $database = DB::connection($connection)->getDatabaseName();
+
+            if ($database !== TestCase::TEST_DATABASE) {
+                throw new \RuntimeException('Os testes só rodam no banco '.TestCase::TEST_DATABASE." (conexão {$connection} aponta para {$database}).");
+            }
+        }
+
         if (! self::$databaseMigrated) {
             Artisan::call('migrate:fresh', ['--database' => 'pgsql_admin', '--force' => true]);
             self::$databaseMigrated = true;
