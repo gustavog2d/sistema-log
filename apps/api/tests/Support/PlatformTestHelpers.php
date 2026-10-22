@@ -52,4 +52,14 @@ trait PlatformTestHelpers
         return $this->asToken($challenge, 'POST', 'auth/2fa/verify', ['code' => $this->otp((string) $user->totp_secret)])
             ->json('access_token');
     }
+
+    protected function adminToken(): string
+    {
+        return $this->accessTokenFor($this->platformUser());
+    }
+
+    protected function supportToken(): string
+    {
+        return $this->accessTokenFor($this->platformUser(attributes: ['role' => 'suporte']));
+    }
 }

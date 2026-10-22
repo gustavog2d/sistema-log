@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsurePlatformRole;
 use App\Http\Middleware\EnsurePlatformUserActive;
 use App\Http\Middleware\PlatformOnly;
 use App\Http\Middleware\PublicRoute;
@@ -40,6 +41,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'public' => PublicRoute::class,
             'abilities' => CheckAbilities::class,
             'platform.active' => EnsurePlatformUserActive::class,
+            'platform.role' => EnsurePlatformRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
@@ -56,6 +58,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(fn (ValidationException $e, Request $r) => $isApi($r) ? Problem::response(422, 'Unprocessable Entity', 'Dados inválidos.', ['errors' => $e->errors()]) : null);
         $exceptions->render(fn (ThrottleRequestsException $e, Request $r) => $isApi($r) ? Problem::tooManyRequests($e) : null);
         $exceptions->render(fn (HttpExceptionInterface $e, Request $r) => $isApi($r) ? Problem::fromHttpException($e) : null);
+
+        // Erro inesperado: sem detalhes (SQL, caminhos, pilha) fora do modo de depuração.
+        $exceptions->render(fn (Throwable $e, Request $r) => $isApi($r) && ! config('app.debug') && ! $e instanceof HttpExceptionInterface
+            ? Problem::response(500, 'Internal Server Error')
+            : null);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
