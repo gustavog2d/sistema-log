@@ -23,9 +23,11 @@ services:
     <<: *api
     command: sh /workspace/docker/api/start.sh
     ports:
-      - '${API_PORT:-8000}:8000'
+      - '127.0.0.1:${API_PORT:-8000}:8000'
     healthcheck:
-      test: ['CMD', 'curl', '-fs', 'http://localhost:8000/up']
+      test:
+        - CMD-SHELL
+        - curl -fs http://localhost:8000/api/v1/health | grep -q '"status":"ok"'
       interval: 5s
       timeout: 3s
       retries: 30
@@ -47,7 +49,7 @@ services:
       API_URL: http://api:8000
       NEXT_PUBLIC_APP_NAME: ${APP_NAME:-App}
     ports:
-      - '${WEB_PORT:-3000}:3000'
+      - '127.0.0.1:${WEB_PORT:-3000}:3000'
     healthcheck:
       test: ['CMD', 'curl', '-fs', 'http://localhost:3000/']
       interval: 5s
@@ -67,7 +69,7 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - '${DB_PORT:-5432}:5432'
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
     healthcheck:
       test:
         [
@@ -89,7 +91,7 @@ services:
   mailpit:
     image: axllent/mailpit
     ports:
-      - '${MAILPIT_PORT:-8025}:8025'
+      - '127.0.0.1:${MAILPIT_PORT:-8025}:8025'
 
 volumes:
   pgdata:

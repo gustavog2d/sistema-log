@@ -31,3 +31,14 @@ O alvo é AWS na região de São Paulo (`sa-east-1`), com Cloudflare na frente e
 - Migrations compatíveis com a versão anterior (expandir, depois contrair), porque apps antigos continuam chamando a API.
 - LGPD: o assinante é controlador dos dados dos clientes dele e a plataforma é operadora. Termos, contrato de tratamento, exportação e exclusão de dados por tenant e por cliente final.
 - Backups com teste de restauração periódico e pentest externo antes do lançamento público.
+
+## Pendências de segurança antes de homologação e produção
+
+Levantadas na revisão de segurança do FND-002 (o ambiente Docker atual é só de desenvolvimento):
+
+- Imagens separadas para homologação e produção: usuário não-root, sem bind mount, sem `composer install`/`pnpm install` no start, sem `artisan serve` (usar php-fpm ou Octane), tags fixas; `migrate` fora do start automático.
+- `APP_DEBUG=false` e `APP_ENV=production`; segredos e `APP_KEY` vindos de secret manager, sem senhas padrão (`${VAR:?}`).
+- Banco e Redis sem porta pública, com senha forte e TLS.
+- Allowlist explícita de CORS, cookies de sessão `secure`/`same_site`, e headers de segurança (HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`) na web e na borda.
+- `/api/v1/health` detalhado restrito à rede interna ou autenticado; só liveness (`/up`) público. Rate limiting nas rotas públicas.
+- `composer audit` e `pnpm audit` no CI (FND-003).

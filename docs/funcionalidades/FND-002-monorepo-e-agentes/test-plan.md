@@ -1,6 +1,6 @@
 # FND-002 · Plano de teste
 
-- **Spec:** [spec.md](spec.md) (versão aprovada em: pendente)
+- **Spec:** [spec.md](spec.md) (versão aprovada em: 2026-10-22)
 - **Responsável:** agente QA
 
 ## Matriz critério × camada
@@ -10,7 +10,7 @@
 | T-01 | CA-01 | Script de verificação | `scripts/verify-structure.sh` | passando |
 | T-02 | CA-02 | Script de verificação | `scripts/verify-compose.sh` (healthchecks) | passando |
 | T-03 | CA-03 | API (feature) | `apps/api/tests/Feature/HealthTest.php` | passando |
-| T-04 | CA-03 | API (feature) | mesmo arquivo: banco fora do ar devolve 503 Problem Details | passando |
+| T-04 | CA-03 | API (feature) | mesmo arquivo: banco ou Redis fora do ar devolve 503 Problem Details | passando |
 | T-05 | CA-04 | Componente (Vitest) | `apps/web/src/components/home.test.tsx` | passando |
 | T-06 | CA-05 | Script de verificação | lint e análise estática terminam com código 0 | passando |
 | T-07 | CA-06 | API / Web | suítes Pest e Vitest passam; Pest conectado ao PostgreSQL | passando |

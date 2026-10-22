@@ -3,6 +3,7 @@
 set -u
 cd "$(dirname "$0")/.."
 fail=0
+health_file=$(mktemp)
 ok()   { echo "ok    [$1] $2"; }
 bad()  { echo "FALHA [$1] $2"; fail=1; }
 
@@ -15,8 +16,8 @@ done
 
 api_port=$(docker compose port api 8000 | sed 's/.*://')
 web_port=$(docker compose port web 3000 | sed 's/.*://')
-code=$(curl -s -o /tmp/health.json -w '%{http_code}' "http://localhost:${api_port}/api/v1/health")
-if [ "$code" = 200 ] && grep -q '"database"' /tmp/health.json && grep -q '"redis"' /tmp/health.json; then ok CA-03 "GET /api/v1/health 200"; else bad CA-03 "health devolveu $code"; fi
+code=$(curl -s -o "$health_file" -w '%{http_code}' "http://localhost:${api_port}/api/v1/health")
+if [ "$code" = 200 ] && grep -q '"database"' "$health_file" && grep -q '"redis"' "$health_file"; then ok CA-03 "GET /api/v1/health 200"; else bad CA-03 "health devolveu $code"; fi
 if curl -s "http://localhost:${web_port}/" | grep -q 'data-testid="home-title"'; then ok CA-04 "web renderiza página inicial"; else bad CA-04 "página inicial não renderizou"; fi
 
 exit $fail
