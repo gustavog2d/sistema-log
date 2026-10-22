@@ -1,6 +1,7 @@
 # ADR 0004 · Hospedagem e infraestrutura
 
 - **Status:** aceito (com revisão prevista)
+- **Atualização 2026-10-22:** por ora tudo roda **apenas localmente** (Docker Compose na máquina de desenvolvimento). Servidor de homologação e de produção serão estruturados depois; o item FND-007 fica adiado.
 - **Data:** 2026-10-22
 - **Decisores:** Gustavo
 
