@@ -61,3 +61,12 @@ Levantadas na revisão de segurança do FND-002 (o ambiente Docker atual é só 
 - CORS: restringir a origem do painel nas rotas da plataforma (hoje o padrão do Laravel aceita qualquer origem; sem cookie, risco baixo).
 - `APP_DEBUG=false` fora do ambiente local; erros 500 em Problem Details quando o painel existir.
 - Verificação de código de recuperação faz até 8 bcrypts por tentativa; aceitável com o limite por IP, registrar.
+
+### Pendências levantadas na revisão de segurança do PLT-003
+
+- `trustProxies` com os IPs do balanceador (o limite por IP e a chave de idempotência dependem do IP real).
+- Limite por e-mail e por /64 de IPv6 no cadastro, e CAPTCHA ou prova de trabalho antes da produção.
+- E-mail confirmado antes de liberar o negócio (PLT-006/PLT-010); hoje o cadastro revela que um e-mail já existe.
+- O papel de login do assinante (PLT-006) precisa de acesso próprio à senha; o papel da API não a lê.
+- Mesmo com privilégios mínimos para o cadastro, o papel da API ainda escreve em `platform_users`, `platform_audit_logs`, `personal_access_tokens`, `plans`, `features` e `plan_features` (necessário para a API da plataforma). Avaliar um papel separado para a API da equipe quando houver homologação.
+- Credenciais dos papéis de desenvolvimento (`app_runtime`, `app_platform`) são só locais; em produção vêm de segredos e o banco não fica exposto. `sslmode=require` fora do local.

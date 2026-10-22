@@ -42,13 +42,15 @@ class SignupService
 
         [$customerRef, $method] = $this->attachPayment($data);
 
+        // O hash (lento de propósito) é feito antes de abrir a transação, para não segurar conexão e linhas.
+        $passwordHash = bcrypt($data->password);
         $ids = new SignupIds;
         $now = now();
         $trialEnds = $now->copy()->addDays($plan->trial_days);
 
         try {
             DB::connection('pgsql_platform')->transaction(
-                fn (Connection $db) => $this->persist($db, $data, $plan, $priceCents, $customerRef, $method, $ids, $now, $trialEnds),
+                fn (Connection $db) => $this->persist($db, $data, $passwordHash, $plan, $priceCents, $customerRef, $method, $ids, $now, $trialEnds),
             );
         } catch (UniqueConstraintViolationException $e) {
             // Dois cadastros simultâneos com o mesmo endereço ou e-mail: o banco decide, a resposta é 422.
@@ -81,7 +83,8 @@ class SignupService
             throw ValidationException::withMessages(['slug' => 'Este endereço não está disponível ('.($slug['reason'] ?? '').').']);
         }
 
-        if (User::query()->where('email', $data->ownerEmail)->exists()) {
+        if (// Só colunas públicas: o papel da API não pode ler o hash das senhas.
+            User::query()->select('id')->where('email', $data->ownerEmail)->exists()) {
             throw ValidationException::withMessages(['owner_email' => 'Este e-mail já está cadastrado.']);
         }
     }
@@ -104,7 +107,7 @@ class SignupService
         }
     }
 
-    private function persist(Connection $db, SignupData $data, Plan $plan, int $priceCents, string $customerRef, PaymentMethodInfo $method, SignupIds $ids, Carbon $now, Carbon $trialEnds): void
+    private function persist(Connection $db, SignupData $data, string $passwordHash, Plan $plan, int $priceCents, string $customerRef, PaymentMethodInfo $method, SignupIds $ids, Carbon $now, Carbon $trialEnds): void
     {
         // Escopo da transação: a tabela de vínculos tem RLS e exige o tenant informado.
         $db->statement("select set_config('app.tenant_id', ?, true)", [$ids->tenant]);
@@ -116,7 +119,7 @@ class SignupService
         ]);
         $db->table('users')->insert([
             'id' => $ids->user, 'name' => $data->ownerName, 'email' => $data->ownerEmail,
-            'password' => bcrypt($data->password),
+            'password' => $passwordHash,
             'terms_accepted_at' => $now, 'terms_version' => Config::string('billing.terms_version'),
             'created_at' => $now, 'updated_at' => $now,
         ]);

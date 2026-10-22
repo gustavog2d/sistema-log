@@ -23,6 +23,7 @@ PostgreSQL real, banco `app_test`. O ID do critério aparece no nome de cada tes
 | T-12 | CA-22 | Banco (RLS) | `SignupSafetyTest.php` (vínculos isolados por tenant) | passando |
 | T-13 | contrato | Contrato | `Feature/Signup/SignupContractTest.php` | passando |
 | T-15 | RN-13, RN-14, RN-15 | API/Banco | `SignupSafetyTest.php` (cupom recusado, compensação no gateway, corrida por endereço e e-mail vira 422, 409 em andamento, reserva abandonada, ordem das chaves) | passando |
+| T-16 | RN-09, RN-16, RN-17, RN-18 | API/Banco | `SignupSafetyTest.php` (privilégios mínimos dos papéis, corpo não-JSON dá 415, chave de outro IP não é reaproveitada, gateway fake recusado fora de local/testing, e-mail ASCII, endereço punycode, senha de 72 bytes, limite global) | passando |
 | T-14 | esquema | Esquema | `SchemaRlsTest` com as novas tabelas (memberships com RLS; as demais na lista de plataforma) | passando |
 
 Teste real com `curl` contra a API em execução: cadastro, repetição com a mesma chave e consulta de endereço (feito em 2026-10-25). Encontrou um defeito que a suíte não pega: o servidor de desenvolvimento do Laravel lê só o `.env`, que podia estar sem as variáveis novas; corrigido no `start.sh`.

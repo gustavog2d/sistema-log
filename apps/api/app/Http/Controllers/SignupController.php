@@ -26,8 +26,14 @@ class SignupController extends Controller
             'slug' => ['required', 'string', 'max:64'],
             'niche' => ['required', 'string', Rule::in(Config::array('tenancy.niches'))],
             'owner_name' => ['required', 'string', 'min:2', 'max:100'],
-            'owner_email' => ['required', 'string', 'email', 'max:255'],
-            'password' => ['required', 'string', 'min:'.Config::integer('platform.min_password_length'), 'max:1024'],
+            // Só ASCII: letras de outros alfabetos poderiam imitar e-mails de outras contas.
+            'owner_email' => ['required', 'string', 'email:rfc,strict', 'max:255', 'regex:/^[\x21-\x7E]+$/'],
+            // O bcrypt só considera os primeiros 72 bytes: acima disso a senha perderia força sem aviso.
+            'password' => ['required', 'string', 'min:'.Config::integer('platform.min_password_length'), function (string $attribute, mixed $value, \Closure $fail): void {
+                if (is_string($value) && strlen($value) > 72) {
+                    $fail('A senha pode ter até 72 bytes.');
+                }
+            }],
             'plan' => ['required', 'string', Rule::exists('plans', 'key')->where('status', 'active')],
             'cycle' => ['required', Rule::in(['monthly', 'yearly'])],
             'payment_method_token' => ['required', 'string', 'max:200'],

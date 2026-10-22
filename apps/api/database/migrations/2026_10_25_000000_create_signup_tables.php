@@ -81,6 +81,25 @@ return new class extends Migration
         DB::statement("ALTER TABLE subscriptions ADD CONSTRAINT subscriptions_cycle_valid CHECK (cycle IN ('monthly', 'yearly'))");
         DB::statement("ALTER TABLE memberships ADD CONSTRAINT memberships_role_valid CHECK (role IN ('owner', 'manager', 'professional', 'reception'))");
 
+        // Privilégios mínimos. O papel de plataforma escreve só nas tabelas do cadastro e da cobrança;
+        // o papel da API não lê o hash das senhas nem as chaves de idempotência (respostas guardadas).
+        DB::statement(<<<'SQL'
+            DO $$
+            BEGIN
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_platform') THEN
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON tenants, users, memberships, payment_methods, subscriptions, idempotency_keys TO app_platform;
+                    GRANT USAGE, SELECT ON SEQUENCE idempotency_keys_id_seq TO app_platform;
+                END IF;
+                IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_runtime') THEN
+                    REVOKE ALL ON idempotency_keys FROM app_runtime;
+                    REVOKE ALL ON users FROM app_runtime;
+                    GRANT SELECT (id, name, email, email_verified_at, terms_accepted_at, terms_version, created_at, updated_at) ON users TO app_runtime;
+                    REVOKE ALL ON migrations FROM app_runtime;
+                END IF;
+            END
+            $$
+            SQL);
+
         // Dados de plataforma: o papel da API só lê. Quem escreve é o papel de plataforma.
         DB::statement(<<<'SQL'
             DO $$

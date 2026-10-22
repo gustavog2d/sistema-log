@@ -23,6 +23,12 @@ class IdempotentRequest
 
     public function handle(Request $request, Closure $next, string $scope = 'default'): Response
     {
+        // O hash é calculado sobre o corpo JSON; outros formatos (formulário, query string) seriam
+        // todos iguais a "vazio" e poderiam reaproveitar a resposta de outro pedido.
+        if (! $request->isJson()) {
+            return Problem::response(415, 'Unsupported Media Type', 'Envie o corpo como application/json.');
+        }
+
         $key = trim((string) $request->header('Idempotency-Key'));
 
         if ($key === '' || mb_strlen($key) > 255) {
@@ -31,7 +37,8 @@ class IdempotentRequest
 
         $hash = hash('sha256', (string) json_encode($this->normalized($request->json()->all())));
         $db = DB::connection('pgsql_platform');
-        $where = ['scope' => $scope, 'key' => $key];
+        // A chave vale só para quem a criou (mesmo IP): adivinhar a chave de outra pessoa não devolve a resposta dela.
+        $where = ['scope' => $scope.':'.substr(hash('sha256', (string) $request->ip()), 0, 16), 'key' => $key];
 
         // Reserva a chave. Um pedido que morreu no meio (sem resposta gravada) libera a chave após o prazo.
         $db->table('idempotency_keys')->where($where)->whereNull('response_body')

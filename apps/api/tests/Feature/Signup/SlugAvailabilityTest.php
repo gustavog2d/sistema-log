@@ -13,6 +13,7 @@ it('CA-08 explains why an address is not available', function (string $slug, str
     'reservado' => ['admin', 'reserved'],
     'inválido (maiúsculas)' => ['MeuEstudio', 'invalid'],
     'inválido (curto)' => ['ab', 'invalid'],
+    'inválido (punycode)' => ['xn--abc', 'invalid'],
 ]);
 
 it('answers 422 when the slug is missing or too long', function () {

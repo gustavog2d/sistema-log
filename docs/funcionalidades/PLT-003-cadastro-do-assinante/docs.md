@@ -34,9 +34,16 @@ Qualquer outro valor é recusado. Nenhum cartão real é usado nem guardado: só
 - O e-mail é único na plataforma; a senha tem no mínimo 12 caracteres; os termos precisam ser aceitos (o aceite e a versão ficam registrados).
 - Nichos de lançamento: `tatuagem`, `manicure`, `barbearia`, `estetica_automotiva` (lista em `config/tenancy.php`).
 
+## Segurança do cadastro
+
+- Só `application/json` (415 nos demais formatos); a chave de idempotência vale só para o IP que a criou.
+- `BILLING_GATEWAY` precisa ser definido em cada ambiente; `fake` só roda em `local` e `testing`.
+- E-mail apenas ASCII, endereço sem `xn--`, senha até 72 bytes.
+- Limite por IP (10/min) e teto global (300/hora). Atrás de balanceador é preciso configurar `trustProxies` com os IPs dele, senão todos os clientes compartilham o mesmo IP (pendência de infraestrutura, em `docs/08`).
+
 ## Bancos e papéis
 
-O cadastro escreve com o papel `app_platform` (conexão `pgsql_platform`). O papel da API (`app_runtime`) só lê `tenants`, `subscriptions`, `payment_methods`, `users` e `idempotency_keys`. Num ambiente já criado, recrie o volume do banco (`docker compose down -v && docker compose up -d --build --wait`) para ganhar o papel novo.
+O cadastro escreve com o papel `app_platform` (conexão `pgsql_platform`), que só acessa as tabelas do cadastro e da cobrança. O papel da API (`app_runtime`) só lê `tenants`, `subscriptions` e `payment_methods`, lê `users` sem a senha e não acessa `idempotency_keys` nem `migrations`. Num ambiente já criado, recrie o volume do banco (`docker compose down -v && docker compose up -d --build --wait`) para ganhar o papel novo.
 
 ## Limitações
 

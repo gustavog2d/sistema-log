@@ -28,12 +28,15 @@ O meio de pagamento é um **meio de teste simulado** por trás de uma interface 
 - **RN-06** — Nicho: um de `tatuagem`, `manicure`, `barbearia`, `estetica_automotiva` (lista em configuração; novos nichos entram sem mudar código de regra).
 - **RN-07** — Dona: nome, e-mail e senha (mínimo 12 caracteres). O e-mail é único na plataforma. Termos de uso e privacidade precisam ser aceitos (`accept_terms: true`), e o aceite (data e versão) é registrado.
 - **RN-08** — Idempotência: o cabeçalho `Idempotency-Key` é obrigatório. Repetir o pedido com a mesma chave e o mesmo corpo devolve a **mesma resposta** sem criar nada de novo; a mesma chave com corpo diferente dá 422.
-- **RN-09** — Escrita de plataforma (criar negócio, assinatura, meio de pagamento) usa um papel de banco próprio (`app_platform`). O papel da API (`app_runtime`) continua **sem** poder escrever em `tenants`, `subscriptions` e `payment_methods`.
+- **RN-09** — Escrita de plataforma (criar negócio, assinatura, meio de pagamento) usa um papel de banco próprio (`app_platform`), com acesso **só** às tabelas do cadastro e da cobrança (concedido explicitamente, nunca por padrão). O papel da API (`app_runtime`) continua **sem** poder escrever em `tenants`, `subscriptions`, `payment_methods` e `users`, **não lê** o hash das senhas nem as chaves de idempotência e não acessa a tabela de migrations.
 - **RN-10** — Meio de pagamento de teste (somente com `BILLING_GATEWAY=fake`): `tok_ok` (aprovado), `tok_fail_on_charge` (aceito no cadastro; falhará na cobrança do 7º dia, para testar a suspensão) e `tok_declined` (recusado no cadastro). Qualquer outro token é recusado.
 - **RN-11** — Limite de 10 requisições por minuto por IP no cadastro e 60 na consulta de endereço. Erros em Problem Details.
 - **RN-12** — Auditoria do cadastro (`signup.completed`, com ids e plano; sem senha nem token de pagamento).
 - **RN-13** — Cupom de desconto e assinatura de cortesia entram no PLT-012; o campo `coupon_code` ainda não é aceito (enviar dá 422).
 - **RN-14** — O gateway é chamado antes de gravar. Se a gravação falhar depois (inclusive em corrida por endereço ou e-mail, que vira 422), o cliente criado no gateway é removido (compensação). A auditoria é gravada só depois do sucesso.
+- **RN-16** — Só `application/json` é aceito no cadastro (outros formatos dão 415). A chave de idempotência vale apenas para quem a criou (escopo por IP), então adivinhar a chave de outra pessoa não devolve a resposta dela.
+- **RN-17** — `BILLING_GATEWAY` não tem valor padrão: cada ambiente declara o seu, e o gateway de teste `fake` só funciona nos ambientes `local` e `testing` (em outro ambiente o sistema recusa subir o cadastro).
+- **RN-18** — E-mail só com caracteres ASCII; endereço não pode começar com `xn--`; senha com no máximo 72 bytes (limite do bcrypt); o hash da senha é feito antes de abrir a transação; limite de 10 por minuto por IP e teto global de 300 cadastros por hora.
 - **RN-15** — Uma reserva de `Idempotency-Key` sem resposta e com mais de 5 minutos é considerada abandonada e liberada; chaves com mais de um dia são apagadas. A ordem das chaves do JSON não muda a identidade do pedido.
 
 ## Critérios de aceite
