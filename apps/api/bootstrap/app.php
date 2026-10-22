@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsurePlatformRole;
 use App\Http\Middleware\EnsurePlatformUserActive;
+use App\Http\Middleware\IdempotentRequest;
 use App\Http\Middleware\PlatformOnly;
 use App\Http\Middleware\PublicRoute;
 use App\Http\Middleware\ResolveTenant;
@@ -42,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'abilities' => CheckAbilities::class,
             'platform.active' => EnsurePlatformUserActive::class,
             'platform.role' => EnsurePlatformRole::class,
+            'idempotent' => IdempotentRequest::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

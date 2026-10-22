@@ -24,5 +24,5 @@ class Tenant extends Model
 
     use HasUuids;
 
-    protected $fillable = ['name', 'slug', 'status', 'timezone', 'currency'];
+    protected $fillable = ['name', 'slug', 'niche', 'status', 'timezone', 'currency'];
 }

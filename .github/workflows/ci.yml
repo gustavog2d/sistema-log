@@ -56,6 +56,9 @@ jobs:
       DB_DATABASE: app
       DB_USERNAME: app_runtime
       DB_PASSWORD: app_runtime
+      DB_PLATFORM_USERNAME: app_platform
+      DB_PLATFORM_PASSWORD: app_platform
+      BILLING_GATEWAY: fake
       DB_ADMIN_USERNAME: app
       DB_ADMIN_PASSWORD: app
       REDIS_HOST: 127.0.0.1

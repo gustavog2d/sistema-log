@@ -4,15 +4,17 @@ use App\Models\Feature;
 use App\Models\Plan;
 use Database\Seeders\CatalogSeeder;
 
-it('CA-01 seeds the three launch plans as drafts without prices', function () {
+it('CA-01 seeds the three launch plans active with the initial prices', function () {
     $this->seed(CatalogSeeder::class);
 
     $plans = Plan::orderBy('position')->get();
 
     expect($plans->pluck('key')->all())->toBe(['essencial', 'profissional', 'estudio']);
     expect($plans->pluck('name')->all())->toBe(['Essencial', 'Profissional', 'Estúdio']);
-    expect($plans->pluck('status')->unique()->all())->toBe(['draft']);
-    expect($plans->pluck('monthly_price_cents')->filter()->all())->toBe([]);
+    expect($plans->pluck('status')->unique()->all())->toBe(['active']);
+    expect($plans->pluck('monthly_price_cents')->all())->toBe([1500, 5000, 25000]);
+    expect($plans->pluck('yearly_discount_percent')->unique()->all())->toBe([10]);
+    expect($plans->map->yearlyPriceCents()->all())->toBe([16200, 54000, 270000]);
     expect($plans->pluck('trial_days')->unique()->all())->toBe([7]);
 });
 
