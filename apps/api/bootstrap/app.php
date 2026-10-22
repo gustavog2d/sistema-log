@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsurePlatformRole;
 use App\Http\Middleware\EnsurePlatformUserActive;
+use App\Http\Middleware\EnsureSubscriptionAllowsWrites;
 use App\Http\Middleware\IdempotentRequest;
 use App\Http\Middleware\PlatformOnly;
 use App\Http\Middleware\PublicRoute;
@@ -44,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'platform.active' => EnsurePlatformUserActive::class,
             'platform.role' => EnsurePlatformRole::class,
             'idempotent' => IdempotentRequest::class,
+            'subscription.access' => EnsureSubscriptionAllowsWrites::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -19,7 +19,7 @@ O que cada assinante pode usar é decidido por um serviço de *entitlements* na 
 - **Cancelamento:** em até 7 dias sem custo, conforme o direito de arrependimento do Código de Defesa do Consumidor (art. 49). Os 7 dias contam **a partir do momento em que o cliente solicita e libera a assinatura**, que coincide com o período de teste: cancelar durante o teste nunca gera cobrança, e a primeira cobrança só ocorre depois dele. Não há estorno automático depois da primeira cobrança; o cancelamento então vale até o fim do período já pago. (Decisão de Gustavo em 2026-10-22; vale revisão jurídica antes do lançamento.)
 - **Meios de pagamento:** Pix e cartão de crédito, com recorrência automática no cartão.
 
-## Decisões de negócio, segunda rodada (Gustavo, 2026-10-24)
+## Decisões de negócio, segunda rodada (Gustavo, 2026-10-22)
 
 - **Preços iniciais (mensal):** Essencial R$ 15,00, Profissional R$ 50,00 e Estúdio R$ 250,00. **Desconto de 10%** no plano anual.
 - **Teste de 7 dias exige meio de pagamento já cadastrado.** Para iniciar o teste, o cliente informa e autoriza o pagamento; a cobrança só ocorre no 7º dia, se ele não tiver cancelado.

@@ -72,12 +72,12 @@ it('CA-16 does not let the api role write platform billing tables, and proves it
 ]);
 
 it('CA-16 lets the api role read business data of those tables, but not password hashes or idempotency keys', function () {
-    foreach (['tenants', 'subscriptions', 'payment_methods'] as $table) {
+    foreach (['tenants', 'subscriptions'] as $table) {
         expect(DB::table($table)->count())->toBe(0);
     }
     expect(DB::table('users')->select('id', 'email', 'terms_version')->count())->toBe(0);
 
-    foreach ([fn () => DB::table('users')->select('password')->get(), fn () => DB::table('idempotency_keys')->count()] as $forbidden) {
+    foreach ([fn () => DB::table('users')->select('password')->get(), fn () => DB::table('idempotency_keys')->count(), fn () => DB::table('payment_methods')->count()] as $forbidden) {
         try {
             $forbidden();
             $code = null;

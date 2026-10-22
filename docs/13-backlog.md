@@ -17,8 +17,8 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-001b | Painel web do super admin (login, 2FA e navegação) consumindo a API do PLT-001 | PLT-001, FND-006 | Rota de plataforma inacessível a usuário de tenant | A especificar |
 | PLT-002 | Catálogo de planos e funcionalidades (entitlements) gerido pelo super admin | PLT-001 | Funcionalidade fora do plano devolve 403 | Entregue |
 | PLT-003 | Cadastro self-service (API): dados do negócio, subdomínio, nicho, plano, pagamento de teste e 7 dias de teste | PLT-002 | Subdomínio único e reservado; provisionamento idempotente | Entregue (API) |
-| PLT-004 | Assinatura e cobrança recorrente pelo gateway (checkout, webhooks, reconciliação) | PLT-003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | A especificar |
-| PLT-005 | Bloqueio e liberação de acesso conforme status da assinatura | PLT-004 | Suspensa = só leitura; regularizar reativa | A especificar |
+| PLT-004 | Cobrança do fim do teste e das renovações com meio de pagamento de teste; suspensão imediata em falha (`billing:run`) | PLT-003 | Rodar duas vezes não cobra duas vezes; falha suspende na hora | Entregue (API) |
+| PLT-005 | Bloqueio de acesso por status (somente leitura quando suspensa ou cancelada) e `GET /subscription` | PLT-004 | Suspensa = só leitura; liberar na hora ao regularizar (a regularização é do PLT-007) | Entregue (API) |
 | PLT-006 | Autenticação do assinante (web e token mobile), recuperação de senha, 2FA do dono | FND-005 | Token de um tenant não vale em outro | A especificar |
 | PLT-007 | Gestão da assinatura pelo dono: plano, forma de pagamento, faturas, upgrade, downgrade, cancelamento | PLT-004 | Downgrade acima do limite é bloqueado com aviso | A especificar |
 | PLT-008 | Usuários e papéis do assinante: convite, papéis, desativação, limite do plano | PLT-006 | Cada papel só acessa o que a matriz permite | A especificar |
@@ -26,6 +26,7 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-010 | E-mails transacionais da plataforma (boas-vindas, teste acabando, cobrança, suspensão) | PLT-004 | Cada evento dispara um e-mail, uma vez | A especificar |
 | PLT-011 | Landing, leads com UTM e reCAPTCHA, tela de leads no super admin | PLT-001 | Lead inválido ou sem captcha rejeitado | A especificar |
 | PLT-012 | Cupons e assinaturas de cortesia: cupom de 100% ou proporcional, criado pelo super admin, com validade e limite de uso | PLT-002, PLT-003 | Cupom de 100% assina sem cobrança; proporcional reduz o valor | A especificar |
+| INT-001 | Gateway real de pagamento (Asaas): checkout, webhooks, conciliação, nota fiscal e reserva da fatura em estado `pending` antes de cobrar (cobrança fora da transação) | PLT-004, ADR 0003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | A especificar (por último, depende da conta do Asaas) |
 
 ```mermaid
 flowchart LR

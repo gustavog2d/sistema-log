@@ -53,4 +53,4 @@ Use `App\Plans\EntitlementResolver::forPlan($plano, $excecoesDoAssinante)`. Ele 
 
 | Versão | Data | Mudança |
 | --- | --- | --- |
-| 0.1.0 | 2026-10-24 | Catálogo, regras por plano, preço anual calculado, listagem pública e auditoria |
+| 0.1.0 | 2026-10-22 | Catálogo, regras por plano, preço anual calculado, listagem pública e auditoria |
