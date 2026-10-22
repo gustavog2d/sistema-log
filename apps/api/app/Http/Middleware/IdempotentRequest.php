@@ -18,6 +18,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class IdempotentRequest
 {
+    /** Depois deste prazo, uma reserva sem resposta é considerada abandonada. */
+    public const STALE_AFTER_SECONDS = 300;
+
     public function handle(Request $request, Closure $next, string $scope = 'default'): Response
     {
         $key = trim((string) $request->header('Idempotency-Key'));
@@ -26,9 +29,13 @@ class IdempotentRequest
             throw ValidationException::withMessages(['Idempotency-Key' => 'Informe o cabeçalho Idempotency-Key (até 255 caracteres).']);
         }
 
-        $hash = hash('sha256', (string) json_encode($request->json()->all()));
+        $hash = hash('sha256', (string) json_encode($this->normalized($request->json()->all())));
         $db = DB::connection('pgsql_platform');
         $where = ['scope' => $scope, 'key' => $key];
+
+        // Reserva a chave. Um pedido que morreu no meio (sem resposta gravada) libera a chave após o prazo.
+        $db->table('idempotency_keys')->where($where)->whereNull('response_body')
+            ->where('created_at', '<', now()->subSeconds(self::STALE_AFTER_SECONDS))->delete();
 
         try {
             $db->table('idempotency_keys')->insert($where + ['request_hash' => $hash]);
@@ -55,6 +62,19 @@ class IdempotentRequest
         }
 
         return $response;
+    }
+
+    /**
+     * A ordem das chaves do JSON não muda o resultado.
+     *
+     * @param  array<mixed>  $value
+     * @return array<mixed>
+     */
+    private function normalized(array $value): array
+    {
+        ksort($value);
+
+        return array_map(fn ($item) => is_array($item) ? $this->normalized($item) : $item, $value);
     }
 
     private function replay(?\stdClass $stored, string $hash): Response

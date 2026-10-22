@@ -34,12 +34,30 @@ paths:
               $ref: "#/components/schemas/SignupRequest"
       responses:
         "201":
-          description: Cadastro concluído
+          description: Cadastro concluído. Repetir o mesmo pedido (mesma Idempotency-Key e mesmo corpo) devolve esta mesma resposta, com o cabeçalho Idempotent-Replayed.
+          headers:
+            Idempotent-Replayed:
+              description: Presente (valor true) quando a resposta é a repetição de um pedido anterior.
+              schema: { type: string, enum: ["true"] }
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/SignupResult"
-        "422": { $ref: "#/components/responses/Problem" }
+        "409":
+          description: Já existe um pedido com esta Idempotency-Key ainda em processamento. Tente de novo em instantes.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: >-
+            Dados inválidos (campo em `errors`): formato, endereço ou e-mail indisponível, plano inativo, meio de
+            pagamento recusado, termos não aceitos, `coupon_code` (ainda não aceito) e problemas da chave de
+            idempotência (ausente, acima de 255 caracteres ou já usada com outro conteúdo, em `errors["Idempotency-Key"]`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
         "429": { $ref: "#/components/responses/Problem" }
 components:
   responses:
@@ -61,15 +79,16 @@ components:
       required: [business_name, slug, niche, owner_name, owner_email, password, plan, cycle, payment_method_token, accept_terms]
       properties:
         business_name: { type: string, minLength: 2, maxLength: 100 }
-        slug: { type: string }
+        slug: { type: string, maxLength: 64 }
         niche: { type: string, enum: [tatuagem, manicure, barbearia, estetica_automotiva] }
-        owner_name: { type: string, maxLength: 100 }
+        owner_name: { type: string, minLength: 2, maxLength: 100 }
         owner_email: { type: string, format: email }
         password: { type: string, minLength: 12 }
         plan: { type: string, description: Chave de um plano ativo }
         cycle: { type: string, enum: [monthly, yearly] }
-        payment_method_token: { type: string }
+        payment_method_token: { type: string, maxLength: 200 }
         accept_terms: { type: boolean, const: true }
+        coupon_code: { not: {}, description: Ainda não aceito (cupons entram no PLT-012); enviar este campo dá 422. }
     SignupResult:
       type: object
       required: [tenant, subscription, payment_method]

@@ -33,3 +33,7 @@ it('limits availability checks per ip', function () {
 
     $this->getJson('http://app.test/api/v1/signup/slug-availability?slug=livre')->assertStatus(429);
 });
+
+it('answers 422 when the slug is sent as a list', function () {
+    $this->getJson('http://app.test/api/v1/signup/slug-availability?slug[]=a&slug[]=b')->assertStatus(422);
+});

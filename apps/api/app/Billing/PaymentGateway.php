@@ -18,6 +18,9 @@ interface PaymentGateway
      */
     public function attachPaymentMethod(string $customerRef, string $token): PaymentMethodInfo;
 
+    /** Remove o cliente e seus meios de pagamento (compensação quando o cadastro falha depois do gateway). */
+    public function deleteCustomer(string $customerRef): void;
+
     /** Cobra um valor. A mesma chave de idempotência nunca cobra duas vezes. */
     public function charge(string $customerRef, string $paymentMethodRef, int $amountCents, string $currency, string $idempotencyKey): ChargeResult;
 }

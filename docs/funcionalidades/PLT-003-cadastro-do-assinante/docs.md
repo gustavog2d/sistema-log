@@ -30,7 +30,7 @@ Qualquer outro valor é recusado. Nenhum cartão real é usado nem guardado: só
 
 - O pagamento é obrigatório para começar o teste, mas **nada é cobrado** no cadastro.
 - O preço do ciclo escolhido (mensal ou anual) fica gravado na assinatura: mudar o plano depois não altera quem já assinou.
-- Repetir o mesmo pedido com a mesma `Idempotency-Key` devolve a mesma resposta (cabeçalho `Idempotent-Replayed: true`) sem criar nada. Chave igual com corpo diferente dá 422.
+- Repetir o mesmo pedido com a mesma `Idempotency-Key` devolve a mesma resposta (cabeçalho `Idempotent-Replayed: true`) sem criar nada. Chave igual com corpo diferente dá 422; um pedido idêntico ainda em andamento dá 409. A ordem das chaves do JSON não importa, e reservas abandonadas (mais de 5 minutos sem resposta) são liberadas.
 - O e-mail é único na plataforma; a senha tem no mínimo 12 caracteres; os termos precisam ser aceitos (o aceite e a versão ficam registrados).
 - Nichos de lançamento: `tatuagem`, `manicure`, `barbearia`, `estetica_automotiva` (lista em `config/tenancy.php`).
 
@@ -41,6 +41,8 @@ O cadastro escreve com o papel `app_platform` (conexão `pgsql_platform`). O pap
 ## Limitações
 
 - Não há login do assinante (PLT-006), cobrança do 7º dia e suspensão (PLT-004/005), cancelamento (PLT-007), cupom (PLT-012) nem e-mail de boas-vindas (PLT-010).
+- Se a gravação falhar depois de o gateway aceitar o cartão, o cliente criado no gateway é removido (melhor esforço, com registro do erro se a remoção falhar).
+- O campo `coupon_code` é recusado (422) até existir o cupom (PLT-012).
 - O cadastro responde 422 quando o e-mail já existe (revela que o e-mail está cadastrado).
 - A versão dos termos é provisória.
 

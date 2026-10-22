@@ -43,9 +43,13 @@ export interface SignupRequest {
      * @maxLength 100
      */
   business_name: string;
+  /** @maxLength 64 */
   slug: string;
   niche: SignupRequestNiche;
-  /** @maxLength 100 */
+  /**
+     * @minLength 2
+     * @maxLength 100
+     */
   owner_name: string;
   owner_email: string;
   /** @minLength 12 */
@@ -53,8 +57,11 @@ export interface SignupRequest {
   /** Chave de um plano ativo */
   plan: string;
   cycle: SignupRequestCycle;
+  /** @maxLength 200 */
   payment_method_token: string;
   accept_terms: true;
+  /** Ainda não aceito (cupons entram no PLT-012); enviar este campo dá 422. */
+  coupon_code?: unknown;
 }
 
 export type SignupResultTenant = {
@@ -181,8 +188,13 @@ export type signupResponse201 = {
   status: 201
 }
 
+export type signupResponse409 = {
+  data: Problem
+  status: 409
+}
+
 export type signupResponse422 = {
-  data: ProblemResponse
+  data: Problem
   status: 422
 }
 
@@ -194,7 +206,7 @@ export type signupResponse429 = {
 export type signupResponseSuccess = (signupResponse201) & {
   headers: Headers;
 };
-export type signupResponseError = (signupResponse422 | signupResponse429) & {
+export type signupResponseError = (signupResponse409 | signupResponse422 | signupResponse429) & {
   headers: Headers;
 };
 

@@ -27,9 +27,20 @@ class FakePaymentGateway implements PaymentGateway
     /** @var list<array{customer: string, method: string, amount: int, currency: string, key: string, paid: bool}> */
     private array $charges = [];
 
+    /** @var array<string, bool> cliente => ativo (para testar a compensação) */
+    private array $customers = [];
+
     public function createCustomer(string $name, string $email): string
     {
-        return 'cus_fake_'.Str::lower(Str::random(12));
+        $ref = 'cus_fake_'.Str::lower(Str::random(12));
+        $this->customers[$ref] = true;
+
+        return $ref;
+    }
+
+    public function deleteCustomer(string $customerRef): void
+    {
+        $this->customers[$customerRef] = false;
     }
 
     public function attachPaymentMethod(string $customerRef, string $token): PaymentMethodInfo
@@ -53,6 +64,16 @@ class FakePaymentGateway implements PaymentGateway
         $this->charges[] = ['customer' => $customerRef, 'method' => $paymentMethodRef, 'amount' => $amountCents, 'currency' => $currency, 'key' => $idempotencyKey, 'paid' => $paid];
 
         return new ChargeResult($paid, 'ch_fake_'.md5($idempotencyKey), $paid ? null : 'card_declined');
+    }
+
+    /**
+     * Clientes ainda ativos nesta instância (só para testes).
+     *
+     * @return list<string>
+     */
+    public function activeCustomers(): array
+    {
+        return array_keys(array_filter($this->customers));
     }
 
     /**

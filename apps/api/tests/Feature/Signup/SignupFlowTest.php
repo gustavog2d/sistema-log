@@ -33,6 +33,7 @@ it('CA-02 stores the business, the owner, the membership, the card and the subsc
 
     expect($tenant->niche)->toBe('tatuagem')->and($tenant->slug)->toBe('tintaviva');
     expect($membership->tenant_id)->toBe($tenant->id)->and($membership->user_id)->toBe($user->id)->and($membership->role)->toBe('owner');
+    expect($user->email)->toBe('ana@exemplo.com')->and($user->name)->toBe('Ana Souza');
     expect($subscription->tenant_id)->toBe($tenant->id)->and($subscription->payment_method_id)->toBe($method->id)->and($subscription->status)->toBe('trialing');
     expect($method->tenant_id)->toBe($tenant->id);
 });
@@ -116,7 +117,7 @@ it('CA-12 records the terms acceptance and stores the password hashed with a low
     $user = DB::connection('pgsql_admin')->table('users')->first();
 
     expect($user->email)->toBe('ana@exemplo.com');
-    expect($user->terms_accepted_at)->not->toBeNull()->and($user->terms_version)->not->toBeEmpty();
+    expect($user->terms_accepted_at)->not->toBeNull()->and($user->terms_version)->toBe(config('billing.terms_version'));
     expect($user->password)->not->toBe('uma-senha-forte-123')->and(Hash::check('uma-senha-forte-123', $user->password))->toBeTrue();
 });
 

@@ -32,7 +32,9 @@ O meio de pagamento é um **meio de teste simulado** por trás de uma interface 
 - **RN-10** — Meio de pagamento de teste (somente com `BILLING_GATEWAY=fake`): `tok_ok` (aprovado), `tok_fail_on_charge` (aceito no cadastro; falhará na cobrança do 7º dia, para testar a suspensão) e `tok_declined` (recusado no cadastro). Qualquer outro token é recusado.
 - **RN-11** — Limite de 10 requisições por minuto por IP no cadastro e 60 na consulta de endereço. Erros em Problem Details.
 - **RN-12** — Auditoria do cadastro (`signup.completed`, com ids e plano; sem senha nem token de pagamento).
-- **RN-13** — Cupom de desconto e assinatura de cortesia entram no PLT-012; o campo `coupon_code` ainda não é aceito.
+- **RN-13** — Cupom de desconto e assinatura de cortesia entram no PLT-012; o campo `coupon_code` ainda não é aceito (enviar dá 422).
+- **RN-14** — O gateway é chamado antes de gravar. Se a gravação falhar depois (inclusive em corrida por endereço ou e-mail, que vira 422), o cliente criado no gateway é removido (compensação). A auditoria é gravada só depois do sucesso.
+- **RN-15** — Uma reserva de `Idempotency-Key` sem resposta e com mais de 5 minutos é considerada abandonada e liberada; chaves com mais de um dia são apagadas. A ordem das chaves do JSON não muda a identidade do pedido.
 
 ## Critérios de aceite
 
@@ -72,7 +74,7 @@ Contrato em `openapi.yaml`.
 | Método | Rota | Descrição | Erros |
 | --- | --- | --- | --- |
 | GET | `/api/v1/signup/slug-availability` | Endereço livre? | 422, 429 |
-| POST | `/api/v1/signup` | Cria negócio, dona, pagamento e teste | 422, 429 |
+| POST | `/api/v1/signup` | Cria negócio, dona, pagamento e teste | 409 (pedido idêntico em andamento), 422, 429 |
 
 ## Dados
 
