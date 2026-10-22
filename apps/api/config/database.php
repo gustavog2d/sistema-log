@@ -90,8 +90,25 @@ return [
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
             'database' => env('DB_DATABASE', 'laravel'),
+            // Papel de runtime (sem superusuário e sem BYPASSRLS), para o RLS valer.
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
+        // Papel dono das tabelas: usado só em migrations e preparo de testes. Ignora o RLS.
+        'pgsql_admin' => [
+            'driver' => 'pgsql',
+            'url' => env('DB_ADMIN_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'laravel'),
+            'username' => env('DB_ADMIN_USERNAME', 'root'),
+            'password' => env('DB_ADMIN_PASSWORD', ''),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,

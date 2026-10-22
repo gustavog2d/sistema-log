@@ -8,8 +8,11 @@ x-api: &api
   environment: &api-env
     DB_HOST: postgres
     DB_PORT: 5432
-    DB_USERNAME: ${DB_USERNAME:-app}
-    DB_PASSWORD: ${DB_PASSWORD:-app}
+    DB_USERNAME: ${DB_USERNAME:-app_runtime}
+    DB_PASSWORD: ${DB_PASSWORD:-app_runtime}
+    DB_ADMIN_USERNAME: ${DB_ADMIN_USERNAME:-app}
+    DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:-app}
+    APP_BASE_DOMAIN: ${APP_BASE_DOMAIN:-localhost}
     DB_DATABASE: ${DB_DATABASE:-app}
     REDIS_HOST: redis
     MAIL_HOST: mailpit
@@ -62,8 +65,8 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: ${DB_USERNAME:-app}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-app}
+      POSTGRES_USER: ${DB_ADMIN_USERNAME:-app}
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:-app}
       POSTGRES_DB: ${DB_DATABASE:-app}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -74,7 +77,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'pg_isready -U ${DB_USERNAME:-app} -d ${DB_DATABASE:-app}',
+          'pg_isready -U ${DB_ADMIN_USERNAME:-app} -d ${DB_DATABASE:-app}',
         ]
       interval: 3s
       timeout: 3s

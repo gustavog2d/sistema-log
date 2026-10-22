@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\PlatformOnly;
+use App\Http\Middleware\PublicRoute;
+use App\Http\Middleware\ResolveTenant;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,7 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'tenant' => ResolveTenant::class,
+            'platform' => PlatformOnly::class,
+            'public' => PublicRoute::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
