@@ -15,5 +15,5 @@ run CA-05 "Prettier"                    web "cd /workspace && pnpm exec prettier
 run CA-06 "Vitest"                      web "cd /workspace && pnpm test"
 run CA-07 "Teste único (Pest)"          api "vendor/bin/pest --filter='reports api, database and redis as healthy'"
 run CA-07 "Teste único (Vitest)"        web "cd /workspace && pnpm --filter web exec vitest run src/components/home.test.tsx -t 'renders the title'"
-run RN-04 "Cliente gerado sem diferença" web "cd /workspace && f=packages/api-client/src/generated/api.ts && before=\$(sha256sum \$f) && pnpm api-client:generate >/dev/null && pnpm exec prettier --write \$f >/dev/null && [ \"\$before\" = \"\$(sha256sum \$f)\" ]"
+run RN-04 "Cliente gerado sem diferença" web "cd /workspace && d=packages/api-client/src/generated && before=\$(cat \$d/*.ts | sha256sum) && pnpm api-client:generate >/dev/null && [ \"\$before\" = \"\$(cat \$d/*.ts | sha256sum)\" ]"
 exit $fail

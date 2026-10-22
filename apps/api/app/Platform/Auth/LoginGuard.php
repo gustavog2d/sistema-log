@@ -4,13 +4,14 @@ namespace App\Platform\Auth;
 
 use App\Models\PlatformUser;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /** Regras de senha e bloqueio progressivo da conta. */
 class LoginGuard
 {
-    /** Hash fixo para gastar o mesmo tempo quando o e-mail não existe. */
-    private const DUMMY_HASH = '$2y$12$usesomesillystringfore7hnbRJHxXVLeakoG8K30oukPsA.ztMG';
+    /** Hash gerado com o custo configurado, para gastar o mesmo tempo quando o e-mail não existe. */
+    private static ?string $dummyHash = null;
 
     public function __construct(private readonly PlatformAudit $audit) {}
 
@@ -23,7 +24,7 @@ class LoginGuard
         $user = PlatformUser::query()->where('email', mb_strtolower($email))->first();
 
         if ($user === null) {
-            Hash::check($password, self::DUMMY_HASH);
+            Hash::check($password, self::$dummyHash ??= Hash::make(bin2hex(random_bytes(16))));
             $this->audit->record('login.failed', null, ['reason' => 'unknown_user']);
 
             throw new InvalidCredentials;
@@ -51,15 +52,28 @@ class LoginGuard
     /** Conta uma falha (senha ou código) e bloqueia ao atingir o limite. */
     public function registerFailure(PlatformUser $user, string $reason): void
     {
-        $user->failed_attempts++;
+        // Linha travada: requisições paralelas não passam do limite de tentativas.
+        $locked = DB::transaction(function () use ($user): bool {
+            $fresh = PlatformUser::query()->lockForUpdate()->findOrFail($user->id);
+            $fresh->failed_attempts++;
 
-        if ($user->failed_attempts >= Config::integer('platform.max_failed_attempts')) {
-            $user->locked_until = now()->addMinutes(Config::integer('platform.lock_minutes'));
-            $user->failed_attempts = 0;
+            $reachedLimit = $fresh->failed_attempts >= Config::integer('platform.max_failed_attempts');
+
+            if ($reachedLimit) {
+                $fresh->locked_until = now()->addMinutes(Config::integer('platform.lock_minutes'));
+                $fresh->failed_attempts = 0;
+            }
+
+            $fresh->save();
+            $user->setRawAttributes($fresh->getAttributes(), true);
+
+            return $reachedLimit;
+        });
+
+        if ($locked) {
             $this->audit->record('login.locked', $user, ['reason' => $reason]);
         }
 
-        $user->save();
         $this->audit->record('login.failed', $user, ['reason' => $reason]);
     }
 

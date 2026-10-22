@@ -4,6 +4,7 @@ namespace App\Http;
 
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /** Respostas de erro no formato Problem Details (RFC 9457). */
 final class Problem
@@ -30,6 +31,16 @@ final class Problem
             $status,
             ['Content-Type' => 'application/problem+json', ...$headers],
         );
+    }
+
+    /** 403 e 404 de rotas da API, sem expor a mensagem interna da exceção. */
+    public static function fromHttpException(HttpExceptionInterface $exception): ?JsonResponse
+    {
+        return match ($exception->getStatusCode()) {
+            403 => self::response(403, 'Forbidden', 'Acesso negado.'),
+            404 => self::response(404, 'Not Found'),
+            default => null,
+        };
     }
 
     public static function tooManyRequests(ThrottleRequestsException $exception): JsonResponse

@@ -24,6 +24,8 @@ paths:
                 $ref: "#/components/schemas/Challenge"
         "401":
           $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
         "423":
           $ref: "#/components/responses/Problem"
         "429":
@@ -49,6 +51,10 @@ paths:
                 $ref: "#/components/schemas/AccessToken"
         "401":
           $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
         "423":
           $ref: "#/components/responses/Problem"
   /platform/2fa/setup:
@@ -64,6 +70,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TwoFactorSetup"
+        "401":
+          $ref: "#/components/responses/Problem"
         "403":
           $ref: "#/components/responses/Problem"
   /platform/2fa/confirm:
@@ -88,6 +96,10 @@ paths:
         "401":
           $ref: "#/components/responses/Problem"
         "403":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "423":
           $ref: "#/components/responses/Problem"
   /platform/me:
     get:

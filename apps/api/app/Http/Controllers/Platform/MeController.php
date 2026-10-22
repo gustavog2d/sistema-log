@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Http\Controllers\Controller;
-use App\Models\PlatformUser;
+use App\Platform\Auth\AuthenticatedPlatformUser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -11,8 +11,7 @@ class MeController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $user = $request->user();
-        abort_unless($user instanceof PlatformUser, 401);
+        $user = AuthenticatedPlatformUser::from($request);
 
         return response()->json([
             'id' => $user->id,

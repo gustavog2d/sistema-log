@@ -24,6 +24,8 @@ Testes de API em Pest com PostgreSQL real. O código TOTP dos testes é gerado c
 | T-13 | CA-14 | API | `Feature/Platform/LoginSecurityTest.php` | passando |
 | T-14 | RN-10 | API | `Feature/Platform/AuthFlowTest.php` (desativar revoga tokens) | passando |
 | T-15 | contrato | Contrato | `Feature/Platform/ContractTest.php` | passando |
+| T-17 | RN-04, RN-05 | API | `AuthFlowTest.php` (expiração de 5 min e 8 h, desafio de uso único, setup recusado com 2FA ativo, papel `suporte`) | passando |
+| T-18 | CA-07 | API | `AuthFlowTest.php` (bloqueio via confirmação do 2FA) e `AuditTest.php` (`login.locked`, `recovery_code.used`) | passando |
 | T-16 | isolamento | Esquema | `SchemaRlsTest` continua verde com as novas tabelas de plataforma | passando |
 
 - Regressões encontradas em teste real com `curl` (cliente sem `Accept: application/json`): 401 e 403 em Problem Details, nunca redirect nem 500. Cobertas em `AuthFlowTest`.
@@ -31,8 +33,8 @@ Testes de API em Pest com PostgreSQL real. O código TOTP dos testes é gerado c
 ## Casos obrigatórios
 
 - [x] Sucesso do fluxo principal
-- [x] Validação de campos obrigatórios (e-mail, senha, código)
-- [x] Permissão: token de desafio sem acesso a rota protegida; usuário de assinante sem acesso
+- [x] Validação de campos obrigatórios e limites (e-mail, senha, código) em login, verify e confirm
+- [x] Permissão: token de desafio sem acesso a rota protegida; token de acesso não executa as etapas do 2FA; token `setup` não verifica código. Usuário de assinante ainda não existe (PLT-006): o isolamento por host está em `PlatformHostTest` (CA-09)
 - [x] Isolamento de tenant: rotas de plataforma respondem 404 no host de um assinante
 - [x] Resposta bate com o `openapi.yaml`
 - [ ] Plano, limite, idempotência, concorrência, fuso, acessibilidade: não se aplicam

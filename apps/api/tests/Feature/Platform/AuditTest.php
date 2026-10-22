@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 it('CA-12 records the login flow without secrets', function () {
     $user = $this->platformUser();
@@ -23,4 +24,20 @@ it('CA-12 records two factor activation', function () {
     $this->asToken($challenge, 'POST', '2fa/confirm', ['code' => $this->otp($secret)]);
 
     expect(DB::connection('pgsql_admin')->table('platform_audit_logs')->pluck('event')->all())->toContain('two_factor.enabled');
+});
+
+it('CA-12 records lockouts and recovery code usage', function () {
+    $user = $this->platformUser();
+    $user->recovery_codes = [Hash::make('abcd-efgh-1234')];
+    $user->save();
+
+    $challenge = $this->login($user->email)->json('challenge_token');
+    $this->asToken($challenge, 'POST', 'auth/2fa/verify', ['code' => 'abcd-efgh-1234'])->assertOk();
+
+    foreach (range(1, 5) as $_) {
+        $this->login($user->email, 'senha-errada-123');
+    }
+
+    expect(DB::connection('pgsql_admin')->table('platform_audit_logs')->pluck('event')->all())
+        ->toContain('recovery_code.used', 'login.locked');
 });

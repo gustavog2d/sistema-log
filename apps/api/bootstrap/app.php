@@ -46,9 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(fn (AuthorizationException $e, Request $r) => $isApi($r) ? Problem::response(403, 'Forbidden', 'Acesso negado.') : null);
         $exceptions->render(fn (ValidationException $e, Request $r) => $isApi($r) ? Problem::response(422, 'Unprocessable Entity', 'Dados inválidos.', ['errors' => $e->errors()]) : null);
         $exceptions->render(fn (ThrottleRequestsException $e, Request $r) => $isApi($r) ? Problem::tooManyRequests($e) : null);
-        $exceptions->render(fn (HttpExceptionInterface $e, Request $r) => $isApi($r) && in_array($e->getStatusCode(), [403, 404], true)
-            ? Problem::response($e->getStatusCode(), $e->getStatusCode() === 403 ? 'Forbidden' : 'Not Found', $e->getStatusCode() === 403 ? 'Acesso negado.' : null)
-            : null);
+        $exceptions->render(fn (HttpExceptionInterface $e, Request $r) => $isApi($r) ? Problem::fromHttpException($e) : null);
 
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),

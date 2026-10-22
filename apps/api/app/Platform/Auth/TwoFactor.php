@@ -4,6 +4,7 @@ namespace App\Platform\Auth;
 
 use App\Models\PlatformUser;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use PragmaRX\Google2FA\Google2FA;
 
@@ -82,18 +83,28 @@ class TwoFactor
 
     private function consumeRecoveryCode(PlatformUser $user, string $code): bool
     {
-        $codes = $user->recovery_codes ?? [];
+        $used = DB::transaction(function () use ($user, $code): bool {
+            // Linha travada: dois pedidos simultâneos não usam o mesmo código de recuperação.
+            $fresh = PlatformUser::query()->lockForUpdate()->findOrFail($user->id);
+            $codes = $fresh->recovery_codes ?? [];
 
-        foreach ($codes as $index => $hash) {
-            if (Hash::check(mb_strtolower(trim($code)), $hash)) {
-                unset($codes[$index]);
-                $user->forceFill(['recovery_codes' => array_values($codes)])->save();
-                $this->audit->record('recovery_code.used', $user);
+            foreach ($codes as $index => $hash) {
+                if (Hash::check(mb_strtolower(trim($code)), $hash)) {
+                    unset($codes[$index]);
+                    $fresh->forceFill(['recovery_codes' => array_values($codes)])->save();
+                    $user->setRawAttributes($fresh->getAttributes(), true);
 
-                return true;
+                    return true;
+                }
             }
+
+            return false;
+        });
+
+        if ($used) {
+            $this->audit->record('recovery_code.used', $user);
         }
 
-        return false;
+        return $used;
     }
 }
