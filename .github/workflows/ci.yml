@@ -39,10 +39,10 @@ jobs:
         env:
           POSTGRES_USER: app
           POSTGRES_PASSWORD: app
-          POSTGRES_DB: app_test
+          POSTGRES_DB: app
         ports: ['5432:5432']
         options: >-
-          --health-cmd "pg_isready -U app -d app_test"
+          --health-cmd "pg_isready -U app -d app"
           --health-interval 5s --health-timeout 5s --health-retries 10
       redis:
         image: redis:7-alpine
@@ -53,8 +53,11 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_USERNAME: app
-      DB_PASSWORD: app
+      DB_DATABASE: app
+      DB_USERNAME: app_runtime
+      DB_PASSWORD: app_runtime
+      DB_ADMIN_USERNAME: app
+      DB_ADMIN_PASSWORD: app
       REDIS_HOST: 127.0.0.1
     steps:
       - uses: actions/checkout@v4
@@ -69,6 +72,9 @@ jobs:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-
+      - name: Papéis e banco de teste do PostgreSQL
+        working-directory: .
+        run: PGPASSWORD=app psql -h 127.0.0.1 -U app -d app -v ON_ERROR_STOP=1 -f docker/postgres/init.sql
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: cp .env.example .env && php artisan key:generate --force
       - name: Pint
