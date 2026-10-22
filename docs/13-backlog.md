@@ -12,7 +12,7 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | FND-004 | Infra de homologação em Docker Compose (API, workers, Postgres, Redis, armazenamento de objetos, e-mail) + Cloudflare com curinga; backup e restauração ensaiados (ADR 0004). Terraform/AWS fica para depois | FND-001 | Deploy e rollback ensaiados | A especificar |
 | FND-005 | Base multi-tenant: resolução por subdomínio e token, RLS, suíte de isolamento | FND-002 | Tenant A não acessa dado do tenant B | Entregue |
 | FND-006 | Design system base (tokens, componentes, layout do painel) | FND-001 | Componentes com testes de acessibilidade | A especificar |
-| FND-007 | Deploy em homologação com Docker Compose no servidor escolhido (inclui backup/restauração e Cloudflare) | FND-003, FND-004 | Deploy e rollback ensaiados | A especificar (depende do provedor do servidor) |
+| FND-007 | Deploy em homologação com Docker Compose no servidor escolhido (inclui backup/restauração e Cloudflare) | FND-003, FND-004 | Deploy e rollback ensaiados | Adiado (primeiro roda só local; ADR 0004) |
 | PLT-001 | Login do super admin com 2FA e painel da plataforma | FND-005 | Rota de plataforma inacessível a usuário de tenant | A especificar |
 | PLT-002 | Catálogo de planos e funcionalidades (entitlements) gerido pelo super admin | PLT-001 | Funcionalidade fora do plano devolve 403 | A especificar |
 | PLT-003 | Cadastro self-service: dados do negócio, escolha do subdomínio, nicho, teste grátis | PLT-002 | Subdomínio único e reservado; provisionamento idempotente | A especificar |
@@ -24,6 +24,7 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-009 | Gestão de assinantes no super admin: lista, detalhe, exceções, suspender, impersonação auditada | PLT-005 | Impersonação sempre registrada | A especificar |
 | PLT-010 | E-mails transacionais da plataforma (boas-vindas, teste acabando, cobrança, suspensão) | PLT-004 | Cada evento dispara um e-mail, uma vez | A especificar |
 | PLT-011 | Landing, leads com UTM e reCAPTCHA, tela de leads no super admin | PLT-001 | Lead inválido ou sem captcha rejeitado | A especificar |
+| PLT-012 | Cupons e assinaturas de cortesia: cupom de 100% ou proporcional, criado pelo super admin, com validade e limite de uso | PLT-002, PLT-003 | Cupom de 100% assina sem cobrança; proporcional reduz o valor | A especificar |
 
 ```mermaid
 flowchart LR
