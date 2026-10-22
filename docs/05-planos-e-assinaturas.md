@@ -11,12 +11,12 @@ O que cada assinante pode usar é decidido por um serviço de *entitlements* na 
 
 ## Decisões de negócio (Gustavo, 2026-10-22)
 
-- **Planos de lançamento:** Essencial, Profissional e Estúdio. Preços, limites e o que cada um inclui **ainda não estão definidos**; o sistema nasce sem regra fixa e o catálogo é configurável.
+- **Planos de lançamento:** três planos: Essencial, Profissional e Estúdio. Preços, limites e o que cada um inclui **ainda não estão definidos**; o sistema nasce sem regra fixa e o catálogo é configurável.
 - **Teste grátis:** 7 dias.
 - **Ciclos:** mensal ou anual. O anual tem desconto (percentual por plano, a definir).
 - **Funcionalidades por plano:** cada funcionalidade pode estar **liberada, limitada (com número) ou oculta** conforme o plano. O modelo já prevê as três situações; as regras de cada plano entram depois, sem mudar código (só dados do catálogo).
 - **Assinatura de cortesia (teste interno):** é possível assinar sem pagar, por **cupom de desconto** de 100% (cortesia) ou proporcional. O cupom é do nosso domínio (o gateway não o fornece para assinaturas): ele define o valor que será cobrado.
-- **Cancelamento:** em até 7 dias sem custo, conforme o direito de arrependimento do Código de Defesa do Consumidor (art. 49). Regra adotada (a mais favorável ao cliente): cancelar durante o teste não gera cobrança; depois da primeira cobrança, o cliente tem 7 dias para cancelar com estorno integral.
+- **Cancelamento:** em até 7 dias sem custo, conforme o direito de arrependimento do Código de Defesa do Consumidor (art. 49). Os 7 dias contam **a partir do momento em que o cliente solicita e libera a assinatura**, que coincide com o período de teste: cancelar durante o teste nunca gera cobrança, e a primeira cobrança só ocorre depois dele. Não há estorno automático depois da primeira cobrança; o cancelamento então vale até o fim do período já pago. (Decisão de Gustavo em 2026-10-22; vale revisão jurídica antes do lançamento.)
 - **Meios de pagamento:** Pix e cartão de crédito, com recorrência automática no cartão.
 
 ## Modelo de funcionalidades por plano

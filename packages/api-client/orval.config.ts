@@ -16,4 +16,5 @@ export default defineConfig({
   health: contract('health', 'FND-002-monorepo-e-agentes'),
   tenant: contract('tenant', 'FND-005-base-multi-tenant'),
   platform: contract('platform', 'PLT-001-login-super-admin'),
+  plans: contract('plans', 'PLT-002-catalogo-de-planos'),
 });
