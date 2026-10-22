@@ -1,0 +1,15 @@
+{
+  "name": "monorepo",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "format": "prettier --write .",
+    "api-client:generate": "pnpm --filter @app/api-client generate"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

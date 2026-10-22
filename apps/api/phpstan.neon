@@ -1,0 +1,10 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: max
+    # Os testes Pest usam $this dentro de closures, que o PHPStan não resolve; eles são validados pela própria suíte.
+    paths:
+        - app
+        - routes
+        - bootstrap
