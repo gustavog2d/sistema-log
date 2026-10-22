@@ -1,5 +1,6 @@
 export * as auth from './generated/auth';
 export * as health from './generated/health';
+export * as management from './generated/management';
 export * as plans from './generated/plans';
 export * as platform from './generated/platform';
 export * as signup from './generated/signup';

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Billing\SubscriptionAccess;
+use App\Billing\SubscriptionManager;
 use App\Http\Problem;
 use App\Models\Plan;
 use App\Models\Subscription;
@@ -32,6 +33,8 @@ class SubscriptionController extends Controller
             'next_charge_at' => SubscriptionAccess::nextChargeAt($subscription)?->toIso8601String(),
             'suspended_at' => $subscription->suspended_at?->toIso8601String(),
             'can_write' => SubscriptionAccess::canWrite($subscription->status),
+            'payment_method' => SubscriptionManager::summary($subscription)['payment_method'],
+            'cancel_at_period_end' => SubscriptionManager::summary($subscription)['cancel_at_period_end'],
         ]);
     }
 }

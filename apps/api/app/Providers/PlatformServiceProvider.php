@@ -28,6 +28,7 @@ class PlatformServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('tenant-reset', fn (Request $request) => Limit::perHour(10)->by((string) $request->ip()));
         RateLimiter::for('subscription-status', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
+        RateLimiter::for('subscription-manage', fn (Request $request) => Limit::perMinute(30)->by((string) $request->ip()));
         RateLimiter::for('slug-check', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('platform-login', fn (Request $request) => Limit::perMinute(10)->by((string) $request->ip()));
         RateLimiter::for('platform-verify', fn (Request $request) => Limit::perMinute(20)->by((string) $request->ip()));

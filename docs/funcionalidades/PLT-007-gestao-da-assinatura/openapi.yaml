@@ -1,0 +1,151 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+security: [{ bearerAuth: [] }]
+paths:
+  /subscription/payment-method:
+    put:
+      operationId: updatePaymentMethod
+      summary: Troca o meio de pagamento; se a assinatura está suspensa, cobra na hora e regulariza
+      description: Exige `Idempotency-Key` e o papel de dona. Funciona com a assinatura suspensa.
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 255 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_method_token]
+              properties:
+                payment_method_token: { type: string, maxLength: 200 }
+      responses:
+        "200":
+          description: Meio de pagamento trocado (e assinatura regularizada, se estava suspensa)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManagedSubscription" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "402": { $ref: "#/components/responses/PaymentFailed" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /subscription/cancel:
+    post:
+      operationId: cancelSubscription
+      summary: Pede o cancelamento (vale no fim do teste ou do período pago; suspensa cancela na hora)
+      responses:
+        "200":
+          description: Cancelamento registrado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManagedSubscription" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /subscription/reactivate:
+    post:
+      operationId: reactivateSubscription
+      summary: Desfaz um pedido de cancelamento ainda pendente
+      responses:
+        "200":
+          description: Cancelamento desfeito
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ManagedSubscription" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /subscription/invoices:
+    get:
+      operationId: listInvoices
+      summary: Faturas do negócio, das mais novas para as mais antigas
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Página de faturas
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InvoicePage" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token de acesso do assinante (PLT-006).
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    PaymentFailed:
+      description: A cobrança da regularização foi recusada; a assinatura continua suspensa
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/PaymentFailed" }
+  schemas:
+    ManagedSubscription:
+      type: object
+      required: [status, cancel_at_period_end, can_write, payment_method]
+      properties:
+        status: { type: string, enum: [trialing, active, suspended, canceled] }
+        cancel_at_period_end: { type: boolean }
+        can_write: { type: boolean }
+        current_period_end: { type: [string, "null"], format: date-time }
+        payment_method:
+          type: [object, "null"]
+          required: [type, brand, last4]
+          properties:
+            type: { type: string }
+            brand: { type: [string, "null"] }
+            last4: { type: [string, "null"] }
+    InvoicePage:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Invoice" }
+        next_cursor: { type: [string, "null"] }
+    Invoice:
+      type: object
+      required: [id, period_start, period_end, amount_cents, currency, status, paid_at]
+      properties:
+        id: { type: string, format: uuid }
+        period_start: { type: string, format: date-time }
+        period_end: { type: string, format: date-time }
+        amount_cents: { type: integer }
+        currency: { type: string }
+        status: { type: string, enum: [paid, failed] }
+        paid_at: { type: [string, "null"], format: date-time }
+    PaymentFailed:
+      type: object
+      required: [type, title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer, enum: [402] }
+        detail: { type: string }
+        code: { type: string, enum: [payment_failed] }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors: { type: object }

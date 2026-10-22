@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateTenantUser;
+use App\Http\Middleware\EnsureOwner;
 use App\Http\Middleware\EnsurePlatformRole;
 use App\Http\Middleware\EnsurePlatformUserActive;
 use App\Http\Middleware\EnsureSubscriptionAllowsWrites;
@@ -52,6 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'subscription.access' => EnsureSubscriptionAllowsWrites::class,
             'subscription.exempt' => SubscriptionExempt::class,
             'auth.tenant' => AuthenticateTenantUser::class,
+            'owner' => EnsureOwner::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -80,6 +80,13 @@ class SubscriptionBilling
 
         $db->statement("select set_config('app.tenant_id', ?, true)", [$sub->tenantId]);
 
+        // Cancelamento pedido pela dona: no vencimento a assinatura termina, sem cobrar e sem fatura.
+        if ($row->canceled_at !== null) {
+            $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'canceled', 'updated_at' => now()]);
+
+            return [['subscription.canceled', ['subscription' => $sub->id, 'tenant' => $sub->tenantId]]];
+        }
+
         [$start, $end] = $this->period($due, $sub->cycle, $asOf, $sub->billingDay());
         $result = $this->charge($db, $sub, $due);
 

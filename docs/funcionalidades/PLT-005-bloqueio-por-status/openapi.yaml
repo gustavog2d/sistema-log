@@ -45,7 +45,7 @@ components:
   schemas:
     Subscription:
       type: object
-      required: [status, plan, cycle, price_cents, currency, trial_ends_at, current_period_end, next_charge_at, suspended_at, can_write]
+      required: [status, plan, cycle, price_cents, currency, trial_ends_at, current_period_end, next_charge_at, suspended_at, can_write, payment_method, cancel_at_period_end]
       properties:
         status: { type: string, enum: [trialing, active, suspended, canceled] }
         plan:
@@ -62,6 +62,15 @@ components:
         next_charge_at: { type: [string, "null"], format: date-time, description: Quando a próxima cobrança será tentada; nulo se suspensa ou cancelada }
         suspended_at: { type: [string, "null"], format: date-time }
         can_write: { type: boolean, description: Falso quando a assinatura está suspensa ou cancelada (somente leitura) }
+        payment_method:
+          type: [object, "null"]
+          description: Meio de pagamento atual (nunca a referência do gateway)
+          required: [type, brand, last4]
+          properties:
+            type: { type: string }
+            brand: { type: [string, "null"] }
+            last4: { type: [string, "null"] }
+        cancel_at_period_end: { type: boolean, description: Verdadeiro quando há cancelamento pedido e ainda não efetivado (PLT-007) }
     SubscriptionBlocked:
       type: object
       description: Corpo do 403 de escrita bloqueada (Problem Details com `code`)
