@@ -105,13 +105,19 @@ export type ForgotPasswordBody = {
 export type ResetPasswordBody = {
   email: string;
   token: string;
-  /** @minLength 12 */
+  /**
+     * De 12 caracteres até 72 bytes (limite do bcrypt).
+     * @minLength 12
+     */
   password: string;
 };
 
 export type ChangePasswordBody = {
   current_password: string;
-  /** @minLength 12 */
+  /**
+     * De 12 caracteres até 72 bytes (limite do bcrypt).
+     * @minLength 12
+     */
   password: string;
 };
 
@@ -201,6 +207,11 @@ export type verifyTwoFactorResponse401 = {
   status: 401
 }
 
+export type verifyTwoFactorResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
 export type verifyTwoFactorResponse422 = {
   data: ProblemResponse
   status: 422
@@ -211,10 +222,15 @@ export type verifyTwoFactorResponse423 = {
   status: 423
 }
 
+export type verifyTwoFactorResponse429 = {
+  data: ProblemResponse
+  status: 429
+}
+
 export type verifyTwoFactorResponseSuccess = (verifyTwoFactorResponse200) & {
   headers: Headers;
 };
-export type verifyTwoFactorResponseError = (verifyTwoFactorResponse401 | verifyTwoFactorResponse422 | verifyTwoFactorResponse423) & {
+export type verifyTwoFactorResponseError = (verifyTwoFactorResponse401 | verifyTwoFactorResponse403 | verifyTwoFactorResponse422 | verifyTwoFactorResponse423 | verifyTwoFactorResponse429) & {
   headers: Headers;
 };
 
@@ -268,10 +284,15 @@ export type meResponse401 = {
   status: 401
 }
 
+export type meResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
 export type meResponseSuccess = (meResponse200) & {
   headers: Headers;
 };
-export type meResponseError = (meResponse401) & {
+export type meResponseError = (meResponse401 | meResponse403) & {
   headers: Headers;
 };
 
@@ -311,10 +332,15 @@ export type logoutResponse401 = {
   status: 401
 }
 
+export type logoutResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
 export type logoutResponseSuccess = (logoutResponse204) & {
   headers: Headers;
 };
-export type logoutResponseError = (logoutResponse401) & {
+export type logoutResponseError = (logoutResponse401 | logoutResponse403) & {
   headers: Headers;
 };
 
@@ -354,10 +380,15 @@ export type logoutAllResponse401 = {
   status: 401
 }
 
+export type logoutAllResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
 export type logoutAllResponseSuccess = (logoutAllResponse204) & {
   headers: Headers;
 };
-export type logoutAllResponseError = (logoutAllResponse401) & {
+export type logoutAllResponseError = (logoutAllResponse401 | logoutAllResponse403) & {
   headers: Headers;
 };
 
@@ -521,15 +552,25 @@ export type changePasswordResponse401 = {
   status: 401
 }
 
+export type changePasswordResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
 export type changePasswordResponse422 = {
   data: ProblemResponse
   status: 422
 }
 
+export type changePasswordResponse423 = {
+  data: ProblemResponse
+  status: 423
+}
+
 export type changePasswordResponseSuccess = (changePasswordResponse200) & {
   headers: Headers;
 };
-export type changePasswordResponseError = (changePasswordResponse401 | changePasswordResponse422) & {
+export type changePasswordResponseError = (changePasswordResponse401 | changePasswordResponse403 | changePasswordResponse422 | changePasswordResponse423) & {
   headers: Headers;
 };
 
@@ -606,6 +647,7 @@ export const getTwoFactorSetupUrl = () => {
 }
 
 /**
+ * Aceita o token de acesso ou o token de configuração (`next=setup`, quando o 2FA é obrigatório para donas).
  * @summary Gera o segredo do 2FA
  */
 export const twoFactorSetup = async ( options?: Parameters<typeof customFetch>[1]): Promise<twoFactorSetupResponse> => {
@@ -641,10 +683,20 @@ export type twoFactorConfirmResponse422 = {
   status: 422
 }
 
+export type twoFactorConfirmResponse423 = {
+  data: ProblemResponse
+  status: 423
+}
+
+export type twoFactorConfirmResponse429 = {
+  data: ProblemResponse
+  status: 429
+}
+
 export type twoFactorConfirmResponseSuccess = (twoFactorConfirmResponse200) & {
   headers: Headers;
 };
-export type twoFactorConfirmResponseError = (twoFactorConfirmResponse401 | twoFactorConfirmResponse403 | twoFactorConfirmResponse422) & {
+export type twoFactorConfirmResponseError = (twoFactorConfirmResponse401 | twoFactorConfirmResponse403 | twoFactorConfirmResponse422 | twoFactorConfirmResponse423 | twoFactorConfirmResponse429) & {
   headers: Headers;
 };
 
@@ -698,15 +750,25 @@ export type twoFactorDisableResponse401 = {
   status: 401
 }
 
+export type twoFactorDisableResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
 export type twoFactorDisableResponse422 = {
   data: ProblemResponse
   status: 422
 }
 
+export type twoFactorDisableResponse423 = {
+  data: ProblemResponse
+  status: 423
+}
+
 export type twoFactorDisableResponseSuccess = (twoFactorDisableResponse204) & {
   headers: Headers;
 };
-export type twoFactorDisableResponseError = (twoFactorDisableResponse401 | twoFactorDisableResponse422) & {
+export type twoFactorDisableResponseError = (twoFactorDisableResponse401 | twoFactorDisableResponse403 | twoFactorDisableResponse422 | twoFactorDisableResponse423) & {
   headers: Headers;
 };
 

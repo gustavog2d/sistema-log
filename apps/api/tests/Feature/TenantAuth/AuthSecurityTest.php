@@ -97,7 +97,7 @@ it('does not let the auth role write a token for a business other than the one i
         ]);
     });
 
-    expect(sqlState($attempt))->toBe(sqlState($attempt) === '42501' ? '42501' : sqlState($attempt));
+    expect(sqlState($attempt))->toBe('42501');
     expect(DB::connection('pgsql_admin')->table('user_access_tokens')->count())->toBe(0);
 });
 
@@ -107,4 +107,15 @@ it('keeps the new user columns out of the api role', function () {
     foreach (['failed_attempts', 'locked_until', 'recovery_codes', 'last_login_at'] as $column) {
         expect(sqlState(fn () => DB::table('users')->select($column)->get()))->toBe('42501', "{$column} deveria ser inacessível à API");
     }
+});
+
+it('CA-03 does not let wrong passwords in another business lock the account of someone who is not a member there', function () {
+    $this->workspace('negocioa', 'ana@exemplo.com');
+    $this->workspace('negociob', 'beto@exemplo.com');
+
+    foreach (range(1, 6) as $ignored) {
+        $this->loginAt('negociob', 'ana@exemplo.com', 'senha-errada-123');
+    }
+
+    $this->loginAt('negocioa', 'ana@exemplo.com')->assertOk()->assertJsonStructure(['access_token']);
 });

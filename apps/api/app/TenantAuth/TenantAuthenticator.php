@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use SensitiveParameter;
 use stdClass;
 
@@ -16,7 +17,7 @@ use stdClass;
  */
 class TenantAuthenticator
 {
-    public function __construct(private readonly AccessTokens $tokens) {}
+    public function __construct(private readonly AccessTokens $tokens, private readonly TenantTwoFactor $twoFactor) {}
 
     /**
      * @return array<string, mixed> sessão, desafio de 2FA ou desafio de configuração
@@ -33,7 +34,11 @@ class TenantAuthenticator
         $user = $db->table('users')->where('email', $email)->first();
         $passwordOk = Hash::check($password, $user instanceof stdClass && is_string($user->password) ? $user->password : $this->dummyHash());
 
-        if (! $user instanceof stdClass) {
+        $role = $user instanceof stdClass ? $this->roleOf($db, $tenantId, $user) : null;
+
+        // Quem não tem vínculo com este negócio conta como inexistente aqui: o contador é por negócio e e-mail,
+        // então ninguém trava a conta de outra pessoa errando a senha em outro negócio.
+        if (! $user instanceof stdClass || $role === null) {
             $this->failUnknown($tenantId, $email);
         }
 
@@ -41,15 +46,120 @@ class TenantAuthenticator
             throw new AccountIsLocked;
         }
 
-        $role = $this->roleOf($db, $tenantId, $user);
-
-        if (! $passwordOk || $role === null) {
+        if (! $passwordOk) {
             $this->registerFailure($db, $user);
 
             throw new LoginFailed;
         }
 
         return $this->session($db, $tenantId, $user, $role);
+    }
+
+    /**
+     * Segunda etapa: troca o desafio por um token de acesso depois de um código válido (TOTP ou de recuperação).
+     *
+     * @return array<string, mixed>
+     *
+     * @throws LoginFailed
+     * @throws AccountIsLocked
+     */
+    public function completeChallenge(AuthenticatedPerson $person, string $code): array
+    {
+        $db = DB::connection('pgsql_auth');
+        $user = $db->table('users')->where('id', $person->id)->first();
+
+        if (! $user instanceof stdClass) {
+            throw new LoginFailed;
+        }
+
+        if ($this->isLocked($user)) {
+            throw new AccountIsLocked;
+        }
+
+        if (! $this->twoFactor->verify($db, $person->id, $code)) {
+            $this->registerFailure($db, $user);
+
+            throw new LoginFailed;
+        }
+
+        $this->tokens->revoke($person->tokenId);
+
+        return $this->access($db, $this->tokens->tenantId(), $user, $person->role);
+    }
+
+    /**
+     * Confere a senha atual da pessoa, contando a falha para o bloqueio.
+     *
+     * @throws AccountIsLocked
+     * @throws ValidationException
+     */
+    public function confirmPassword(Connection $db, AuthenticatedPerson $person, #[SensitiveParameter] string $password): stdClass
+    {
+        $user = $db->table('users')->where('id', $person->id)->first();
+
+        if (! $user instanceof stdClass) {
+            throw ValidationException::withMessages(['current_password' => 'A senha atual está incorreta.']);
+        }
+
+        if ($this->isLocked($user)) {
+            throw new AccountIsLocked;
+        }
+
+        if (! is_string($user->password) || ! Hash::check($password, $user->password)) {
+            $this->registerFailure($db, $user);
+
+            throw ValidationException::withMessages(['current_password' => 'A senha atual está incorreta.']);
+        }
+
+        return $user;
+    }
+
+    /**
+     * Liga o 2FA com o primeiro código. Código errado conta para o bloqueio; quem entrou só para configurar precisa entrar de novo.
+     *
+     * @return list<string> códigos de recuperação
+     *
+     * @throws AccountIsLocked
+     * @throws ValidationException
+     */
+    public function confirmTwoFactor(AuthenticatedPerson $person, string $code): array
+    {
+        $db = DB::connection('pgsql_auth');
+        $user = $db->table('users')->where('id', $person->id)->first();
+
+        if ($user instanceof stdClass && $this->isLocked($user)) {
+            throw new AccountIsLocked;
+        }
+
+        $codes = $this->twoFactor->confirm($db, $person->id, $code);
+
+        if ($codes === null) {
+            if ($user instanceof stdClass) {
+                $this->registerFailure($db, $user);
+            }
+
+            throw ValidationException::withMessages(['code' => 'O código não confere.']);
+        }
+
+        if ($person->tokenKind === AccessTokens::SETUP) {
+            $this->tokens->revoke($person->tokenId);
+        }
+
+        return $codes;
+    }
+
+    /** Desliga o 2FA depois de conferir a senha atual. */
+    public function disableTwoFactor(AuthenticatedPerson $person, #[SensitiveParameter] string $password): void
+    {
+        $db = DB::connection('pgsql_auth');
+        $this->confirmPassword($db, $person, $password);
+        $this->twoFactor->disable($db, $person->id);
+    }
+
+    /** @return array{secret: string, otpauth_uri: string} */
+    public function startTwoFactor(AuthenticatedPerson $person): array
+    {
+        return $this->twoFactor->setup(DB::connection('pgsql_auth'), $person->id, $person->email);
     }
 
     /**

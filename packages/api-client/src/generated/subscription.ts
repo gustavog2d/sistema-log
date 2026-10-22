@@ -97,6 +97,11 @@ export type getSubscriptionResponse200 = {
   status: 200
 }
 
+export type getSubscriptionResponse401 = {
+  data: ProblemResponse
+  status: 401
+}
+
 export type getSubscriptionResponse404 = {
   data: ProblemResponse
   status: 404
@@ -105,7 +110,7 @@ export type getSubscriptionResponse404 = {
 export type getSubscriptionResponseSuccess = (getSubscriptionResponse200) & {
   headers: Headers;
 };
-export type getSubscriptionResponseError = (getSubscriptionResponse404) & {
+export type getSubscriptionResponseError = (getSubscriptionResponse401 | getSubscriptionResponse404) & {
   headers: Headers;
 };
 
@@ -120,7 +125,7 @@ export const getGetSubscriptionUrl = () => {
 }
 
 /**
- * @summary Status da assinatura do negócio (sempre permitido, mesmo suspenso)
+ * @summary Status da assinatura do negócio (exige login; permitido mesmo suspenso)
  */
 export const getSubscription = async ( options?: Parameters<typeof customFetch>[1]): Promise<getSubscriptionResponse> => {
 

@@ -54,6 +54,12 @@ class AccessTokens
         DB::table('user_access_tokens')->where('id', $tokenId)->delete();
     }
 
+    /** Invalida todos os tokens da pessoa, em todos os negócios, com um corte por data (`users.tokens_valid_after`). */
+    public function revokeAll(string $userId): void
+    {
+        DB::connection('pgsql_auth')->table('users')->where('id', $userId)->update(['tokens_valid_after' => Instant::now()]);
+    }
+
     public function tenantId(): string
     {
         return (string) $this->context->id();

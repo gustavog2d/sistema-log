@@ -3,16 +3,10 @@
 namespace App\Http\Controllers\TenantAuth;
 
 use App\Http\Controllers\Controller;
-use App\TenantAuth\AccessTokens;
-use App\TenantAuth\AccountIsLocked;
 use App\TenantAuth\AuthenticatedPerson;
-use App\TenantAuth\LoginFailed;
 use App\TenantAuth\TenantAuthenticator;
-use App\TenantAuth\TenantTwoFactor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use stdClass;
 
 class LoginController extends Controller
 {
@@ -27,30 +21,12 @@ class LoginController extends Controller
     }
 
     /** Segunda etapa: troca o desafio por um token de acesso depois de um código válido. */
-    public function verify(Request $request, TenantAuthenticator $authenticator, TenantTwoFactor $twoFactor, AccessTokens $tokens): JsonResponse
+    public function verify(Request $request, TenantAuthenticator $authenticator): JsonResponse
     {
         $request->validate(['code' => ['required', 'string', 'max:64']]);
         /** @var AuthenticatedPerson $person */
         $person = $request->attributes->get('tenant_person');
-        $db = DB::connection('pgsql_auth');
-        $user = $db->table('users')->where('id', $person->id)->first();
 
-        if (! $user instanceof stdClass) {
-            throw new LoginFailed;
-        }
-
-        if ($authenticator->isLocked($user)) {
-            throw new AccountIsLocked;
-        }
-
-        if (! $twoFactor->verify($db, $person->id, $request->string('code')->toString())) {
-            $authenticator->registerFailure($db, $user);
-
-            throw new LoginFailed;
-        }
-
-        $tokens->revoke($person->tokenId);
-
-        return response()->json($authenticator->access($db, $tokens->tenantId(), $user, $person->role));
+        return response()->json($authenticator->completeChallenge($person, $request->string('code')->toString()));
     }
 }

@@ -69,17 +69,6 @@ it('CA-03 locks an unknown email just like a real one', function () {
     expect($statuses->all())->toBe([401, 401, 401, 401, 401, 423]);
 });
 
-it('CA-03 counts a failed attempt from a person without membership against the account', function () {
-    $this->workspace('neg', 'ana@exemplo.com');
-    $this->workspace('outro', 'beto@exemplo.com');
-
-    foreach (range(1, 5) as $_) {
-        $this->loginAt('neg', 'beto@exemplo.com')->assertUnauthorized();
-    }
-
-    $this->loginAt('outro', 'beto@exemplo.com')->assertStatus(423);
-});
-
 it('CA-19 limits login attempts per address', function () {
     $this->workspace();
 

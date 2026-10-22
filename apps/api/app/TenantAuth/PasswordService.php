@@ -45,12 +45,18 @@ class PasswordService
 
         $link = sprintf('%s://%s.%s/redefinir-senha?token=%s&email=%s', $scheme, $tenant->slug, Config::string('tenancy.base_domain'), $token, urlencode($email));
 
-        try {
-            Mail::to($email)->send(new PasswordResetMail($tenant->name, $link, $token));
-        } catch (Throwable $e) {
-            // O pedido não revela falha de envio (a resposta é sempre a mesma); o erro vai para o log.
-            report($e);
-        }
+        $mail = new PasswordResetMail($tenant->name, $link, $token);
+
+        // Depois da resposta: o tempo do envio não distingue quem tem vínculo de quem não tem.
+        defer(function () use ($email, $mail): void {
+            try {
+                Mail::to($email)->send($mail);
+            } catch (Throwable $e) {
+                // O pedido não revela falha de envio (a resposta é sempre a mesma); o erro vai para o log.
+                // Só a classe: a mensagem do transporte pode trazer o endereço da pessoa.
+                report(new \RuntimeException('Falha ao enviar o e-mail de recuperação ('.$e::class.').'));
+            }
+        });
     }
 
     /**
@@ -94,21 +100,7 @@ class PasswordService
     public function change(AuthenticatedPerson $person, #[SensitiveParameter] string $current, #[SensitiveParameter] string $new): array
     {
         $db = DB::connection('pgsql_auth');
-        $user = $db->table('users')->where('id', $person->id)->first();
-
-        if (! $user instanceof stdClass) {
-            throw ValidationException::withMessages(['current_password' => 'A senha atual está incorreta.']);
-        }
-
-        if ($this->authenticator->isLocked($user)) {
-            throw new AccountIsLocked;
-        }
-
-        if (! is_string($user->password) || ! Hash::check($current, $user->password)) {
-            $this->authenticator->registerFailure($db, $user);
-
-            throw ValidationException::withMessages(['current_password' => 'A senha atual está incorreta.']);
-        }
+        $user = $this->authenticator->confirmPassword($db, $person, $current);
 
         if ($current === $new) {
             throw ValidationException::withMessages(['password' => 'A nova senha precisa ser diferente da atual.']);
