@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /signup/slug-availability:
+    get:
+      operationId: signupSlugAvailability
+      summary: O endereço escolhido está livre?
+      parameters:
+        - { name: slug, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Disponibilidade
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlugAvailability"
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /signup:
+    post:
+      operationId: signup
+      summary: Cria o negócio, a dona, o pagamento e inicia o teste
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, maxLength: 255 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "201":
+          description: Cadastro concluído. Repetir o mesmo pedido (mesma Idempotency-Key e mesmo corpo) devolve esta mesma resposta, com o cabeçalho Idempotent-Replayed.
+          headers:
+            Idempotent-Replayed:
+              description: Presente (valor true) quando a resposta é a repetição de um pedido anterior.
+              schema: { type: string, enum: ["true"] }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupResult"
+        "409":
+          description: Já existe um pedido com esta Idempotency-Key ainda em processamento. Tente de novo em instantes.
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "422":
+          description: >-
+            Dados inválidos (campo em `errors`): formato, endereço ou e-mail indisponível, plano inativo, meio de
+            pagamento recusado, termos não aceitos, `coupon_code` (ainda não aceito) e problemas da chave de
+            idempotência (ausente, acima de 255 caracteres ou já usada com outro conteúdo, em `errors["Idempotency-Key"]`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "429": { $ref: "#/components/responses/Problem" }
+components:
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    SlugAvailability:
+      type: object
+      required: [available]
+      properties:
+        available: { type: boolean }
+        reason: { type: string, enum: [invalid, reserved, taken] }
+    SignupRequest:
+      type: object
+      required: [business_name, slug, niche, owner_name, owner_email, password, plan, cycle, payment_method_token, accept_terms]
+      properties:
+        business_name: { type: string, minLength: 2, maxLength: 100 }
+        slug: { type: string, maxLength: 64 }
+        niche: { type: string, enum: [tatuagem, manicure, barbearia, estetica_automotiva] }
+        owner_name: { type: string, minLength: 2, maxLength: 100 }
+        owner_email: { type: string, format: email }
+        password: { type: string, minLength: 12 }
+        plan: { type: string, description: Chave de um plano ativo }
+        cycle: { type: string, enum: [monthly, yearly] }
+        payment_method_token: { type: string, maxLength: 200 }
+        accept_terms: { type: boolean, const: true }
+        coupon_code: { not: {}, description: Ainda não aceito (cupons entram no PLT-012); enviar este campo dá 422. }
+    SignupResult:
+      type: object
+      required: [tenant, subscription, payment_method]
+      properties:
+        tenant:
+          type: object
+          required: [id, name, slug, niche]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            slug: { type: string }
+            niche: { type: string }
+        subscription:
+          type: object
+          required: [id, status, plan, cycle, price_cents, currency, trial_ends_at, first_charge_at]
+          properties:
+            id: { type: string, format: uuid }
+            status: { type: string, enum: [trialing] }
+            plan: { type: string }
+            cycle: { type: string, enum: [monthly, yearly] }
+            price_cents: { type: integer }
+            currency: { type: string }
+            trial_ends_at: { type: string, format: date-time }
+            first_charge_at: { type: string, format: date-time }
+        payment_method:
+          type: object
+          required: [type, brand, last4]
+          properties:
+            type: { type: string }
+            brand: { type: string }
+            last4: { type: string }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors: { type: object }

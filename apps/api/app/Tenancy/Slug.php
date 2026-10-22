@@ -32,7 +32,8 @@ final class Slug
      */
     public static function isValid(string $slug, ?array $reserved = null): bool
     {
-        if (preg_match(self::PATTERN, $slug) !== 1) {
+        // `xn--` é o prefixo de nomes internacionais (punycode): permitiria endereços que imitam outros.
+        if (preg_match(self::PATTERN, $slug) !== 1 || str_starts_with($slug, 'xn--')) {
             return false;
         }
 

@@ -17,4 +17,5 @@ export default defineConfig({
   tenant: contract('tenant', 'FND-005-base-multi-tenant'),
   platform: contract('platform', 'PLT-001-login-super-admin'),
   plans: contract('plans', 'PLT-002-catalogo-de-planos'),
+  signup: contract('signup', 'PLT-003-cadastro-do-assinante'),
 });
