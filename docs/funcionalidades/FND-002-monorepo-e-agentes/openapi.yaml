@@ -1,0 +1,66 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Saúde da API, do banco e do Redis
+      responses:
+        "200":
+          description: Tudo saudável
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+        "503":
+          description: Banco ou Redis indisponível
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/HealthProblem"
+components:
+  schemas:
+    Health:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        checks:
+          type: object
+          required: [database, redis]
+          properties:
+            database:
+              type: string
+              enum: [ok]
+            redis:
+              type: string
+              enum: [ok]
+    HealthProblem:
+      type: object
+      description: Problem Details (RFC 9457) com o estado de cada verificação
+      required: [type, title, status, detail, checks]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+          enum: [503]
+        detail:
+          type: string
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [ok, fail]
+            redis:
+              type: string
+              enum: [ok, fail]

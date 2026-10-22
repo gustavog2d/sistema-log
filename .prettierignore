@@ -1,0 +1,13 @@
+node_modules
+.next
+vendor
+apps/api
+docs
+packages/api-client/src/generated
+pnpm-lock.yaml
+*.md
+.claude
+compose.yaml
+apps/web/.next
+apps/web/next-env.d.ts
+.pnpm-store
