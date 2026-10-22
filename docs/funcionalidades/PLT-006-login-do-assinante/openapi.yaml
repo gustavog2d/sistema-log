@@ -1,0 +1,267 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+  description: Rotas do endereço de um negócio ({slug}.{domínio}). Token Bearer opaco, de um único negócio.
+servers:
+  - url: /api/v1
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      summary: Entrar com e-mail e senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Acesso, ou desafio de 2FA quando a pessoa tem 2FA ativo
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Session"
+                  - $ref: "#/components/schemas/Challenge"
+        "401": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+        "423": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /auth/2fa/verify:
+    post:
+      operationId: verifyTwoFactor
+      summary: Código do 2FA (TOTP ou de recuperação) troca o desafio por um token de acesso
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodeRequest" }
+      responses:
+        "200":
+          description: Acesso
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+        "423": { $ref: "#/components/responses/Problem" }
+  /auth/me:
+    get:
+      operationId: me
+      summary: Quem está logado
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Pessoa, papel e negócio
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+        "401": { $ref: "#/components/responses/Problem" }
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoga o token usado
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Token revogado }
+        "401": { $ref: "#/components/responses/Problem" }
+  /auth/logout-all:
+    post:
+      operationId: logoutAll
+      summary: Invalida todos os tokens da pessoa, em todos os negócios
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Tokens invalidados }
+        "401": { $ref: "#/components/responses/Problem" }
+  /auth/password/forgot:
+    post:
+      operationId: forgotPassword
+      summary: Pede o e-mail de recuperação (sempre 202, não revela se o e-mail existe)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "202": { description: Pedido recebido }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /auth/password/reset:
+    post:
+      operationId: resetPassword
+      summary: Define a nova senha com o token do e-mail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token, password]
+              properties:
+                email: { type: string, format: email }
+                token: { type: string }
+                password: { type: string, minLength: 12 }
+      responses:
+        "204": { description: Senha redefinida; todos os acessos anteriores foram invalidados }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /auth/password/change:
+    post:
+      operationId: changePassword
+      summary: Troca a senha (exige a atual) e devolve um token novo
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, password]
+              properties:
+                current_password: { type: string }
+                password: { type: string, minLength: 12 }
+      responses:
+        "200":
+          description: Senha trocada; os outros acessos caíram
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Session" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /auth/2fa/setup:
+    post:
+      operationId: twoFactorSetup
+      summary: Gera o segredo do 2FA
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Segredo para o app autenticador
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorSetup" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+  /auth/2fa/confirm:
+    post:
+      operationId: twoFactorConfirm
+      summary: Confirma o 2FA com um código e devolve os códigos de recuperação
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodeRequest" }
+      responses:
+        "200":
+          description: 2FA ativo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorConfirmed" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /auth/2fa/disable:
+    post:
+      operationId: twoFactorDisable
+      summary: Desativa o 2FA (exige a senha atual)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password]
+              properties:
+                current_password: { type: string }
+      responses:
+        "204": { description: 2FA desativado }
+        "401": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    CodeRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, description: Código TOTP de 6 dígitos ou código de recuperação }
+    Person:
+      type: object
+      required: [id, name, email, role]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { type: string, enum: [owner, manager, professional, reception] }
+    Session:
+      type: object
+      required: [access_token, token_type, expires_at, user]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [Bearer] }
+        expires_at: { type: string, format: date-time }
+        user: { $ref: "#/components/schemas/Person" }
+    Challenge:
+      type: object
+      required: [challenge_token, next, expires_at]
+      properties:
+        challenge_token: { type: string }
+        next: { type: string, enum: [verify, setup] }
+        expires_at: { type: string, format: date-time }
+    Me:
+      type: object
+      required: [user, tenant, can_write, two_factor_enabled]
+      properties:
+        user: { $ref: "#/components/schemas/Person" }
+        tenant:
+          type: object
+          required: [id, name, slug]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            slug: { type: string }
+        can_write: { type: boolean }
+        two_factor_enabled: { type: boolean }
+    TwoFactorSetup:
+      type: object
+      required: [secret, otpauth_uri]
+      properties:
+        secret: { type: string }
+        otpauth_uri: { type: string }
+    TwoFactorConfirmed:
+      type: object
+      required: [recovery_codes]
+      properties:
+        recovery_codes:
+          type: array
+          items: { type: string }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors: { type: object }

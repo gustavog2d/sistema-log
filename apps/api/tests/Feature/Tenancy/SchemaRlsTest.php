@@ -9,7 +9,7 @@ function platformTables(): array
     return ['migrations', 'tenants', 'jobs', 'job_batches', 'failed_jobs', 'cache', 'cache_locks',
         'platform_users', 'platform_audit_logs', 'personal_access_tokens',
         'plans', 'features', 'plan_features',
-        'users', 'subscriptions', 'payment_methods', 'idempotency_keys'];
+        'users', 'subscriptions', 'payment_methods', 'idempotency_keys', 'password_reset_tokens'];
 }
 
 /** @return list<string> */

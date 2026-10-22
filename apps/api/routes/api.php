@@ -11,6 +11,10 @@ use App\Http\Controllers\Platform\TwoFactorController;
 use App\Http\Controllers\PublicPlanController;
 use App\Http\Controllers\SignupController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\TenantAuth\LoginController;
+use App\Http\Controllers\TenantAuth\PasswordController;
+use App\Http\Controllers\TenantAuth\SessionController;
+use App\Http\Controllers\TenantAuth\TwoFactorController as TenantTwoFactorController;
 use App\Platform\Auth\AccessTokens;
 use Illuminate\Support\Facades\Route;
 
@@ -24,7 +28,30 @@ Route::middleware('public')->group(function () {
 Route::middleware(['tenant', 'subscription.access'])->group(function () {
     Route::get('/tenant/current', CurrentTenantController::class);
     // Sempre permitido, mesmo com a assinatura suspensa: é como o assinante entende o bloqueio.
-    Route::get('/subscription', SubscriptionController::class)->middleware('throttle:subscription-status');
+    Route::get('/subscription', SubscriptionController::class)->middleware(['auth.tenant', 'throttle:subscription-status']);
+});
+
+// Autenticação do assinante (PLT-006). Funciona mesmo com a assinatura suspensa ou cancelada (`subscription.exempt`):
+// quem não pagou precisa conseguir entrar para ler os próprios dados e entender o bloqueio.
+Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(function () {
+    Route::post('login', [LoginController::class, 'login'])->middleware(['throttle:tenant-login', 'throttle:tenant-login-email']);
+    Route::post('password/forgot', [PasswordController::class, 'forgot'])->middleware('throttle:tenant-forgot');
+    Route::post('password/reset', [PasswordController::class, 'reset'])->middleware('throttle:tenant-reset');
+
+    Route::post('2fa/verify', [LoginController::class, 'verify'])->middleware(['auth.tenant:challenge', 'throttle:tenant-verify']);
+
+    Route::middleware('auth.tenant')->group(function () {
+        Route::get('me', [SessionController::class, 'me']);
+        Route::post('logout', [SessionController::class, 'logout']);
+        Route::post('logout-all', [SessionController::class, 'logoutAll']);
+        Route::post('password/change', [PasswordController::class, 'change']);
+        Route::post('2fa/disable', [TenantTwoFactorController::class, 'disable']);
+    });
+
+    Route::middleware('auth.tenant:access,setup')->group(function () {
+        Route::post('2fa/setup', [TenantTwoFactorController::class, 'setup']);
+        Route::post('2fa/confirm', [TenantTwoFactorController::class, 'confirm'])->middleware('throttle:tenant-verify');
+    });
 });
 
 // Cadastro do assinante (PLT-003): público, só nos hosts da plataforma.
