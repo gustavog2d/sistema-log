@@ -1,6 +1,6 @@
 # PLT-003 · Plano de teste
 
-- **Spec:** [spec.md](spec.md) (versão aprovada em: 2026-10-24)
+- **Spec:** [spec.md](spec.md) (versão aprovada em: 2026-10-22)
 - **Responsável:** agente QA
 
 PostgreSQL real, banco `app_test`. O ID do critério aparece no nome de cada teste. O cenário é montado com o papel dono; as chamadas usam os papéis de runtime e de plataforma como em produção.
@@ -26,7 +26,7 @@ PostgreSQL real, banco `app_test`. O ID do critério aparece no nome de cada tes
 | T-16 | RN-09, RN-16, RN-17, RN-18 | API/Banco | `SignupSafetyTest.php` (privilégios mínimos dos papéis, corpo não-JSON dá 415, chave de outro IP não é reaproveitada, gateway fake recusado fora de local/testing, e-mail ASCII, endereço punycode, senha de 72 bytes, limite global) | passando |
 | T-14 | esquema | Esquema | `SchemaRlsTest` com as novas tabelas (memberships com RLS; as demais na lista de plataforma) | passando |
 
-Teste real com `curl` contra a API em execução: cadastro, repetição com a mesma chave e consulta de endereço (feito em 2026-10-25). Encontrou um defeito que a suíte não pega: o servidor de desenvolvimento do Laravel lê só o `.env`, que podia estar sem as variáveis novas; corrigido no `start.sh`.
+Teste real com `curl` contra a API em execução: cadastro, repetição com a mesma chave e consulta de endereço (feito em 2026-10-22). Encontrou um defeito que a suíte não pega: o servidor de desenvolvimento do Laravel lê só o `.env`, que podia estar sem as variáveis novas; corrigido no `start.sh`.
 
 ## Casos obrigatórios
 

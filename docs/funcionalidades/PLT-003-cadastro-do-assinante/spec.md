@@ -1,6 +1,6 @@
 # PLT-003 · Cadastro do assinante e início do teste (API)
 
-- **Status:** aprovada (regras de negócio de Gustavo em 2026-10-24; decisões técnicas delegadas)
+- **Status:** aprovada (regras de negócio de Gustavo em 2026-10-22; decisões técnicas delegadas)
 - **Fase:** 1 · Plataforma
 - **Plano / feature flag:** —
 - **Depende de:** FND-005, PLT-002

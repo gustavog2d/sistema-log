@@ -36,4 +36,4 @@ Autentica a equipe da plataforma (super admin e suporte) com senha e segundo fat
 
 | Versão | Data | Mudança |
 | --- | --- | --- |
-| 0.1.0 | 2026-10-23 | Login com 2FA, tokens Sanctum, auditoria e comando de criação |
+| 0.1.0 | 2026-10-22 | Login com 2FA, tokens Sanctum, auditoria e comando de criação |

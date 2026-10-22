@@ -57,4 +57,4 @@ O cadastro escreve com o papel `app_platform` (conexão `pgsql_platform`), que s
 
 | Versão | Data | Mudança |
 | --- | --- | --- |
-| 0.1.0 | 2026-10-25 | Cadastro com teste de 7 dias, meio de pagamento de teste, idempotência e papel de plataforma |
+| 0.1.0 | 2026-10-22 | Cadastro com teste de 7 dias, meio de pagamento de teste, idempotência e papel de plataforma |

@@ -17,7 +17,12 @@ use Illuminate\Support\Carbon;
  * @property string $status
  * @property int $price_cents
  * @property string $currency
+ * @property Carbon|null $trial_starts_at
  * @property Carbon|null $trial_ends_at
+ * @property Carbon|null $current_period_start
+ * @property Carbon|null $current_period_end
+ * @property Carbon|null $canceled_at
+ * @property Carbon|null $suspended_at
  */
 class Subscription extends Model
 {
@@ -34,6 +39,7 @@ class Subscription extends Model
             'current_period_start' => 'datetime',
             'current_period_end' => 'datetime',
             'canceled_at' => 'datetime',
+            'suspended_at' => 'datetime',
         ];
     }
 }
