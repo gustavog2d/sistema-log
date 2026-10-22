@@ -4,7 +4,20 @@ on:
   pull_request:
     branches: [develop, master]
   push:
-    branches: [develop, master, 'FND-*', 'PLT-*', 'AGD-*', 'ORC-*', 'FIN-*', 'CLI-*', 'INT-*', 'MOB-*', 'ci-negativo-*']
+    branches:
+      [
+        develop,
+        master,
+        'FND-*',
+        'PLT-*',
+        'AGD-*',
+        'ORC-*',
+        'FIN-*',
+        'CLI-*',
+        'INT-*',
+        'MOB-*',
+        'ci-negativo-*',
+      ]
 
 permissions:
   contents: read
