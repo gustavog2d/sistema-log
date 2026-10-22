@@ -19,6 +19,17 @@ O que cada assinante pode usar é decidido por um serviço de *entitlements* na 
 - **Cancelamento:** em até 7 dias sem custo, conforme o direito de arrependimento do Código de Defesa do Consumidor (art. 49). Os 7 dias contam **a partir do momento em que o cliente solicita e libera a assinatura**, que coincide com o período de teste: cancelar durante o teste nunca gera cobrança, e a primeira cobrança só ocorre depois dele. Não há estorno automático depois da primeira cobrança; o cancelamento então vale até o fim do período já pago. (Decisão de Gustavo em 2026-10-22; vale revisão jurídica antes do lançamento.)
 - **Meios de pagamento:** Pix e cartão de crédito, com recorrência automática no cartão.
 
+## Decisões de negócio, segunda rodada (Gustavo, 2026-10-24)
+
+- **Preços iniciais (mensal):** Essencial R$ 15,00, Profissional R$ 50,00 e Estúdio R$ 250,00. **Desconto de 10%** no plano anual.
+- **Teste de 7 dias exige meio de pagamento já cadastrado.** Para iniciar o teste, o cliente informa e autoriza o pagamento; a cobrança só ocorre no 7º dia, se ele não tiver cancelado.
+- **Falha no pagamento = acesso suspenso na mesma hora.** Não há carência. Isto vale para a primeira cobrança e para as seguintes.
+- **Cupons:** criados pelo super admin, com **período de validade** e **limite de usos**.
+- **Meio de pagamento por último.** Por enquanto o fluxo roda com um meio de pagamento de teste (simulado) atrás de uma interface própria; o gateway real (Asaas) entra no fim, quando a conta existir.
+- **Nichos do primeiro teste:** tatuagem, manicure, barbeiro e estética automotiva.
+- **Migração do Tatulog:** fora do escopo por ora (há apenas 1 assinatura).
+- **Nome do produto e domínio:** ainda indefinidos; continuam em configuração. Cores e logo: sugestão do time de desenvolvimento (ver design system).
+
 ## Modelo de funcionalidades por plano
 
 `plan_features` guarda, para cada par plano × funcionalidade: `enabled` (liberada ou não), `limit` (número, ou vazio para ilimitado) e `visible` (se a funcionalidade aparece na interface mesmo quando bloqueada, para oferecer upgrade, ou fica oculta). O serviço de entitlements devolve esse resultado e a interface apenas o reflete.
@@ -38,24 +49,22 @@ O Tatulog cobrava R$ 14,90 e R$ 39,90 por mês; os novos preços entram nas [dec
 ```mermaid
 stateDiagram-v2
     [*] --> Teste: cadastro
-    Teste --> Ativa: 1º pagamento
-    Teste --> Suspensa: teste expira
-    Ativa --> Inadimplente: cobrança falha
-    Inadimplente --> Ativa: pagamento
-    Inadimplente --> Suspensa: fim da carência
-    Suspensa --> Ativa: regulariza
+    Teste --> Ativa: cobrança do 7º dia paga
+    Teste --> Suspensa: cobrança do 7º dia falha
+    Teste --> Cancelada: cancela durante o teste (sem cobrança)
+    Ativa --> Suspensa: cobrança falha (sem carência)
+    Suspensa --> Ativa: pagamento regularizado
     Suspensa --> Cancelada: retenção acaba
     Ativa --> Cancelada: cancela (fim do período pago)
     Cancelada --> [*]
 
-    Teste: Teste grátis (acesso completo)
+    Teste: Teste de 7 dias (acesso completo, pagamento já cadastrado)
     Ativa: Ativa (acesso completo)
-    Inadimplente: Inadimplente (acesso mantido)
     Suspensa: Suspensa (só leitura)
     Cancelada: Cancelada (dados retidos)
 ```
 
-O teste grátis e o cancelamento mantêm o acesso até o fim do período; só a suspensão bloqueia escrita, e os dados ficam retidos por um prazo definido na política de privacidade antes da exclusão.
+O teste e o cancelamento mantêm o acesso até o fim do período; só a suspensão bloqueia escrita (acesso só de leitura). A falha de cobrança suspende na mesma hora. Os dados ficam retidos por um prazo (a definir na política de privacidade) antes da exclusão.
 
 ## Cobrança recorrente
 

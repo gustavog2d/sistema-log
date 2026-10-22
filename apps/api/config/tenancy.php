@@ -12,6 +12,9 @@ return [
         explode(',', (string) env('APP_PLATFORM_HOSTS', '')),
     ))),
 
+    // Nichos de lançamento (o nicho só muda presets e vocabulário, nunca regra de negócio).
+    'niches' => ['tatuagem', 'manicure', 'barbearia', 'estetica_automotiva'],
+
     // Subdomínios que nenhum assinante pode usar (lista provisória, revisar no PLT-003).
     'reserved_slugs' => Slug::RESERVED,
 ];

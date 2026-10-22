@@ -8,14 +8,23 @@ use Illuminate\Database\Seeder;
 
 /**
  * Catálogo inicial. Idempotente e sem sobrescrever o que a equipe já ajustou.
- * Os três planos nascem em rascunho, sem preço e sem regras: isso ainda não foi definido pelo produto.
+ * Planos com os preços iniciais definidos pelo produto (R$ 15, R$ 50 e R$ 250 por mês, 10% de desconto no
+ * anual). As regras de cada plano (liberada, limitada ou oculta) ainda não existem: vale o padrão da funcionalidade.
  */
 class CatalogSeeder extends Seeder
 {
     public function run(): void
     {
-        foreach ([['essencial', 'Essencial'], ['profissional', 'Profissional'], ['estudio', 'Estúdio']] as $position => [$key, $name]) {
-            Plan::query()->firstOrCreate(['key' => $key], ['name' => $name, 'position' => $position + 1]);
+        $plans = [['essencial', 'Essencial', 1500], ['profissional', 'Profissional', 5000], ['estudio', 'Estúdio', 25000]];
+
+        foreach ($plans as $position => [$key, $name, $monthlyCents]) {
+            Plan::query()->firstOrCreate(['key' => $key], [
+                'name' => $name,
+                'position' => $position + 1,
+                'status' => 'active',
+                'monthly_price_cents' => $monthlyCents,
+                'yearly_discount_percent' => 10,
+            ]);
         }
 
         $features = [

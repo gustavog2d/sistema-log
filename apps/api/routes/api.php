@@ -9,6 +9,7 @@ use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\PlanFeatureController;
 use App\Http\Controllers\Platform\TwoFactorController;
 use App\Http\Controllers\PublicPlanController;
+use App\Http\Controllers\SignupController;
 use App\Platform\Auth\AccessTokens;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,12 @@ Route::middleware('public')->group(function () {
 
 Route::middleware('tenant')->group(function () {
     Route::get('/tenant/current', CurrentTenantController::class);
+});
+
+// Cadastro do assinante (PLT-003): público, só nos hosts da plataforma.
+Route::middleware('platform')->group(function () {
+    Route::get('signup/slug-availability', [SignupController::class, 'slugAvailability'])->middleware('throttle:slug-check');
+    Route::post('signup', [SignupController::class, 'store'])->middleware(['throttle:signup', 'idempotent:signup']);
 });
 
 // Equipe da plataforma (PLT-001): só nos hosts da plataforma.
