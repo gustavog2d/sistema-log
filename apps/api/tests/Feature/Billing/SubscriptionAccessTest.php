@@ -135,7 +135,7 @@ it('A1 lists exactly the tenant routes that are allowed to work with a suspended
 
     expect($exempt)->toBe([
         'api/v1/auth/2fa/confirm', 'api/v1/auth/2fa/disable', 'api/v1/auth/2fa/setup', 'api/v1/auth/2fa/verify',
-        'api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/logout-all', 'api/v1/auth/me',
+        'api/v1/auth/invitations/accept', 'api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/logout-all', 'api/v1/auth/me',
         'api/v1/auth/password/change', 'api/v1/auth/password/forgot', 'api/v1/auth/password/reset',
         'api/v1/subscription/cancel', 'api/v1/subscription/invoices', 'api/v1/subscription/payment-method', 'api/v1/subscription/reactivate',
     ]);

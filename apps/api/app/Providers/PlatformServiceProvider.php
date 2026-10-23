@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Tenancy\TenantContext;
+use App\TenantAuth\AuthenticatedPerson;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -29,9 +30,22 @@ class PlatformServiceProvider extends ServiceProvider
         RateLimiter::for('tenant-reset', fn (Request $request) => Limit::perHour(10)->by((string) $request->ip()));
         RateLimiter::for('subscription-status', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('subscription-manage', fn (Request $request) => Limit::perMinute(30)->by((string) $request->ip()));
+        RateLimiter::for('team-invite', fn (Request $request) => Limit::perHour(30)->by(app(TenantContext::class)->id().'|'.self::personKey($request)));
+        RateLimiter::for('invitation-accept', fn (Request $request) => [
+            Limit::perMinute(10)->by((string) $request->ip()),
+            Limit::perHour(20)->by(app(TenantContext::class)->id().'|'.self::emailKey($request)),
+        ]);
         RateLimiter::for('slug-check', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('platform-login', fn (Request $request) => Limit::perMinute(10)->by((string) $request->ip()));
         RateLimiter::for('platform-verify', fn (Request $request) => Limit::perMinute(20)->by((string) $request->ip()));
+    }
+
+    /** Pessoa autenticada da requisição, para chave de limite. */
+    private static function personKey(Request $request): string
+    {
+        $person = $request->attributes->get('tenant_person');
+
+        return $person instanceof AuthenticatedPerson ? $person->id : '';
     }
 
     /** E-mail normalizado para chave de limite; um valor que não é texto (ex.: lista) vira vazio, a validação o recusa depois. */

@@ -210,7 +210,7 @@ class TenantAuthenticator
             // Vínculos têm RLS: o negócio é informado para a consulta enxergar só os dele.
             $tx->statement("select set_config('app.tenant_id', ?, true)", [$tenantId]);
 
-            return $tx->table('memberships')->where('user_id', $user->id)->value('role');
+            return $tx->table('memberships')->where('user_id', $user->id)->where('status', 'active')->value('role');
         });
 
         return is_string($role) ? $role : null;
