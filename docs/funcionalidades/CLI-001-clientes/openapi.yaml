@@ -140,7 +140,14 @@ components:
       type: object
       required: [client, existing]
       properties:
-        client: { $ref: "#/components/schemas/Client" }
+        client:
+          type: object
+          description: Só o necessário para escolher o cliente (sem e-mail, Instagram nem notas)
+          required: [id, name, phone]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            phone: { type: string }
         existing: { type: boolean }
     ClientInput:
       type: object

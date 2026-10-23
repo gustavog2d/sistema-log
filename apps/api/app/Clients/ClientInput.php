@@ -57,7 +57,7 @@ final class ClientInput
             // Só ASCII: letras de outros alfabetos poderiam imitar e-mails de outras pessoas.
             'email' => ['sometimes', 'nullable', 'string', 'email:rfc,strict', 'max:255', 'regex:/^[\x21-\x7E]+$/', ...$only('email', 'Já existe um cliente com este e-mail.')],
             'instagram' => ['sometimes', 'nullable', 'string', 'regex:/^[a-z0-9._]{1,30}$/', ...$only('instagram', 'Já existe um cliente com este Instagram.')],
-            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000', self::noControl()],
         ];
     }
 
@@ -65,8 +65,18 @@ final class ClientInput
     public static function plainText(): Closure
     {
         return function (string $attribute, mixed $value, Closure $fail): void {
-            if (is_string($value) && (preg_match('/[\x00-\x1F\x7F]/', $value) === 1 || preg_match('~https?:|www\.|://|@~i', $value) === 1)) {
+            if (is_string($value) && (preg_match('/[\x00-\x1F\x7F]/', $value) === 1 || preg_match('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]/u', $value) === 1 || preg_match('~https?:|www\.|://|@~i', $value) === 1)) {
                 $fail('Use só o nome, sem endereços nem caracteres especiais de controle.');
+            }
+        };
+    }
+
+    /** Notas: texto livre, mas sem caracteres de controle (o banco recusa o NUL) nem de direção do texto; quebra de linha e tabulação valem. */
+    private static function noControl(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            if (is_string($value) && (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value) === 1 || preg_match('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]/u', $value) === 1)) {
+                $fail('Há caracteres que não podem ser usados nas notas.');
             }
         };
     }

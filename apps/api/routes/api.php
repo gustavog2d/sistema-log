@@ -45,7 +45,7 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
 
 // Clientes (CLI-001): os quatro papéis leem e escrevem; só dona e gerente excluem. O acesso de suporte só lê.
 Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:tenant-api'])->prefix('clients')->group(function () {
-    Route::get('/', [ClientController::class, 'index']);
+    Route::get('/', [ClientController::class, 'index'])->middleware('throttle:tenant-people-list');
     Route::get('{id}', [ClientController::class, 'show'])->whereUuid('id');
     Route::post('/', [ClientController::class, 'store'])->middleware('no.impersonation');
     Route::post('quick', [ClientController::class, 'quick'])->middleware('no.impersonation');

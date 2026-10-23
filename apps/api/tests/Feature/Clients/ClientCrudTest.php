@@ -48,6 +48,9 @@ it('CA-01 refuses invalid data with the error on the field', function (array $pa
     'bad instagram' => [['instagram' => 'tem espaço'], 'instagram'],
     'long instagram' => [['instagram' => str_repeat('a', 31)], 'instagram'],
     'long notes' => [['notes' => str_repeat('a', 2001)], 'notes'],
+    'notes with NUL' => [['notes' => "texto\x00oculto"], 'notes'],
+    'notes with bidi control' => [['notes' => "texto\u{202E}invertido"], 'notes'],
+    'name with zero width' => [['name' => "Bia\u{200B}Lima"], 'name'],
 ]);
 
 it('CA-02 refuses a repeated phone, e-mail and Instagram in the same business', function () {
@@ -106,4 +109,10 @@ it('CA-06 deletes a client and answers 404 for an id that is not a uuid', functi
     clientsApi($this, $token, 'DELETE', 'neg', "clients/{$client->id}")->assertNoContent();
     expect(DB::connection('pgsql_admin')->table('clients')->count())->toBe(0);
     clientsApi($this, $token, 'GET', 'neg', 'clients/nao-e-uuid')->assertNotFound();
+});
+
+it('CA-01 keeps line breaks and tabs in the notes', function () {
+    [, $token] = ownerOf($this, 'neg');
+
+    clientsApi($this, $token, 'POST', 'neg', 'clients', clientPayload(['notes' => "linha 1\nlinha 2\tcom tab"]))->assertCreated()->assertJsonPath('notes', "linha 1\nlinha 2\tcom tab");
 });

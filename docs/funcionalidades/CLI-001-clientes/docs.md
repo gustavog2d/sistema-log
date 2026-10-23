@@ -21,6 +21,12 @@
 - **Histórico:** `Client` usa `Audited` (`name`, `phone`, `email`, `instagram`, `notes`); a tela mostra com `EntityHistory`.
 - **Testes:** `vendor/bin/pest tests/Feature/Clients` e `pnpm --filter web exec vitest run src/components/panel/clients-view.test.tsx src/lib/phone.test.ts`.
 
+## Pendências registradas nas revisões
+
+- **LGPD:** o histórico guarda nome, telefone e e-mail do cliente (as notas ficam ocultas) e é só de acréscimo: o pedido de eliminação do titular depende do PLT-016 (anonimização do histórico). Orientar a não digitar dado de saúde nas notas.
+- O acesso de suporte (30 minutos, como a dona) lê todos os clientes e o histórico sem trilha de leitura; auditoria de leitura de dado pessoal fica como evolução.
+- A criação rápida devolve só `id`, `name` e `phone`.
+
 ## Limites conhecidos
 
 - A exclusão ainda não é barrada por agendamentos (passa a valer com a agenda, AGD-003).

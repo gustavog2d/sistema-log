@@ -834,6 +834,18 @@
     "deleteTitle": "Excluir cliente",
     "deleteText": "Excluir {name}? Isso não pode ser desfeito (a mudança fica no histórico).",
     "deleteConfirm": "Excluir de vez",
-    "historyTitle": "Histórico de {name}"
+    "historyTitle": "Histórico de {name}",
+    "countries": {
+      "BR": "Brasil",
+      "PT": "Portugal",
+      "US": "Estados Unidos / Canadá",
+      "AR": "Argentina",
+      "UY": "Uruguai",
+      "PY": "Paraguai",
+      "CL": "Chile",
+      "ES": "Espanha",
+      "OTHER": "Outro país"
+    },
+    "phoneHintOther": "Digite o número inteiro com o código do país, sem o +."
   }
 }

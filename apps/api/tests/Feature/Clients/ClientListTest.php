@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\Str;
+
 beforeEach(function () {
     $this->seedBillingCatalog();
 });
@@ -70,4 +72,15 @@ it('CA-04 treats LIKE wildcards in the search as plain text', function () {
 
     expect(collect(clientsApi($this, $token, 'GET', 'neg', 'clients?q='.urlencode('%'))->json('data')))->toHaveCount(0);
     expect(collect(clientsApi($this, $token, 'GET', 'neg', 'clients?q='.urlencode('0% t'))->json('data'))->pluck('name')->all())->toBe(['100% Tinta']);
+});
+
+it('RN-08 limits how fast the list of clients can be read', function () {
+    [, $token] = ownerOf($this, 'neg');
+
+    for ($i = 0; $i < 60; $i++) {
+        clientsApi($this, $token, 'GET', 'neg', 'clients?limit=1')->assertOk();
+    }
+
+    clientsApi($this, $token, 'GET', 'neg', 'clients?limit=1')->assertStatus(429);
+    clientsApi($this, $token, 'GET', 'neg', 'clients/'.(string) Str::uuid())->assertNotFound();
 });

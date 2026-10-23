@@ -36,6 +36,16 @@ class Client extends Model implements AuditedEntity
         return ['name', 'phone', 'email', 'instagram', 'notes'];
     }
 
+    /**
+     * Notas são texto livre e podem ter dado de saúde: o histórico só registra que mudaram (LGPD).
+     *
+     * @return list<string>
+     */
+    public function maskedAuditFields(): array
+    {
+        return ['notes'];
+    }
+
     /** @return array<string, mixed> */
     public function toApi(): array
     {

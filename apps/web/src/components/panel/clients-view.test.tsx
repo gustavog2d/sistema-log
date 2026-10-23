@@ -161,7 +161,7 @@ describe('ClientsView', () => {
     );
   });
 
-  it('CA-09 creates a client with the phone in E.164 and puts it on top of the list', async () => {
+  it('CA-09 creates a client with the phone in E.164 and lists it in alphabetical order', async () => {
     call.mockResolvedValue({
       status: 201,
       data: client({
@@ -196,7 +196,7 @@ describe('ClientsView', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Cliente cadastrado.',
     );
-    expect(screen.getAllByRole('row')[1]).toHaveTextContent('Eva Nunes');
+    expect(screen.getAllByRole('row')[3]).toHaveTextContent('Eva Nunes');
   });
 
   it('CA-02 shows the API error on the field and keeps the dialog open', async () => {
@@ -306,6 +306,95 @@ describe('ClientsView', () => {
     );
   });
 
+  it('CA-09 keeps a number from another country whole when editing and saving', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: client({ id: 'c3', phone: '+33612345678' }),
+    });
+    const user = userEvent.setup();
+    render(
+      <ClientsView
+        me={me()}
+        initial={{
+          data: [client({ id: 'c3', name: 'Zoé', phone: '+33612345678' })],
+          next_cursor: null,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('+33612345678')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Editar: Zoé' }));
+    expect(screen.getByLabelText('País')).toHaveValue('OTHER');
+    expect(screen.getByLabelText(/^Telefone/)).toHaveValue('33612345678');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith('PATCH', 'clients/c3', {
+        body: expect.objectContaining({ phone: '+33612345678' }),
+      }),
+    );
+  });
+
+  it('CA-09 keeps the list in alphabetical order after creating a client', async () => {
+    call.mockResolvedValue({
+      status: 201,
+      data: client({ id: 'new', name: 'Ana Paula', phone: '+5511988887777' }),
+    });
+    const user = userEvent.setup();
+    render(<ClientsView me={me()} initial={page()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Novo cliente' }));
+    await user.type(screen.getByLabelText(/^Nome/), 'Ana Paula');
+    await user.type(screen.getByLabelText(/^Telefone/), '11988887777');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await screen.findByRole('status');
+    const names = screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => row.textContent ?? '');
+    expect(names[0]).toContain('Ana Paula');
+    expect(names[1]).toContain('Bia Lima');
+    expect(names[2]).toContain('Caio Reis');
+  });
+
+  it('CA-09 asks for at least two characters before searching', async () => {
+    const user = userEvent.setup();
+    render(<ClientsView me={me()} initial={page()} />);
+
+    await user.type(
+      screen.getByLabelText('Buscar por nome, telefone, e-mail ou Instagram'),
+      'a',
+    );
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'ao menos 2 caracteres',
+    );
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it('CA-09 shows the loading state while searching', async () => {
+    let release!: (value: unknown) => void;
+    call.mockImplementation(() => new Promise((done) => (release = done)));
+    const user = userEvent.setup();
+    render(<ClientsView me={me()} initial={page()} />);
+
+    await user.type(
+      screen.getByLabelText('Buscar por nome, telefone, e-mail ou Instagram'),
+      'bia',
+    );
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    expect((await screen.findAllByText('Carregando…')).length).toBeGreaterThan(
+      0,
+    );
+    release({ status: 200, data: { data: [], next_cursor: null } });
+    await waitFor(() =>
+      expect(screen.queryByText('Carregando…')).not.toBeInTheDocument(),
+    );
+  });
+
   it('CA-09 shows the first-use message and the load error', () => {
     const { unmount } = render(
       <ClientsView me={me()} initial={{ data: [], next_cursor: null }} />,
@@ -325,6 +414,9 @@ describe('ClientsView', () => {
 
     expect(await axe(container)).toHaveNoViolations();
     await user.click(screen.getByRole('button', { name: 'Novo cliente' }));
+    expect(await axe(screen.getByRole('dialog'))).toHaveNoViolations();
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getByRole('button', { name: 'Excluir: Bia Lima' }));
     expect(await axe(screen.getByRole('dialog'))).toHaveNoViolations();
   });
 });

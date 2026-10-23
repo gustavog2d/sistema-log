@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { t, tf } from '@/i18n';
+import { t, tf, type MessageKey } from '@/i18n';
 import { ApiError, call } from '@/lib/api';
 import type { Client, ClientPage } from '@/lib/client-types';
 import {
-  COUNTRIES,
+  ALL_COUNTRIES,
   DEFAULT_COUNTRY,
   displayPhone,
   formatNational,
@@ -24,6 +24,13 @@ import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { EntityHistory } from './entity-history';
 
 const LIMIT = 20;
+
+/** Mesma ordem da API (alfabética, sem diferenciar acento nem maiúsculas). */
+function sortByName(list: Client[]): Client[] {
+  return [...list].sort((a, b) =>
+    a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }),
+  );
+}
 
 type Form = {
   name: string;
@@ -65,6 +72,7 @@ export function ClientsView({
   // Busca já aplicada: o "carregar mais" continua a consulta que gerou o cursor.
   const [applied, setApplied] = useState('');
   const [busy, setBusy] = useState(false);
+  const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(
     initial ? null : t('clients.loadError'),
   );
@@ -89,6 +97,7 @@ export function ClientsView({
     if (append && cursor) query.set('cursor', cursor);
 
     setBusy(true);
+    setMore(append);
     setError(null);
 
     try {
@@ -112,6 +121,13 @@ export function ClientsView({
 
   function search(event: FormEvent) {
     event.preventDefault();
+
+    if (q.trim().length === 1) {
+      setError(t('clients.searchHint'));
+
+      return;
+    }
+
     void load(false);
   }
 
@@ -176,9 +192,11 @@ export function ClientsView({
         : await call<Client>('POST', 'clients', { body });
 
       setRows((current) =>
-        client
-          ? current.map((row) => (row.id === data.id ? data : row))
-          : [data, ...current],
+        sortByName(
+          client
+            ? current.map((row) => (row.id === data.id ? data : row))
+            : [data, ...current],
+        ),
       );
       setDialog(null);
       setNotice(t(client ? 'clients.saved' : 'clients.created'));
@@ -253,13 +271,18 @@ export function ClientsView({
           maxLength={100}
           autoComplete="off"
         />
-        <Button type="submit" loading={busy && rows.length === 0}>
+        <Button type="submit" loading={busy && !more}>
           {t('clients.searchSubmit')}
         </Button>
       </form>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
+      {busy && !more ? (
+        <p role="status" className="text-muted">
+          {t('common.loading')}
+        </p>
+      ) : null}
       {rows.length === 0 && !error ? (
         <EmptyState
           title={t(searched ? 'clients.empty' : 'clients.emptyFirst')}
@@ -324,7 +347,7 @@ export function ClientsView({
       {cursor ? (
         <Button
           variant="secondary"
-          loading={busy}
+          loading={busy && more}
           onClick={() => void load(true)}
         >
           {t('clients.loadMore')}
@@ -361,8 +384,9 @@ export function ClientsView({
               value={form.country.code}
               onChange={(event) => {
                 const country =
-                  COUNTRIES.find((item) => item.code === event.target.value) ??
-                  DEFAULT_COUNTRY;
+                  ALL_COUNTRIES.find(
+                    (item) => item.code === event.target.value,
+                  ) ?? DEFAULT_COUNTRY;
                 setForm({
                   ...form,
                   country,
@@ -370,15 +394,20 @@ export function ClientsView({
                 });
               }}
             >
-              {COUNTRIES.map((country) => (
+              {ALL_COUNTRIES.map((country) => (
                 <option key={country.code} value={country.code}>
-                  {`${country.name} (+${country.ddi})`}
+                  {t(`clients.countries.${country.code}` as MessageKey)}
+                  {country.ddi ? ` (+${country.ddi})` : ''}
                 </option>
               ))}
             </SelectField>
             <TextField
               label={t('clients.phone')}
-              hint={t('clients.phoneHint')}
+              hint={t(
+                form.country.code === 'OTHER'
+                  ? 'clients.phoneHintOther'
+                  : 'clients.phoneHint',
+              )}
               type="tel"
               inputMode="tel"
               value={form.national}

@@ -25,4 +25,7 @@ export default defineConfig({
   team: contract('team', 'PLT-008-usuarios-e-papeis'),
   management: contract('management', 'PLT-007-gestao-da-assinatura'),
   auth: contract('auth', 'PLT-006-login-do-assinante'),
+  planChange: contract('planChange', 'PLT-013-troca-de-plano'),
+  audit: contract('audit', 'FND-008-auditoria-do-assinante'),
+  clients: contract('clients', 'CLI-001-clientes'),
 });

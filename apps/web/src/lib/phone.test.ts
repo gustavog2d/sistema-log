@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   COUNTRIES,
   DEFAULT_COUNTRY,
+  OTHER_COUNTRY,
   displayPhone,
   formatNational,
   splitE164,
@@ -31,13 +32,20 @@ describe('phone', () => {
     expect(formatNational(country('PT'), '912345678')).toBe('912 345 678');
   });
 
+  it('CLI-001 never loses digits of a number from another country on the way in and out', () => {
+    const { country: other, national } = splitE164('+33612345678');
+
+    expect(toE164(other, formatNational(other, national))).toBe('+33612345678');
+    expect(formatNational(other, '33 6 12 34 56 78')).toBe('33612345678');
+  });
+
   it('CLI-001 builds the E.164 with the country code and no trunk zero', () => {
     expect(toE164(DEFAULT_COUNTRY, '(11) 99999-8888')).toBe('+5511999998888');
     expect(toE164(country('PT'), '912 345 678')).toBe('+351912345678');
     expect(toE164(country('AR'), '011 5555 1234')).toBe('+541155551234');
   });
 
-  it('CLI-001 splits an E.164 by the longest country code and falls back to Brazil', () => {
+  it('CLI-001 splits an E.164 by the longest country code and keeps an unknown code whole as "other"', () => {
     expect(splitE164('+5511999998888')).toEqual({
       country: DEFAULT_COUNTRY,
       national: '11999998888',
@@ -45,7 +53,7 @@ describe('phone', () => {
     expect(splitE164('+351912345678').country.code).toBe('PT');
     expect(splitE164('+14155550123').country.code).toBe('US');
     expect(splitE164('+999123456')).toEqual({
-      country: DEFAULT_COUNTRY,
+      country: OTHER_COUNTRY,
       national: '999123456',
     });
   });
@@ -53,5 +61,6 @@ describe('phone', () => {
   it('CLI-001 shows a phone for lists', () => {
     expect(displayPhone('+5511999998888')).toBe('+55 (11) 99999-8888');
     expect(displayPhone('+351912345678')).toBe('+351 912 345 678');
+    expect(displayPhone('+33612345678')).toBe('+33612345678');
   });
 });

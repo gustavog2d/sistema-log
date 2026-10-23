@@ -21,6 +21,9 @@ class Auditor
     /** Nomes de campo (ou chaves dentro de um campo) que nunca entram no histórico: segredos, credenciais, cartão e documentos. */
     private const SENSITIVE = '/(password|passwd|senha|token|secret|segredo|hash|totp|recovery|api_?key|private_?key|credential|authorization|bearer|cvv|cvc|card|cartao|iban|pix_?key|chave_?pix|cpf|cnpj|\brg\b|passport|passaporte)/i';
 
+    /** Marca no lugar do conteúdo de um campo oculto. */
+    public const MASK = '[oculto]';
+
     public function __construct(private readonly TenantContext $context) {}
 
     public function created(Model $model): void
@@ -42,8 +45,8 @@ class Auditor
                 continue;
             }
 
-            $before[$field] = $this->normalize($field, $model->getOriginal($field));
-            $after[$field] = $this->normalize($field, $model->getAttribute($field));
+            $before[$field] = $this->shown($model, $field, $model->getOriginal($field));
+            $after[$field] = $this->shown($model, $field, $model->getAttribute($field));
         }
 
         // Editar só campos não auditados não gera registro.
@@ -86,10 +89,22 @@ class Auditor
         $values = [];
 
         foreach ($this->fields($model) as $field) {
-            $values[$field] = $this->normalize($field, $read($field));
+            $values[$field] = $this->shown($model, $field, $read($field));
         }
 
         return $values;
+    }
+
+    /** Valor para o histórico: campos "ocultos" (texto livre que pode ter dado sensível) só registram que existem ou mudaram. */
+    private function shown(Model $model, string $field, mixed $value): mixed
+    {
+        $masked = method_exists($model, 'maskedAuditFields') ? $model->maskedAuditFields() : [];
+
+        if (is_array($masked) && in_array($field, $masked, true)) {
+            return $value === null || $value === '' ? null : self::MASK;
+        }
+
+        return $this->normalize($field, $value);
     }
 
     private function entity(Model $model): AuditedEntity

@@ -23,7 +23,7 @@ it('CA-05 returns the existing client when the phone is already registered', fun
 
     clientsApi($this, $token, 'POST', 'neg', 'clients/quick', ['name' => 'Bia', 'phone' => '(11) 99999-8888', 'country' => '55'])->assertStatus(422);
     clientsApi($this, $token, 'POST', 'neg', 'clients/quick', ['name' => 'Bia', 'phone' => '+55 (11) 99999-8888'])->assertOk()
-        ->assertJsonPath('existing', true)->assertJsonPath('client.id', $existing->id)->assertJsonPath('client.name', 'Beatriz');
+        ->assertJsonPath('existing', true)->assertJsonPath('client.id', $existing->id)->assertJsonPath('client.name', 'Beatriz')->assertJsonMissingPath('client.notes')->assertJsonMissingPath('client.email');
 
     expect(DB::connection('pgsql_admin')->table('clients')->count())->toBe(1);
 });
@@ -46,6 +46,20 @@ it('CA-05 keeps a single client when the same phone is created twice, deciding b
     expect($first['existing'])->toBeFalse()->and($second['existing'])->toBeTrue()->and($second['client']->id)->toBe($first['client']->id)
         ->and(DB::connection('pgsql_admin')->table('clients')->count())->toBe(1)
         ->and(auditRows())->toHaveCount(1);
+});
+
+it('CA-07 never stores the content of the notes in the history, only that they exist or changed', function () {
+    [, $token] = ownerOf($this, 'neg');
+    $id = clientsApi($this, $token, 'POST', 'neg', 'clients', clientPayload(['notes' => 'Alergia a látex, usa medicação X']))->assertCreated()->json('id');
+    clientsApi($this, $token, 'PATCH', 'neg', "clients/{$id}", ['notes' => 'Outra anotação de saúde'])->assertOk();
+    clientsApi($this, $token, 'PATCH', 'neg', "clients/{$id}", ['notes' => null])->assertOk();
+    clientsApi($this, $token, 'DELETE', 'neg', "clients/{$id}")->assertNoContent();
+
+    $rows = auditRows();
+    expect(json_encode($rows))->not->toContain('látex')->not->toContain('saúde')->not->toContain('medicação')
+        ->and($rows[0]->after['notes'])->toBe('[oculto]')
+        ->and($rows[1]->before)->toBe(['notes' => '[oculto]'])->and($rows[1]->after)->toBe(['notes' => '[oculto]'])
+        ->and($rows[2]->after)->toBe(['notes' => null]);
 });
 
 it('CA-07 records creation, edition and deletion in the history with before and after', function () {

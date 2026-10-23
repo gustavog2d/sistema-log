@@ -44,7 +44,10 @@ class ClientController extends Controller
         $phone = $data['phone'];
         $result = $this->clients->quick(is_string($name) ? $name : '', is_string($phone) ? $phone : '');
 
-        return response()->json(['client' => $result['client']->toApi(), 'existing' => $result['existing']], $result['existing'] ? 200 : 201);
+        // Só o necessário para escolher o cliente: nada de e-mail, Instagram ou notas.
+        $client = $result['client'];
+
+        return response()->json(['client' => ['id' => $client->id, 'name' => $client->name, 'phone' => $client->phone], 'existing' => $result['existing']], $result['existing'] ? 200 : 201);
     }
 
     public function show(string $id): JsonResponse
