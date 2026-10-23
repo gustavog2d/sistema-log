@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- FND-006: design system (tokens com teste de contraste, componentes acessíveis, layouts do site e dos painéis), ponte do web com a API (cookie HttpOnly, proteção contra CSRF) e roteamento por endereço (site, painel da equipe e painel do assinante). Guia de estilo em `/guia-de-estilo` e sugestão de paleta e logotipo em `docs/16-design-system.md`.
 - PLT-011: captura de leads da landing (API) com UTM, consentimento LGPD, anti-robô (reCAPTCHA com verificador de teste local), campo isca, deduplicação em 24 horas, limite por hora, tela de gestão da equipe (lista, status, notas) e retenção de 12 meses.
 - PLT-009: gestão de assinantes pela equipe (API): lista e detalhe, exceções de funcionalidade por negócio, suspender e reativar na mão, estender o teste e acesso de suporte (30 minutos, com motivo, auditoria e aviso à dona).
 - PLT-010: e-mails transacionais (boas-vindas, fim do teste chegando, pagamento aprovado, suspensão, regularização, cancelamento, troca de senha e 2FA desligado), um por acontecimento, pela fila, com registro de envio sem o endereço.

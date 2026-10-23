@@ -56,6 +56,10 @@ services:
     environment:
       API_URL: http://api:8000
       NEXT_PUBLIC_APP_NAME: ${APP_NAME:-App}
+      APP_BASE_DOMAIN: ${APP_BASE_DOMAIN:-localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Só `true` quando o web fica atrás do nosso balanceador (senão o cabeçalho do cliente é descartado).
+      TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
     ports:
       - '127.0.0.1:${WEB_PORT:-3000}:3000'
     healthcheck:

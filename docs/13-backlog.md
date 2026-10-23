@@ -11,7 +11,7 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | FND-003 | CI: lint, análise estática, testes, contrato e auditoria de dependências (deploy em homologação virou FND-007) | FND-002 | Pipeline falha com estilo, lint ou contrato quebrado; bloqueio de merge depende da proteção de branch | Entregue |
 | FND-004 | Infra de homologação em Docker Compose (API, workers, Postgres, Redis, armazenamento de objetos, e-mail) + Cloudflare com curinga; backup e restauração ensaiados (ADR 0004). Terraform/AWS fica para depois | FND-001 | Deploy e rollback ensaiados | A especificar |
 | FND-005 | Base multi-tenant: resolução por subdomínio e token, RLS, suíte de isolamento | FND-002 | Tenant A não acessa dado do tenant B | Entregue |
-| FND-006 | Design system base (tokens, componentes, layout do painel) | FND-001 | Componentes com testes de acessibilidade | A especificar |
+| FND-006 | Design system base (tokens, componentes, layout do painel) | FND-001 | Componentes com testes de acessibilidade | Entregue |
 | FND-007 | Deploy em homologação com Docker Compose no servidor escolhido (inclui backup/restauração e Cloudflare) | FND-003, FND-004 | Deploy e rollback ensaiados | Adiado (primeiro roda só local; ADR 0004) |
 | PLT-001 | Login do super admin com 2FA (API); o painel web vira PLT-001b | FND-005 | Rota de plataforma inacessível a usuário de tenant | Entregue (API) |
 | PLT-001b | Painel web do super admin (login, 2FA e navegação) consumindo a API do PLT-001 | PLT-001, FND-006 | Rota de plataforma inacessível a usuário de tenant | A especificar |
@@ -27,6 +27,8 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-011 | Landing, leads com UTM e reCAPTCHA, tela de leads no super admin | PLT-001 | Lead inválido ou sem captcha rejeitado | Entregue (API) |
 | PLT-012 | Cupons e assinaturas de cortesia: cupom de 100% ou proporcional, criado pelo super admin, com validade e limite de uso | PLT-002, PLT-003 | Cupom de 100% assina sem cobrança; proporcional reduz o valor | Entregue (API) |
 | PLT-013 | Troca de plano: upgrade imediato com cobrança proporcional, downgrade no próximo ciclo com aviso de limite | PLT-007, PLT-002 | Downgrade acima do limite é bloqueado com aviso (depende das regras de limite por plano, ainda não definidas) | A especificar |
+| PLT-014 | Site público: landing com planos e formulário de contato (leads) e cadastro do assinante (plano, ciclo, cupom, pagamento de teste) | FND-006, PLT-003, PLT-011, PLT-012 | Cadastro completo chega ao painel do assinante; lead sem captcha é recusado | A especificar |
+| PLT-015 | Painel web do assinante: entrar (2FA), recuperar senha, aceitar convite, início, assinatura (cartão, cancelar, faturas) e equipe | FND-006, PLT-006, PLT-007, PLT-008 | Suspenso só lê e consegue regularizar; papel sem permissão não vê a tela | A especificar |
 | INT-001 | Gateway real de pagamento (Asaas): checkout, webhooks, conciliação, nota fiscal e reserva da fatura em estado `pending` antes de cobrar (cobrança fora da transação) | PLT-004, ADR 0003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | A especificar (por último, depende da conta do Asaas) |
 
 ```mermaid

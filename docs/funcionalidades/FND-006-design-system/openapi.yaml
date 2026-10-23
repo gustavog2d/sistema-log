@@ -1,0 +1,6 @@
+openapi: 3.1.0
+info:
+  title: Web
+  version: 1.0.0
+# FND-006 não cria rotas da API: o BFF do web repassa as rotas existentes (/bff/* -> /api/v1/*).
+paths: {}
