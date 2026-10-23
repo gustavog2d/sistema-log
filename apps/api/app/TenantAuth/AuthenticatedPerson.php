@@ -13,6 +13,7 @@ final readonly class AuthenticatedPerson
         public string $tokenId,
         public string $tokenKind,
         public bool $twoFactorEnabled,
+        public ?string $impersonatedBy = null,
     ) {}
 
     /** @return array{id: string, name: string, email: string, role: string} */

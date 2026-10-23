@@ -25,6 +25,7 @@ class SessionController extends Controller
             'tenant' => ['id' => $tenant->id, 'name' => $tenant->name, 'slug' => $tenant->slug],
             'can_write' => SubscriptionAccess::canWriteFor($tenant->id),
             'two_factor_enabled' => $person->twoFactorEnabled,
+            'impersonating' => $person->impersonatedBy !== null,
         ]);
     }
 

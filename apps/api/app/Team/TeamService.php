@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Plans\EntitlementResolver;
+use App\Plans\TenantEntitlementOverrides;
 use App\Tenancy\TenantContext;
 use App\TenantAuth\AccountIsLocked;
 use App\TenantAuth\AuthenticatedPerson;
@@ -38,6 +39,7 @@ class TeamService
         private readonly TenantContext $context,
         private readonly TenantAuthenticator $authenticator,
         private readonly EntitlementResolver $entitlements,
+        private readonly TenantEntitlementOverrides $overrides,
     ) {}
 
     /** @return array{members: list<array<string, mixed>>, invitations: list<array<string, mixed>>} */
@@ -290,8 +292,7 @@ class TeamService
             return null;
         }
 
-        // TODO(PLT-009): quando existirem exceções por assinante, passá-las ao resolver.
-        $entitlement = $this->entitlements->forPlan($plan)->firstWhere('feature', 'usuarios.max');
+        $entitlement = $this->entitlements->forPlan($plan, $this->overrides->for($tenantId))->firstWhere('feature', 'usuarios.max');
 
         return $entitlement !== null && $entitlement->enabled ? $entitlement->limit : null;
     }

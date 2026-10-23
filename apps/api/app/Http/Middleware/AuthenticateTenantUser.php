@@ -95,6 +95,7 @@ class AuthenticateTenantUser
                 tokenId: $id,
                 tokenKind: $kind,
                 twoFactorEnabled: $user->totp_confirmed_at !== null,
+                impersonatedBy: is_string($token->impersonated_by) ? $token->impersonated_by : null,
             ),
             in_array($kind, $kinds, true),
         ];

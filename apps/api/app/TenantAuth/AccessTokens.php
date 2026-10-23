@@ -28,20 +28,22 @@ class AccessTokens
      *
      * @return array{token: string, expires_at: Carbon}
      */
-    public function issue(Connection $db, string $tenantId, string $userId, string $kind): array
+    public function issue(Connection $db, string $tenantId, string $userId, string $kind, ?string $impersonatedBy = null, ?int $ttlMinutes = null): array
     {
-        $ttl = $kind === self::ACCESS
-            ? now()->addHours(Config::integer('auth_tenant.access_ttl_hours'))
-            : now()->addMinutes(Config::integer('auth_tenant.challenge_ttl_minutes'));
+        $ttl = $ttlMinutes !== null
+            ? now()->addMinutes($ttlMinutes)
+            : ($kind === self::ACCESS
+                ? now()->addHours(Config::integer('auth_tenant.access_ttl_hours'))
+                : now()->addMinutes(Config::integer('auth_tenant.challenge_ttl_minutes')));
         $id = (string) Str::uuid();
         $secret = Str::random(40);
 
         // O negócio é informado na transação: o RLS exige que o token seja deste negócio.
-        $db->transaction(function (Connection $tx) use ($tenantId, $userId, $kind, $id, $secret, $ttl): void {
+        $db->transaction(function (Connection $tx) use ($tenantId, $userId, $kind, $id, $secret, $ttl, $impersonatedBy): void {
             $tx->statement("select set_config('app.tenant_id', ?, true)", [$tenantId]);
             $tx->table('user_access_tokens')->insert([
                 'id' => $id, 'tenant_id' => $tenantId, 'user_id' => $userId, 'kind' => $kind,
-                'token_hash' => hash('sha256', $secret), 'expires_at' => $ttl, 'created_at' => Instant::now(),
+                'token_hash' => hash('sha256', $secret), 'expires_at' => $ttl, 'created_at' => Instant::now(), 'impersonated_by' => $impersonatedBy,
             ]);
         });
 

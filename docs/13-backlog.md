@@ -22,7 +22,7 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-006 | Autenticação do assinante (web e token mobile), recuperação de senha, 2FA do dono | FND-005 | Token de um tenant não vale em outro | Entregue (API) |
 | PLT-007 | Gestão da assinatura pela dona: forma de pagamento, regularização, faturas, cancelamento | PLT-004 | Suspensa regulariza com novo cartão e volta na hora; cancelamento sem cobrança (troca de plano foi para o PLT-013) | Entregue (API) |
 | PLT-008 | Usuários e papéis do assinante: convite, papéis, desativação, limite do plano | PLT-006 | Cada papel só acessa o que a matriz permite | Entregue (API) |
-| PLT-009 | Gestão de assinantes no super admin: lista, detalhe, exceções, suspender, impersonação auditada | PLT-005 | Impersonação sempre registrada | A especificar |
+| PLT-009 | Gestão de assinantes no super admin: lista, detalhe, exceções, suspender, impersonação auditada | PLT-005 | Impersonação sempre registrada | Entregue (API) |
 | PLT-010 | E-mails transacionais da plataforma (boas-vindas, teste acabando, cobrança, suspensão) | PLT-004 | Cada evento dispara um e-mail, uma vez | Entregue |
 | PLT-011 | Landing, leads com UTM e reCAPTCHA, tela de leads no super admin | PLT-001 | Lead inválido ou sem captcha rejeitado | A especificar |
 | PLT-012 | Cupons e assinaturas de cortesia: cupom de 100% ou proporcional, criado pelo super admin, com validade e limite de uso | PLT-002, PLT-003 | Cupom de 100% assina sem cobrança; proporcional reduz o valor | Entregue (API) |

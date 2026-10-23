@@ -1,0 +1,292 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+security: [{ bearerAuth: [] }]
+paths:
+  /platform/tenants:
+    get:
+      operationId: listTenants
+      summary: Lista os assinantes (equipe da plataforma)
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [trialing, active, suspended, canceled] } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Página de assinantes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenantPage" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /platform/tenants/{id}:
+    get:
+      operationId: getTenant
+      summary: Detalhe de um assinante
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+      responses:
+        "200":
+          description: Assinante
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenantDetail" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /platform/tenants/{id}/suspend:
+    post:
+      operationId: suspendTenant
+      summary: Suspende a assinatura na mão (super admin)
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 5, maxLength: 200 }
+      responses:
+        "200":
+          description: Assinante atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenantItem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /platform/tenants/{id}/unsuspend:
+    post:
+      operationId: unsuspendTenant
+      summary: Tira a suspensão (super admin)
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+      responses:
+        "200":
+          description: Assinante atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenantItem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /platform/tenants/{id}/extend-trial:
+    post:
+      operationId: extendTrial
+      summary: Soma dias ao fim do teste (super admin)
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [days]
+              properties:
+                days: { type: integer, minimum: 1, maximum: 30 }
+      responses:
+        "200":
+          description: Assinante atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TenantItem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /platform/tenants/{id}/entitlements/{feature}:
+    put:
+      operationId: setTenantEntitlement
+      summary: Cria ou troca a exceção de uma funcionalidade (super admin)
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+        - { name: feature, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+                limit: { type: [integer, "null"], minimum: 0 }
+                visible: { type: boolean }
+      responses:
+        "200":
+          description: Funcionalidade efetiva
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Entitlement" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: resetTenantEntitlement
+      summary: Remove a exceção e volta à regra do plano (super admin)
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+        - { name: feature, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Funcionalidade efetiva
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Entitlement" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /platform/tenants/{id}/impersonate:
+    post:
+      operationId: impersonateOwner
+      summary: Entra como a dona do negócio por 30 minutos, com motivo (equipe)
+      parameters:
+        - { $ref: "#/components/parameters/TenantId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 10, maxLength: 200 }
+      responses:
+        "200":
+          description: Acesso de suporte
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Impersonation" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    TenantId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    TenantItem:
+      type: object
+      required: [id, name, slug, niche, created_at, plan, cycle, status, price_cents, currency, trial_ends_at, current_period_end, cancel_at_period_end, suspended_reason]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { type: string }
+        niche: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        plan: { type: [string, "null"] }
+        cycle: { type: [string, "null"] }
+        status: { type: [string, "null"], enum: [trialing, active, suspended, canceled, null] }
+        price_cents: { type: [integer, "null"] }
+        currency: { type: [string, "null"] }
+        trial_ends_at: { type: [string, "null"], format: date-time }
+        current_period_end: { type: [string, "null"], format: date-time }
+        cancel_at_period_end: { type: boolean }
+        suspended_reason: { type: [string, "null"] }
+    TenantPage:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/TenantItem" }
+        next_cursor: { type: [string, "null"] }
+    TenantDetail:
+      allOf:
+        - { $ref: "#/components/schemas/TenantItem" }
+        - type: object
+          required: [owner, active_people, payment_method, coupon, invoices, entitlements]
+          properties:
+            owner:
+              type: [object, "null"]
+              required: [name, email]
+              properties:
+                name: { type: string }
+                email: { type: string }
+            active_people: { type: integer }
+            payment_method:
+              type: [object, "null"]
+              required: [type, brand, last4]
+              properties:
+                type: { type: string }
+                brand: { type: [string, "null"] }
+                last4: { type: [string, "null"] }
+            coupon:
+              type: [object, "null"]
+              required: [code, percent_off]
+              properties:
+                code: { type: string }
+                percent_off: { type: integer }
+            invoices:
+              type: array
+              items:
+                type: object
+                required: [id, period_start, period_end, amount_cents, currency, status, paid_at]
+                properties:
+                  id: { type: string, format: uuid }
+                  period_start: { type: string, format: date-time }
+                  period_end: { type: string, format: date-time }
+                  amount_cents: { type: integer }
+                  currency: { type: string }
+                  status: { type: string, enum: [paid, failed] }
+                  paid_at: { type: [string, "null"], format: date-time }
+            entitlements:
+              type: array
+              items: { $ref: "#/components/schemas/Entitlement" }
+    Entitlement:
+      type: object
+      required: [feature, enabled, limit, visible, source]
+      properties:
+        feature: { type: string }
+        enabled: { type: boolean }
+        limit: { type: [integer, "null"] }
+        visible: { type: boolean }
+        source: { type: string, enum: [override, plan, default] }
+    Impersonation:
+      type: object
+      required: [access_token, token_type, expires_at, url]
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [Bearer] }
+        expires_at: { type: string, format: date-time }
+        url: { type: string, description: Endereço do negócio para abrir com o token }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        errors: { type: object }
