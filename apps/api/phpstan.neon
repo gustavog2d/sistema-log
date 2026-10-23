@@ -8,8 +8,4 @@ parameters:
         - app
         - routes
         - bootstrap
-    ignoreErrors:
-        # O trait é usado pelos modelos de negócio das próximas entregas (e pelos testes).
-        -
-            identifier: trait.unused
-            path: app/Audit/Audited.php
+    ignoreErrors: []

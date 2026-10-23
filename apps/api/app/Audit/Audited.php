@@ -20,12 +20,12 @@ trait Audited
 {
     public static function bootAudited(): void
     {
-        static::created(fn ($model) => app(Auditor::class)->created($model));
-        static::updated(fn ($model) => app(Auditor::class)->updated($model));
-        static::deleted(fn ($model) => app(Auditor::class)->deleted($model));
+        static::created(fn (Model $model) => app(Auditor::class)->created($model));
+        static::updated(fn (Model $model) => app(Auditor::class)->updated($model));
+        static::deleted(fn (Model $model) => app(Auditor::class)->deleted($model));
     }
 
-    /** @param  array<string, mixed>  $options */
+    /** @param  array{touch?: bool|null}  $options */
     public function save(array $options = []): bool
     {
         return (bool) $this->getConnection()->transaction(fn (): bool => parent::save($options));

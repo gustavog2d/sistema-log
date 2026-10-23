@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- CLI-001: clientes (API e tela): cadastro com telefone E.164 único por negócio, e-mail e Instagram únicos, busca sem acento, criação rápida que devolve o cliente existente, exclusão (dona e gerente), histórico do cliente e papéis por ação.
 - FND-008: auditoria do assinante: registro de criação, edição e exclusão com antes e depois (`Audited`), somente de acréscimo e isolado por negócio, `GET /audit-logs` (dona e gerente) e tela de histórico.
 - PLT-013: troca de plano pela dona (API e painel): upgrade vale na hora com cobrança proporcional, downgrade agendado para o fim do período, bloqueio quando o uso passa do limite do plano novo, simulação antes de confirmar e troca agendada que pode ser desfeita.
 - PLT-001b: painel web da equipe da plataforma em `/admin` (entrar com 2FA, resumo, assinantes com busca e detalhe, suspender, reativar, estender teste, exceções de funcionalidade e acesso de suporte, planos, cupons e leads), com perfis super admin (escreve) e suporte (consulta).
