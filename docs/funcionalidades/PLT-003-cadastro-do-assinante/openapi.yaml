@@ -76,7 +76,7 @@ components:
         reason: { type: string, enum: [invalid, reserved, taken] }
     SignupRequest:
       type: object
-      required: [business_name, slug, niche, owner_name, owner_email, password, plan, cycle, payment_method_token, accept_terms]
+      required: [business_name, slug, niche, owner_name, owner_email, password, plan, cycle, accept_terms]
       properties:
         business_name: { type: string, minLength: 2, maxLength: 100 }
         slug: { type: string, maxLength: 64 }
@@ -86,12 +86,12 @@ components:
         password: { type: string, minLength: 12 }
         plan: { type: string, description: Chave de um plano ativo }
         cycle: { type: string, enum: [monthly, yearly] }
-        payment_method_token: { type: string, maxLength: 200 }
+        payment_method_token: { type: string, maxLength: 200, description: "Obrigatório, exceto quando o cupom deixa o preço em zero (cortesia, PLT-012)" }
         accept_terms: { type: boolean, const: true }
-        coupon_code: { not: {}, description: Ainda não aceito (cupons entram no PLT-012); enviar este campo dá 422. }
+        coupon_code: { type: string, maxLength: 40, description: "Cupom de desconto (PLT-012); cupom indisponível dá 422 em `coupon_code`" }
     SignupResult:
       type: object
-      required: [tenant, subscription, payment_method]
+      required: [tenant, subscription, payment_method, coupon]
       properties:
         tenant:
           type: object
@@ -114,12 +114,20 @@ components:
             trial_ends_at: { type: string, format: date-time }
             first_charge_at: { type: string, format: date-time }
         payment_method:
-          type: object
+          type: [object, "null"]
+          description: Nulo na conta de cortesia criada sem cartão
           required: [type, brand, last4]
           properties:
             type: { type: string }
             brand: { type: string }
             last4: { type: string }
+        coupon:
+          type: [object, "null"]
+          description: Cupom aplicado, quando houve
+          required: [code, percent_off]
+          properties:
+            code: { type: string }
+            percent_off: { type: integer }
     Problem:
       type: object
       required: [type, title, status]

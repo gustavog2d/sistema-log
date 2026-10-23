@@ -1,4 +1,5 @@
 export * as auth from './generated/auth';
+export * as coupons from './generated/coupons';
 export * as health from './generated/health';
 export * as management from './generated/management';
 export * as plans from './generated/plans';

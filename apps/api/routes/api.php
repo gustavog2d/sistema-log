@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\Platform\AuthController;
+use App\Http\Controllers\Platform\CouponController;
 use App\Http\Controllers\Platform\FeatureController;
 use App\Http\Controllers\Platform\MeController;
 use App\Http\Controllers\Platform\PlanController;
@@ -80,6 +82,7 @@ Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(func
 // Cadastro do assinante (PLT-003): público, só nos hosts da plataforma.
 Route::middleware('platform')->group(function () {
     Route::get('signup/slug-availability', [SignupController::class, 'slugAvailability'])->middleware('throttle:slug-check');
+    Route::post('signup/coupon-check', CouponCheckController::class)->middleware('throttle:coupon-check');
     Route::post('signup', [SignupController::class, 'store'])->middleware(['throttle:signup', 'idempotent:signup']);
 });
 
@@ -106,7 +109,11 @@ Route::middleware('platform')->prefix('platform')->group(function () {
             Route::get('plans/{plan}/entitlements', [PlanController::class, 'entitlements']);
             Route::get('features', [FeatureController::class, 'index']);
 
+            Route::get('coupons', [CouponController::class, 'index']);
+
             Route::middleware('platform.role:super_admin')->group(function () {
+                Route::post('coupons', [CouponController::class, 'store']);
+                Route::patch('coupons/{id}', [CouponController::class, 'update'])->whereUuid('id');
                 Route::post('plans', [PlanController::class, 'store']);
                 Route::patch('plans/{plan}', [PlanController::class, 'update']);
                 Route::put('plans/{plan}/features/{feature}', [PlanFeatureController::class, 'set']);

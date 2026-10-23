@@ -32,7 +32,7 @@ O meio de pagamento é um **meio de teste simulado** por trás de uma interface 
 - **RN-10** — Meio de pagamento de teste (somente com `BILLING_GATEWAY=fake`): `tok_ok` (aprovado), `tok_fail_on_charge` (aceito no cadastro; falhará na cobrança do 7º dia, para testar a suspensão) e `tok_declined` (recusado no cadastro). Qualquer outro token é recusado.
 - **RN-11** — Limite de 10 requisições por minuto por IP no cadastro e 60 na consulta de endereço. Erros em Problem Details.
 - **RN-12** — Auditoria do cadastro (`signup.completed`, com ids e plano; sem senha nem token de pagamento).
-- **RN-13** — Cupom de desconto e assinatura de cortesia entram no PLT-012; o campo `coupon_code` ainda não é aceito (enviar dá 422).
+- **RN-13** — Cupom de desconto e assinatura de cortesia: ver PLT-012. O campo `coupon_code` é opcional; cupom indisponível dá 422; cortesia (preço final 0) dispensa o meio de pagamento.
 - **RN-14** — O gateway é chamado antes de gravar. Se a gravação falhar depois (inclusive em corrida por endereço ou e-mail, que vira 422), o cliente criado no gateway é removido (compensação). A auditoria é gravada só depois do sucesso.
 - **RN-16** — Só `application/json` é aceito no cadastro (outros formatos dão 415). A chave de idempotência vale apenas para quem a criou (escopo por IP), então adivinhar a chave de outra pessoa não devolve a resposta dela.
 - **RN-17** — `BILLING_GATEWAY` não tem valor padrão: cada ambiente declara o seu, e o gateway de teste `fake` só funciona nos ambientes `local` e `testing` (em outro ambiente o sistema recusa subir o cadastro).

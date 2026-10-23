@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- PLT-012: cupons criados pelo super admin (percentual, validade, limite de usos), aplicados no cadastro com preço congelado e conta de cortesia (100%) sem cartão; consulta pública do preço com o cupom.
 - PLT-008: equipe do negócio (API): convite por e-mail com link de 7 dias, aceite com senha própria, troca de papel, desativação com queda imediata dos acessos, reativação e limite `usuarios.max` do plano.
 - PLT-007: gestão da assinatura pela dona (API): trocar o meio de pagamento, regularizar assinatura suspensa com cobrança na hora, pedir e desfazer o cancelamento (vale no fim do teste ou do período pago, sem cobrança) e listar faturas.
 - PLT-006: login do assinante (API) com e-mail e senha, token opaco por negócio (RLS), sair e sair de todos, recuperação e troca de senha, 2FA (TOTP) opcional, bloqueio por falhas e papel de banco `app_auth`.
