@@ -40,6 +40,7 @@ it('declares every route of the feature in the contract', function () {
         expect($declared)->toContain($path);
     }
 
-    $routes = collect(Route::getRoutes()->getRoutes())->filter(fn ($r) => str_starts_with($r->uri(), 'api/v1/auth/'))->map(fn ($r) => '/'.substr($r->uri(), strlen('api/v1') + 1))->unique()->sort()->values()->all();
+    $routes = collect(Route::getRoutes()->getRoutes())->filter(fn ($r) => str_starts_with($r->uri(), 'api/v1/auth/'))->map(fn ($r) => '/'.substr($r->uri(), strlen('api/v1') + 1))->reject(fn ($path) => $path === '/auth/invitations/accept') // contrato do PLT-008
+        ->unique()->sort()->values()->all();
     expect($routes)->toBe(collect($declared)->sort()->values()->all());
 });

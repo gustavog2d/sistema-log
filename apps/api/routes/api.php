@@ -12,6 +12,8 @@ use App\Http\Controllers\PublicPlanController;
 use App\Http\Controllers\SignupController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SubscriptionManagementController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\TenantAuth\InvitationController;
 use App\Http\Controllers\TenantAuth\LoginController;
 use App\Http\Controllers\TenantAuth\PasswordController;
 use App\Http\Controllers\TenantAuth\SessionController;
@@ -32,6 +34,16 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
     Route::get('/subscription', SubscriptionController::class)->middleware(['auth.tenant', 'throttle:subscription-status']);
 });
 
+// Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager'])->prefix('users')->group(function () {
+    Route::get('/', [TeamController::class, 'index']);
+    Route::post('invitations', [TeamController::class, 'invite'])->middleware('throttle:team-invite');
+    Route::delete('invitations/{id}', [TeamController::class, 'cancelInvitation'])->whereUuid('id');
+    Route::patch('{id}', [TeamController::class, 'changeRole'])->whereUuid('id');
+    Route::post('{id}/deactivate', [TeamController::class, 'deactivate'])->whereUuid('id');
+    Route::post('{id}/reactivate', [TeamController::class, 'reactivate'])->whereUuid('id');
+});
+
 // Gestão da assinatura pela dona (PLT-007). Funciona também com a assinatura suspensa ou cancelada (`subscription.exempt`):
 // é por aqui que se regulariza o pagamento.
 Route::middleware(['tenant', 'subscription.exempt', 'auth.tenant', 'owner', 'throttle:subscription-manage'])->prefix('subscription')->group(function () {
@@ -47,6 +59,7 @@ Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(func
     Route::post('login', [LoginController::class, 'login'])->middleware(['throttle:tenant-login', 'throttle:tenant-login-email']);
     Route::post('password/forgot', [PasswordController::class, 'forgot'])->middleware('throttle:tenant-forgot');
     Route::post('password/reset', [PasswordController::class, 'reset'])->middleware('throttle:tenant-reset');
+    Route::post('invitations/accept', [InvitationController::class, 'accept'])->middleware('throttle:invitation-accept');
 
     Route::post('2fa/verify', [LoginController::class, 'verify'])->middleware(['auth.tenant:challenge', 'throttle:tenant-verify']);
 
