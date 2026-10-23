@@ -24,7 +24,7 @@ export function TextField({
       required={required}
       className={className}
     >
-      {(control) => <input {...control} {...input} className={controlClass} />}
+      {(control) => <input {...input} {...control} className={controlClass} />}
     </Field>
   );
 }
@@ -47,8 +47,8 @@ export function TextareaField({
     >
       {(control) => (
         <textarea
-          {...control}
           {...input}
+          {...control}
           className={cn(controlClass, 'min-h-24 py-2')}
         />
       )}
@@ -74,7 +74,7 @@ export function SelectField({
       className={className}
     >
       {(control) => (
-        <select {...control} {...input} className={controlClass}>
+        <select {...input} {...control} className={controlClass}>
           {children}
         </select>
       )}
@@ -99,8 +99,8 @@ export function CheckboxField({
         className="flex min-h-11 items-start gap-3 text-base text-ink"
       >
         <input
-          {...control}
           {...input}
+          {...control}
           type="checkbox"
           className="mt-1 size-5 accent-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
         />

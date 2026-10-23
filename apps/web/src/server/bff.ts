@@ -1,4 +1,4 @@
-import { hostname } from './host';
+import { classifyHost, hostname, type HostKind } from './host';
 
 /**
  * Ponte entre o navegador e a API (RN-07): o navegador fala só com `/bff/*` no próprio endereço; este código
@@ -43,6 +43,11 @@ export type BffDeps = {
   fetch: typeof fetch;
   apiUrl: string;
   secureCookies: boolean;
+  baseDomain: string;
+  /** Repassa o X-Forwarded-For do cliente (só atrás do nosso próprio balanceador); fora disso o cabeçalho é descartado. */
+  trustForwardedFor?: boolean;
+  maxBodyBytes?: number;
+  timeoutMs?: number;
 };
 
 export function cookieValue(request: Request, name: string): string | null {
@@ -52,7 +57,11 @@ export function cookieValue(request: Request, name: string): string | null {
     const [key, ...rest] = part.trim().split('=');
 
     if (key === name) {
-      return decodeURIComponent(rest.join('='));
+      try {
+        return decodeURIComponent(rest.join('='));
+      } catch {
+        return null;
+      }
     }
   }
 
@@ -70,7 +79,7 @@ function serialize(
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
-    `Max-Age=${Math.max(0, Math.floor(maxAgeSeconds))}`,
+    `Max-Age=${Number.isFinite(maxAgeSeconds) ? Math.max(0, Math.floor(maxAgeSeconds)) : 0}`,
     secure ? 'Secure' : null,
   ]
     .filter(Boolean)
@@ -84,11 +93,14 @@ function problem(status: number, title: string): Response {
   });
 }
 
+/** Cada segmento do caminho: letras, números, hífen e sublinhado (inclui UUIDs). Nada de ponto, `%`, `?`, `#` ou `;`. */
+const SEGMENT = /^[A-Za-z0-9_-]+$/;
+
 /** Caminho da API pedido (sem o prefixo `/bff/`), ou `null` se for suspeito. */
 export function apiPathFrom(pathname: string): string | null {
   const raw = pathname.replace(/^\/bff\/?/, '');
 
-  // Barra, barra invertida e ponto codificados escondem um caminho diferente do que o filtro vê: recusa.
+  // Barra, barra invertida, ponto e nulo codificados escondem um caminho diferente do que o filtro vê: recusa.
   if (
     /%2f|%5c|%2e|%00/i.test(raw) ||
     raw.includes('..') ||
@@ -105,15 +117,33 @@ export function apiPathFrom(pathname: string): string | null {
     return null;
   }
 
-  if (
-    decoded.includes('//') ||
-    decoded.startsWith('/') ||
-    decoded.endsWith('/')
-  ) {
+  // Decodificado uma vez, cada segmento precisa ser simples: um `%252e` vira `%2e` aqui e seria um ponto para o parser de URL.
+  if (!decoded.split('/').every((segment) => SEGMENT.test(segment))) {
     return null;
   }
 
   return ALLOWED.some((pattern) => pattern.test(decoded)) ? decoded : null;
+}
+
+/** Quem pode chamar o quê: o site (domínio base) usa a plataforma; o endereço de assinante usa as rotas do negócio. */
+const SITE_ONLY = [/^platform\//, /^signup(\/|$)/, /^leads$/];
+const TENANT_ONLY = [
+  /^auth\//,
+  /^users(\/|$)/,
+  /^subscription(\/|$)/,
+  /^tenant\/current$/,
+];
+
+export function pathAllowedFor(kind: HostKind['kind'], path: string): boolean {
+  if (kind === 'invalid') {
+    return false;
+  }
+
+  if (kind === 'site') {
+    return !TENANT_ONLY.some((pattern) => pattern.test(path));
+  }
+
+  return !SITE_ONLY.some((pattern) => pattern.test(path));
 }
 
 export async function handleBff(
@@ -124,6 +154,16 @@ export async function handleBff(
   const path = apiPathFrom(url.pathname);
 
   if (path === null) {
+    return problem(404, 'Not Found');
+  }
+
+  const hostKind = classifyHost(
+    request.headers.get('host'),
+    deps.baseDomain,
+  ).kind;
+
+  // O endereço decide o que se pode chamar: o Host que chega aqui é o que a API vai usar para achar o negócio.
+  if (!pathAllowedFor(hostKind, path)) {
     return problem(404, 'Not Found');
   }
 
@@ -156,7 +196,8 @@ export async function handleBff(
 
   const forwardedFor = request.headers.get('x-forwarded-for');
 
-  if (forwardedFor) {
+  // O cabeçalho vem do cliente: só vale atrás do nosso balanceador, senão qualquer um forja o IP e foge dos limites.
+  if (forwardedFor && deps.trustForwardedFor) {
     headers.set('x-forwarded-for', forwardedFor);
   }
 
@@ -169,16 +210,41 @@ export async function handleBff(
     headers.set('authorization', `Bearer ${bearer}`);
   }
 
-  const body = ['GET', 'DELETE'].includes(method)
-    ? undefined
-    : await request.text();
+  const maxBytes = deps.maxBodyBytes ?? 262_144;
+  let body: string | undefined;
+
+  if (!['GET', 'DELETE'].includes(method)) {
+    if (Number(request.headers.get('content-length') ?? 0) > maxBytes) {
+      return problem(413, 'Payload Too Large');
+    }
+
+    if (
+      contentType &&
+      !contentType.toLowerCase().startsWith('application/json')
+    ) {
+      return problem(415, 'Unsupported Media Type');
+    }
+
+    body = await request.text();
+
+    if (new TextEncoder().encode(body).length > maxBytes) {
+      return problem(413, 'Payload Too Large');
+    }
+  }
 
   let upstream: Response;
 
   try {
     upstream = await deps.fetch(
       `${deps.apiUrl.replace(/\/$/, '')}/api/v1/${path}${url.search}`,
-      { method, headers, body, redirect: 'manual', cache: 'no-store' },
+      {
+        method,
+        headers,
+        body,
+        redirect: 'manual',
+        cache: 'no-store',
+        signal: AbortSignal.timeout(deps.timeoutMs ?? 15_000),
+      },
     );
   } catch {
     return problem(502, 'Bad Gateway');
@@ -195,6 +261,7 @@ export async function handleBff(
   }
 
   out.set('cache-control', 'no-store');
+  out.set('x-content-type-options', 'nosniff');
 
   const text = [204, 205, 304].includes(upstream.status)
     ? null

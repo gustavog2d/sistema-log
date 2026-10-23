@@ -17,7 +17,13 @@ export function Table({
   className?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+    <div
+      // Rolagem horizontal alcançável pelo teclado, com nome (a legenda da tabela).
+      role="region"
+      aria-label={caption}
+      tabIndex={0}
+      className="overflow-x-auto rounded-lg border border-line bg-surface"
+    >
       <table
         className={cn('w-full border-collapse text-left text-sm', className)}
       >

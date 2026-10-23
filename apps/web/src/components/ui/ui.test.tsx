@@ -313,3 +313,39 @@ describe('Dialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
+
+describe('review fixes', () => {
+  it('keeps the label link even when the caller passes an id', () => {
+    render(<TextField label="Nome" id="meu-id" error="Erro" />);
+
+    const input = screen.getByLabelText('Nome');
+    expect(input.id).not.toBe('meu-id');
+    expect(input).toHaveAttribute('aria-describedby');
+  });
+
+  it('makes a scrollable table reachable by keyboard, with a name', () => {
+    render(
+      <Table caption="Faturas">
+        <thead />
+      </Table>,
+    );
+
+    expect(screen.getByRole('region', { name: 'Faturas' })).toHaveAttribute(
+      'tabindex',
+      '0',
+    );
+  });
+
+  it('moves the dialog focus to the content, not to the close button, and locks the page scroll', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<Harness />);
+    await user.click(screen.getByText('Abrir'));
+
+    expect(screen.getByLabelText('Motivo')).toHaveFocus();
+    expect(document.body.style.overflow).toBe('hidden');
+
+    await user.keyboard('{Escape}');
+    expect(document.body.style.overflow).toBe('');
+    unmount();
+  });
+});

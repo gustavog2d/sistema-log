@@ -43,10 +43,16 @@ export function Dialog({
     }
 
     opener.current = document.activeElement as HTMLElement | null;
-    const first = panel.current?.querySelector<HTMLElement>(FOCUSABLE);
-    (first ?? panel.current)?.focus();
+    // O foco começa no primeiro item do conteúdo (o botão de fechar é o primeiro da janela, não o mais útil).
+    const items = panel.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
+    (items?.[1] ?? items?.[0] ?? panel.current)?.focus();
+
+    // Atrás do diálogo a página não rola.
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
 
     return () => {
+      document.body.style.overflow = overflow;
       opener.current?.focus();
     };
   }, [open]);

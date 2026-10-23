@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe } from 'vitest-axe';
 import { describe, expect, it } from 'vitest';
+import { AdminShell } from './admin-shell';
 import { AppShell } from './app-shell';
 import { MarketingLayout } from './marketing-layout';
 import { PageHeader } from './page-header';
@@ -120,5 +121,46 @@ describe('AppShell', () => {
     await user.click(screen.getByRole('button', { name: 'Sair' }));
 
     expect(called).toBe(1);
+  });
+});
+
+describe('AdminShell', () => {
+  const shell = (
+    <AdminShell
+      nav={[{ href: '/admin', label: 'Assinantes' }]}
+      currentHref="/admin"
+      user={{ name: 'Gustavo' }}
+      onLogout={() => {}}
+      areaLabel="Equipe da plataforma"
+    >
+      <PageHeader title="Assinantes" />
+    </AdminShell>
+  );
+
+  it('CA-06 has no accessibility violations and shows the staff area label', async () => {
+    const { container } = render(shell);
+
+    expect(await axe(container)).toHaveNoViolations();
+    expect(screen.getByText('Equipe da plataforma')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Assinantes' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('CA-06 closes the mobile menu with Esc and gives the focus back to the button', async () => {
+    const user = userEvent.setup();
+    render(shell);
+    const toggle = screen.getByRole('button', { name: 'Abrir menu' });
+
+    await user.click(toggle);
+    await user.keyboard('{Escape}');
+
+    expect(screen.getByRole('button', { name: 'Abrir menu' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'Abrir menu' })).toHaveFocus();
   });
 });

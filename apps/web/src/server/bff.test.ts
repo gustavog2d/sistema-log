@@ -11,6 +11,7 @@ function deps(
     calls,
     apiUrl: 'http://api:8000',
     secureCookies: secure,
+    baseDomain: 'localhost',
     fetch: vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
       calls.push({ url: String(url), init: init ?? {} });
 
@@ -27,11 +28,15 @@ const json = (body: unknown, status = 200, extra: HeadersInit = {}) =>
 
 const req = (path: string, init: RequestInit & { cookie?: string } = {}) => {
   const { cookie, ...rest } = init;
+  const host =
+    (rest.headers as Record<string, string> | undefined)?.host ??
+    'estudio.localhost:3000';
 
-  return new Request(`http://estudio.localhost:3000${path}`, {
+  return new Request(`http://${host}${path}`, {
     ...rest,
     headers: {
-      host: 'estudio.localhost:3000',
+      host,
+      ...(rest.body ? { 'content-type': 'application/json' } : {}),
       'x-requested-with': 'fetch',
       ...(cookie ? { cookie } : {}),
       ...(rest.headers as Record<string, string> | undefined),
@@ -62,6 +67,12 @@ describe('apiPathFrom', () => {
     '/bff/',
     '/bff',
     '/bff/plans%00',
+    '/bff/auth/%252e%252e/%252e%252e/up',
+    '/bff/plans%3fx=1',
+    '/bff/plans%253fx=1',
+    '/bff/plans%23x',
+    '/bff/auth/me;x',
+    '/bff/auth/me.json',
   ])('CA-11 refuses %s', (path) => {
     expect(apiPathFrom(path)).toBeNull();
   });
@@ -128,6 +139,7 @@ describe('handleBff', () => {
         method: 'POST',
         body: '{"a":1}',
         headers: {
+          host: 'localhost:3000',
           'content-type': 'application/json',
           'idempotency-key': 'k1',
         },
@@ -262,7 +274,11 @@ describe('handleBff', () => {
     const response = await handleBff(
       req(
         '/bff/platform/tenants/0194a7c0-0000-7000-8000-000000000000/impersonate',
-        { method: 'POST', body: '{"reason":"x"}' },
+        {
+          method: 'POST',
+          body: '{"reason":"x"}',
+          headers: { host: 'localhost:3000' },
+        },
       ),
       d,
     );
@@ -357,5 +373,197 @@ describe('handleBff', () => {
 
     expect(response.headers.get('location')).toBeNull();
     expect((d.calls[0]!.init as RequestInit).redirect).toBe('manual');
+  });
+});
+
+describe('handleBff hardening', () => {
+  it('ALTO-1 never lets an encoded traversal reach the API', async () => {
+    const d = deps(() => json({}));
+
+    expect(
+      (await handleBff(req('/bff/auth/%252e%252e/%252e%252e/up'), d)).status,
+    ).toBe(404);
+    expect(d.calls).toHaveLength(0);
+  });
+
+  it('only builds URLs under /api/v1 on the configured API', async () => {
+    const d = deps(() => json({}));
+
+    await handleBff(
+      req('/bff/users/0194a7c0-0000-7000-8000-000000000000/deactivate', {
+        method: 'POST',
+        body: '{}',
+        headers: { 'content-type': 'application/json' },
+      }),
+      d,
+    );
+
+    expect(new URL(d.calls[0]!.url).origin).toBe('http://api:8000');
+    expect(new URL(d.calls[0]!.url).pathname.startsWith('/api/v1/')).toBe(true);
+  });
+
+  it('refuses an address that is not ours', async () => {
+    const d = deps(() => json({}));
+
+    expect(
+      (
+        await handleBff(
+          req('/bff/plans', { headers: { host: 'a.b.localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (await handleBff(req('/bff/plans', { headers: { host: 'evil.com' } }), d))
+        .status,
+    ).toBe(404);
+    expect(
+      (
+        await handleBff(
+          req('/bff/plans', { headers: { host: 'admin.localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(404);
+    expect(d.calls).toHaveLength(0);
+  });
+
+  it('keeps the platform routes on the site address and the business routes on the business address', async () => {
+    const d = deps(() => json({}));
+
+    expect(
+      (
+        await handleBff(
+          req('/bff/platform/me', { headers: { host: 'estudio.localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await handleBff(
+          req('/bff/auth/me', { headers: { host: 'localhost:3000' } }),
+          d,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await handleBff(
+          req('/bff/subscription', { headers: { host: 'localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await handleBff(
+          req('/bff/platform/me', { headers: { host: 'localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await handleBff(
+          req('/bff/auth/me', { headers: { host: 'estudio.localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await handleBff(
+          req('/bff/plans', { headers: { host: 'estudio.localhost' } }),
+          d,
+        )
+      ).status,
+    ).toBe(200);
+  });
+
+  it('drops the X-Forwarded-For of the client unless it sits behind our own balancer', async () => {
+    const d = deps(() => json({}));
+    await handleBff(
+      req('/bff/plans', { headers: { 'x-forwarded-for': '1.2.3.4' } }),
+      d,
+    );
+    expect(
+      new Headers(d.calls[0]!.init.headers).get('x-forwarded-for'),
+    ).toBeNull();
+
+    const trusted = { ...deps(() => json({})), trustForwardedFor: true };
+    await handleBff(
+      req('/bff/plans', { headers: { 'x-forwarded-for': '1.2.3.4' } }),
+      trusted,
+    );
+    expect(
+      new Headers(trusted.calls[0]!.init.headers).get('x-forwarded-for'),
+    ).toBe('1.2.3.4');
+  });
+
+  it('limits the body size and only takes JSON', async () => {
+    const d = { ...deps(() => json({})), maxBodyBytes: 10 };
+
+    const big = await handleBff(
+      req('/bff/leads', {
+        method: 'POST',
+        body: 'x'.repeat(50),
+        headers: { 'content-type': 'application/json' },
+      }),
+      d,
+    );
+    const form = await handleBff(
+      req('/bff/leads', {
+        method: 'POST',
+        body: 'a=1',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          host: 'localhost',
+        },
+      }),
+      { ...d, maxBodyBytes: 1000 },
+    );
+
+    expect(big.status).toBe(404); // o endereço do assinante não chama /leads
+    const site = await handleBff(
+      req('/bff/leads', {
+        method: 'POST',
+        body: 'x'.repeat(50),
+        headers: { 'content-type': 'application/json', host: 'localhost' },
+      }),
+      d,
+    );
+    expect(site.status).toBe(413);
+    expect(form.status).toBe(415);
+  });
+
+  it('gives the upstream call a timeout', async () => {
+    const d = deps(() => json({}));
+
+    await handleBff(req('/bff/plans'), d);
+
+    expect((d.calls[0]!.init as RequestInit).signal).toBeInstanceOf(
+      AbortSignal,
+    );
+  });
+
+  it('survives a malformed cookie and an invalid expiry', async () => {
+    const d = deps(() =>
+      json({ access_token: 'a|b', expires_at: 'não é data' }),
+    );
+
+    const response = await handleBff(
+      req('/bff/auth/login', {
+        method: 'POST',
+        body: '{}',
+        cookie: 'session=%E0%A4%A',
+      }),
+      d,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.getSetCookie()[0]).toContain('Max-Age=');
+    expect(response.headers.getSetCookie()[0]).not.toContain('NaN');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
   });
 });

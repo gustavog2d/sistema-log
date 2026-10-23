@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { appName } from '@/lib/brand';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME ?? 'App',
+  title: appName(),
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

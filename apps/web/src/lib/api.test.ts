@@ -16,6 +16,43 @@ function stub(response: Response | Error) {
   return fn;
 }
 
+describe('call (bridge errors)', () => {
+  it('treats 502/503/504 as a network problem with a friendly message', async () => {
+    for (const status of [502, 503, 504]) {
+      stub(
+        new Response(JSON.stringify({ title: 'Bad Gateway', status }), {
+          status,
+        }),
+      );
+      const error = (await call('GET', 'plans').catch(
+        (e: unknown) => e,
+      )) as ApiError;
+
+      expect(error.isNetwork).toBe(true);
+      expect(error.message).toMatch(/servidor/);
+    }
+  });
+
+  it('does not show English titles of the bridge on the screen', async () => {
+    stub(
+      new Response(
+        JSON.stringify({
+          type: 'about:blank',
+          title: 'Forbidden',
+          status: 403,
+        }),
+        { status: 403 },
+      ),
+    );
+
+    const error = (await call('POST', 'auth/logout').catch(
+      (e: unknown) => e,
+    )) as ApiError;
+
+    expect(error.message).not.toContain('Forbidden');
+  });
+});
+
 describe('call', () => {
   it('sends JSON through the bridge with the CSRF header', async () => {
     const fn = stub(new Response('{"ok":true}', { status: 200 }));

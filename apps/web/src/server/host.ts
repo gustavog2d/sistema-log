@@ -3,6 +3,9 @@ export type HostKind =
 
 const SLUG = /^[a-z0-9]([a-z0-9-]{1,61}[a-z0-9])$/;
 
+/** Subdomínios da plataforma: a API os trata como hosts da equipe ou do sistema, nunca como negócio. */
+const RESERVED = new Set(['www', 'app', 'admin', 'api']);
+
 /** Tira a porta e as maiúsculas do cabeçalho Host. */
 export function hostname(hostHeader: string | null | undefined): string {
   return (hostHeader ?? '').trim().toLowerCase().replace(/:\d+$/, '');
@@ -26,7 +29,9 @@ export function classifyHost(
   if (host.endsWith(`.${base}`)) {
     const slug = host.slice(0, -(base.length + 1));
 
-    return SLUG.test(slug) ? { kind: 'tenant', slug } : { kind: 'invalid' };
+    return SLUG.test(slug) && !RESERVED.has(slug)
+      ? { kind: 'tenant', slug }
+      : { kind: 'invalid' };
   }
 
   return { kind: 'invalid' };

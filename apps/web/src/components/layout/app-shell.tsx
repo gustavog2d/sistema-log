@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
@@ -30,14 +30,24 @@ export function AppShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+
+  // Esc fecha o menu do celular e devolve o foco ao botão que o abre.
+  function onKeyDown(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === 'Escape' && open) {
+      setOpen(false);
+      toggle.current?.focus();
+    }
+  }
 
   return (
     <div className="min-h-dvh bg-canvas text-ink md:grid md:grid-cols-[16rem_1fr]">
       <SkipLink />
-      <aside className="bg-slate-900 text-slate-100">
+      <aside className="bg-slate-900 text-slate-100" onKeyDown={onKeyDown}>
         <div className="flex items-center justify-between px-4 py-3 md:block md:py-5">
           <Logo inverted />
           <Button
+            ref={toggle}
             variant="ghost"
             className="text-slate-100 hover:bg-slate-800 md:hidden"
             aria-expanded={open}

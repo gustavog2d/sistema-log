@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { contrastRatio, tokens, type ColorToken } from '@app/ui-tokens';
 import { MarketingLayout } from '@/components/layout/marketing-layout';
 import { PageHeader } from '@/components/layout/page-header';
@@ -63,6 +64,14 @@ const GROUPS: Array<[string, ColorToken[]]> = [
 ];
 
 export default function StyleGuide() {
+  // Só para desenvolvimento e homologação: em produção a página não existe.
+  if (
+    process.env.NODE_ENV === 'production' &&
+    process.env.STYLE_GUIDE !== 'true'
+  ) {
+    notFound();
+  }
+
   return (
     <MarketingLayout links={[]}>
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">

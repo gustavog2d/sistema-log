@@ -13,11 +13,12 @@ export class ApiError extends Error {
   }
 
   get isNetwork(): boolean {
-    return this.status === 0;
+    return this.status === 0 || [502, 503, 504].includes(this.status);
   }
 }
 
 type Problem = {
+  type?: string;
   title?: string;
   detail?: string;
   code?: string;
@@ -94,8 +95,15 @@ function toApiError(response: Response, problem: Problem | null): ApiError {
   }
 
   const retry = Number(response.headers.get('retry-after'));
-  const message =
-    response.status >= 500
+  // Falha da ponte ou da API fora do ar: mensagem de rede, sem texto técnico nem em inglês.
+  const bridgeDown = [502, 503, 504].includes(response.status);
+  const message = bridgeDown
+    ? t('common.networkError')
+    : response.status >= 500 ||
+        (problem?.type === 'about:blank' &&
+          !problem.detail &&
+          Object.keys(fieldErrors).length === 0 &&
+          [403, 404].includes(response.status))
       ? t('common.genericError')
       : (problem?.detail ??
         Object.values(fieldErrors)[0] ??

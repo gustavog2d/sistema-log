@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import { cn } from '@/lib/cn';
 import { Spinner } from './spinner';
 
@@ -14,7 +14,7 @@ const variants: Record<ButtonVariant, string> = {
   danger: 'bg-danger-fg text-surface hover:bg-slate-900',
 };
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+export type ButtonProps = ComponentProps<'button'> & {
   variant?: ButtonVariant;
   loading?: boolean;
 };
