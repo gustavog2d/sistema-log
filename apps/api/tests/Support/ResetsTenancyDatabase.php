@@ -46,7 +46,7 @@ trait ResetsTenancyDatabase
         Schema::connection('pgsql_admin')->enableTenantRls('probe_items');
 
         DB::connection('pgsql_admin')->statement(
-            'TRUNCATE tenants, platform_users, platform_audit_logs, personal_access_tokens, plans, features, plan_features, users, memberships, subscriptions, payment_methods, idempotency_keys, invoices, user_access_tokens, password_reset_tokens CASCADE',
+            'TRUNCATE tenants, platform_users, platform_audit_logs, personal_access_tokens, plans, features, plan_features, users, memberships, subscriptions, payment_methods, idempotency_keys, invoices, user_access_tokens, password_reset_tokens, coupons, coupon_redemptions CASCADE',
         );
         app(TenantContext::class)->clear();
         app(TenantDatabaseContext::class)->clear();

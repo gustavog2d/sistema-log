@@ -57,11 +57,17 @@ export interface SignupRequest {
   /** Chave de um plano ativo */
   plan: string;
   cycle: SignupRequestCycle;
-  /** @maxLength 200 */
-  payment_method_token: string;
+  /**
+     * Obrigatório, exceto quando o cupom deixa o preço em zero (cortesia, PLT-012)
+     * @maxLength 200
+     */
+  payment_method_token?: string;
   accept_terms: true;
-  /** Ainda não aceito (cupons entram no PLT-012); enviar este campo dá 422. */
-  coupon_code?: unknown;
+  /**
+     * Cupom de desconto (PLT-012); cupom indisponível dá 422 em `coupon_code`
+     * @maxLength 40
+     */
+  coupon_code?: string;
 }
 
 export type SignupResultTenant = {
@@ -97,16 +103,38 @@ export type SignupResultSubscription = {
   first_charge_at: string;
 };
 
+/**
+ * Nulo na conta de cortesia criada sem cartão
+ * @nullable
+ */
 export type SignupResultPaymentMethod = {
   type: string;
   brand: string;
   last4: string;
-};
+} | null;
+
+/**
+ * Cupom aplicado, quando houve
+ * @nullable
+ */
+export type SignupResultCoupon = {
+  code: string;
+  percent_off: number;
+} | null;
 
 export interface SignupResult {
   tenant: SignupResultTenant;
   subscription: SignupResultSubscription;
+  /**
+     * Nulo na conta de cortesia criada sem cartão
+     * @nullable
+     */
   payment_method: SignupResultPaymentMethod;
+  /**
+     * Cupom aplicado, quando houve
+     * @nullable
+     */
+  coupon: SignupResultCoupon;
 }
 
 export type ProblemErrors = { [key: string]: unknown };

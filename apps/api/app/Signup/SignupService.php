@@ -5,6 +5,7 @@ namespace App\Signup;
 use App\Billing\PaymentGateway;
 use App\Billing\PaymentMethodInfo;
 use App\Billing\PaymentMethodRejected;
+use App\Coupons\CouponService;
 use App\Models\Plan;
 use App\Models\User;
 use App\Platform\Auth\PlatformAudit;
@@ -30,6 +31,7 @@ class SignupService
         private readonly PaymentGateway $gateway,
         private readonly PlatformAudit $audit,
         private readonly SlugAvailability $availability,
+        private readonly CouponService $coupons,
     ) {}
 
     /** @return array<string, mixed> */
@@ -38,9 +40,23 @@ class SignupService
         $this->assertAvailable($data);
 
         $plan = Plan::query()->where('key', $data->plan)->where('status', 'active')->firstOrFail();
-        $priceCents = $data->cycle === 'yearly' ? (int) $plan->yearlyPriceCents() : (int) $plan->monthly_price_cents;
 
-        [$customerRef, $method] = $this->attachPayment($data);
+        // O cupom é conferido antes de qualquer chamada ao gateway; o uso só é contado na gravação.
+        $quote = $this->coupons->quote($plan, $data->cycle, $data->couponCode, 'coupon_code');
+        $coupon = $quote['coupon'];
+        $originalCents = $quote['price'];
+        $priceCents = $quote['final'];
+        $token = $data->paymentMethodToken;
+
+        // Só o cupom de 100% dispensa o cartão: preço zero por outro motivo (plano sem preço, arredondamento) não.
+        // Na cortesia um cartão enviado é ignorado (nem cliente no gateway nem recusa por causa dele).
+        if ($quote['courtesy']) {
+            [$customerRef, $method] = [null, null];
+        } elseif ($token === null) {
+            throw ValidationException::withMessages(['payment_method_token' => 'Informe o meio de pagamento.']);
+        } else {
+            [$customerRef, $method] = $this->attachPayment($data, $token);
+        }
 
         // O hash (lento de propósito) é feito antes de abrir a transação, para não segurar conexão e linhas.
         $passwordHash = bcrypt($data->password);
@@ -50,7 +66,7 @@ class SignupService
 
         try {
             DB::connection('pgsql_platform')->transaction(
-                fn (Connection $db) => $this->persist($db, $data, $passwordHash, $plan, $priceCents, $customerRef, $method, $ids, $now, $trialEnds),
+                fn (Connection $db) => $this->persist($db, $data, $passwordHash, $plan, $priceCents, $customerRef, $method, $ids, $now, $trialEnds, $coupon === null ? null : [$coupon, $originalCents]),
             );
         } catch (UniqueConstraintViolationException $e) {
             // Dois cadastros simultâneos com o mesmo endereço ou e-mail: o banco decide, a resposta é 422.
@@ -71,7 +87,16 @@ class SignupService
             'tenant' => $ids->tenant, 'plan' => $plan->key, 'cycle' => $data->cycle, 'niche' => $data->niche,
         ]);
 
-        return $this->result($data, $plan, $priceCents, $method, $ids, $trialEnds);
+        if ($coupon !== null) {
+            try {
+                $this->coupons->recordRedeemed($coupon, $ids->tenant);
+            } catch (Throwable $e) {
+                // O cadastro já está gravado (e o uso, registrado em `coupon_redemptions`): falha de auditoria não o derruba.
+                report($e);
+            }
+        }
+
+        return $this->result($data, $plan, $priceCents, $method, $ids, $trialEnds, $coupon);
     }
 
     /** Endereço e e-mail livres (RN-05, RN-07). Em uma corrida, quem decide é o banco (restrição de unicidade). */
@@ -94,12 +119,12 @@ class SignupService
      *
      * @return array{0: string, 1: PaymentMethodInfo}
      */
-    private function attachPayment(SignupData $data): array
+    private function attachPayment(SignupData $data, string $token): array
     {
         $customerRef = $this->gateway->createCustomer($data->ownerName, $data->ownerEmail);
 
         try {
-            return [$customerRef, $this->gateway->attachPaymentMethod($customerRef, $data->paymentMethodToken)];
+            return [$customerRef, $this->gateway->attachPaymentMethod($customerRef, $token)];
         } catch (PaymentMethodRejected) {
             $this->compensate($customerRef);
 
@@ -107,7 +132,8 @@ class SignupService
         }
     }
 
-    private function persist(Connection $db, SignupData $data, string $passwordHash, Plan $plan, int $priceCents, string $customerRef, PaymentMethodInfo $method, SignupIds $ids, Carbon $now, Carbon $trialEnds): void
+    /** @param  array{0: \stdClass, 1: int}|null  $couponUse  cupom e preço original, quando há cupom */
+    private function persist(Connection $db, SignupData $data, string $passwordHash, Plan $plan, int $priceCents, ?string $customerRef, ?PaymentMethodInfo $method, SignupIds $ids, Carbon $now, Carbon $trialEnds, ?array $couponUse): void
     {
         // Escopo da transação: a tabela de vínculos tem RLS e exige o tenant informado.
         $db->statement("select set_config('app.tenant_id', ?, true)", [$ids->tenant]);
@@ -127,23 +153,34 @@ class SignupService
             'id' => (string) Str::uuid(), 'tenant_id' => $ids->tenant, 'user_id' => $ids->user, 'role' => 'owner',
             'created_at' => $now, 'updated_at' => $now,
         ]);
-        $db->table('payment_methods')->insert([
-            'id' => $ids->method, 'tenant_id' => $ids->tenant, 'gateway_ref' => $method->ref,
-            'type' => $method->type, 'brand' => $method->brand, 'last4' => $method->last4,
-            'created_at' => $now, 'updated_at' => $now,
-        ]);
+        if ($method !== null) {
+            $db->table('payment_methods')->insert([
+                'id' => $ids->method, 'tenant_id' => $ids->tenant, 'gateway_ref' => $method->ref,
+                'type' => $method->type, 'brand' => $method->brand, 'last4' => $method->last4,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
         $db->table('subscriptions')->insert([
             'id' => $ids->subscription, 'tenant_id' => $ids->tenant, 'plan_id' => $plan->id,
-            'payment_method_id' => $ids->method, 'gateway_customer_ref' => $customerRef,
+            'payment_method_id' => $method === null ? null : $ids->method, 'gateway_customer_ref' => $customerRef,
             'cycle' => $data->cycle, 'status' => 'trialing', 'price_cents' => $priceCents, 'currency' => $plan->currency,
             'trial_starts_at' => $now, 'trial_ends_at' => $trialEnds,
             'created_at' => $now, 'updated_at' => $now,
         ]);
+
+        if ($couponUse !== null) {
+            // Cupom travado na mesma transação: se o limite acabou entre a conferência e aqui, o cadastro inteiro volta atrás.
+            $this->coupons->redeem($db, is_string($couponUse[0]->code) ? $couponUse[0]->code : '', $ids->tenant, $ids->subscription, $couponUse[1], $priceCents);
+        }
     }
 
     /** Remove o cliente do gateway (melhor esforço): a falha original é a que importa. */
-    private function compensate(string $customerRef): void
+    private function compensate(?string $customerRef): void
     {
+        if ($customerRef === null) {
+            return;
+        }
+
         try {
             $this->gateway->deleteCustomer($customerRef);
         } catch (Throwable $e) {
@@ -152,7 +189,7 @@ class SignupService
     }
 
     /** @return array<string, mixed> */
-    private function result(SignupData $data, Plan $plan, int $priceCents, PaymentMethodInfo $method, SignupIds $ids, Carbon $trialEnds): array
+    private function result(SignupData $data, Plan $plan, int $priceCents, ?PaymentMethodInfo $method, SignupIds $ids, Carbon $trialEnds, ?\stdClass $coupon): array
     {
         return [
             'tenant' => ['id' => $ids->tenant, 'name' => $data->businessName, 'slug' => $data->slug, 'niche' => $data->niche],
@@ -161,7 +198,8 @@ class SignupService
                 'price_cents' => $priceCents, 'currency' => $plan->currency,
                 'trial_ends_at' => $trialEnds->toIso8601String(), 'first_charge_at' => $trialEnds->toIso8601String(),
             ],
-            'payment_method' => ['type' => $method->type, 'brand' => $method->brand, 'last4' => $method->last4],
+            'payment_method' => $method === null ? null : ['type' => $method->type, 'brand' => $method->brand, 'last4' => $method->last4],
+            'coupon' => $coupon === null ? null : ['code' => $coupon->code, 'percent_off' => CouponService::percentOf($coupon)],
         ];
     }
 }
