@@ -16,6 +16,8 @@ use App\Http\Controllers\Platform\PlanFeatureController;
 use App\Http\Controllers\Platform\TenantAdminController;
 use App\Http\Controllers\Platform\TwoFactorController;
 use App\Http\Controllers\PublicPlanController;
+use App\Http\Controllers\ServiceCategoryController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SignupController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SubscriptionManagementController;
@@ -51,6 +53,28 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:ten
     Route::post('quick', [ClientController::class, 'quick'])->middleware('no.impersonation');
     Route::patch('{id}', [ClientController::class, 'update'])->whereUuid('id')->middleware('no.impersonation');
     Route::delete('{id}', [ClientController::class, 'destroy'])->whereUuid('id')->middleware(['no.impersonation', 'role:owner,manager']);
+});
+
+// Catálogo de serviços (AGD-001): todos os papéis leem; só dona e gerente escrevem. O acesso de suporte só lê.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:tenant-api'])->group(function () {
+    Route::prefix('services')->group(function () {
+        Route::get('/', [ServiceController::class, 'index']);
+        Route::get('{id}', [ServiceController::class, 'show'])->whereUuid('id');
+        Route::middleware(['no.impersonation', 'role:owner,manager'])->group(function () {
+            Route::post('/', [ServiceController::class, 'store']);
+            Route::post('presets', [ServiceController::class, 'preset']);
+            Route::patch('{id}', [ServiceController::class, 'update'])->whereUuid('id');
+            Route::delete('{id}', [ServiceController::class, 'destroy'])->whereUuid('id');
+        });
+    });
+    Route::prefix('service-categories')->group(function () {
+        Route::get('/', [ServiceCategoryController::class, 'index']);
+        Route::middleware(['no.impersonation', 'role:owner,manager'])->group(function () {
+            Route::post('/', [ServiceCategoryController::class, 'store']);
+            Route::patch('{id}', [ServiceCategoryController::class, 'update'])->whereUuid('id');
+            Route::delete('{id}', [ServiceCategoryController::class, 'destroy'])->whereUuid('id');
+        });
+    });
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.

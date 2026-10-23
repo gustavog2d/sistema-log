@@ -39,7 +39,7 @@ Decisões de Gustavo: o pagamento real (INT-001) e o domínio ficam por último;
 | --- | --- | --- | --- | --- |
 | FND-008 | Auditoria do assinante: registro de quem mudou o quê (antes e depois) para todas as entidades de negócio, com tela de histórico | PLT-015 | Toda criação, edição e exclusão gera registro com antes e depois; um negócio nunca vê o log de outro | Entregue |
 | CLI-001 | Clientes: cadastro, busca, telefone E.164 único por negócio, Instagram, notas, média de avaliação, criação rápida | FND-008 | Telefone duplicado no mesmo negócio é recusado; em outro negócio é aceito | Entregue |
-| AGD-001 | Serviços e categorias: catálogo com duração (min), preço base ou "sob orçamento", intervalos | FND-008 | Serviço usado em agendamento não pode ser apagado, só arquivado | A especificar |
+| AGD-001 | Serviços e categorias: catálogo com duração (min), preço base ou "sob orçamento", intervalos | FND-008 | Serviço usado em agendamento não pode ser apagado, só arquivado | Entregue (a trava por agendamento chega com AGD-003) |
 | AGD-002 | Profissionais, expediente e folgas | AGD-001 | Horário livre = expediente − folgas − agendamentos | A especificar |
 | AGD-003 | Agenda: agendamentos com status, tipo, sessões, conflito barrado no banco e visão calendário | CLI-001, AGD-002 | Dois agendamentos do mesmo profissional nunca se sobrepõem (nem em corrida) | A especificar |
 | FIN-001 | Pagamentos do atendimento (sinal, parcelas, final), forma, comissão e avaliação | AGD-003 | Total recebido nunca passa do valor; cancelado não conta como receita | A especificar |
