@@ -77,7 +77,7 @@ class AuthenticateTenantUser
             return [null, true];
         }
 
-        $role = DB::table('memberships')->where('user_id', $user->id)->value('role');
+        $role = DB::table('memberships')->where('user_id', $user->id)->where('status', 'active')->value('role');
 
         if (! is_string($role)) {
             return [null, true];
