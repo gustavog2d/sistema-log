@@ -1,4 +1,5 @@
 import { handleBff } from '@/server/bff';
+import { hostAwareFetch } from '@/server/upstream';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,7 @@ function secureCookies(): boolean {
 
 function handle(request: Request): Promise<Response> {
   return handleBff(request, {
-    fetch,
+    fetch: hostAwareFetch,
     apiUrl: apiUrl(),
     secureCookies: secureCookies(),
     baseDomain: process.env.APP_BASE_DOMAIN || 'localhost',

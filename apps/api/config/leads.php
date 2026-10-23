@@ -9,6 +9,9 @@ return [
     // Chave do hash do IP dos leads (se vazia, usa a APP_KEY). Trocá-la quebra a correlação dos hashes antigos.
     'ip_hash_key' => env('LEADS_IP_HASH_KEY', ''),
 
+    // Exige o anti-robô no cadastro (desligue só em ambiente fechado de testes de carga).
+    'signup_captcha' => (bool) env('SIGNUP_CAPTCHA', true),
+
     // Versão da política de privacidade aceita junto com o contato.
     'privacy_version' => env('PRIVACY_POLICY_VERSION', '2026-10'),
 

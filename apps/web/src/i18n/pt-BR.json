@@ -57,5 +57,202 @@
     "optionA": "Tatuagem",
     "fieldCheck": "Aceito os termos",
     "alertBody": "Texto de exemplo de um aviso."
+  },
+  "site": {
+    "nav": {
+      "plans": "Planos",
+      "how": "Como funciona",
+      "contact": "Contato",
+      "signIn": "Entrar",
+      "start": "Começar o teste grátis",
+      "main": "Navegação principal"
+    },
+    "footer": "Os nomes, o logotipo e os textos legais são provisórios.",
+    "terms": "Termos de uso",
+    "privacy": "Política de privacidade"
+  },
+  "landing": {
+    "heroTitle": "Sua agenda, seus orçamentos e seu financeiro em um só lugar",
+    "heroText": "Para quem atende por horário: tatuagem, manicure, barbearia, estética automotiva e mais. Comece em minutos, teste por 7 dias e só pague se gostar.",
+    "heroCta": "Começar o teste grátis",
+    "heroSecondary": "Ver os planos",
+    "nichesTitle": "Feito para quem atende por horário",
+    "niches": {
+      "tatuagem": "Tatuagem",
+      "manicure": "Manicure",
+      "barbearia": "Barbeiro",
+      "estetica_automotiva": "Estética automotiva"
+    },
+    "featuresTitle": "O que você ganha",
+    "benefits": [
+      {
+        "title": "Agenda sem conflito",
+        "text": "Marque, remarque e veja o dia inteiro de relance, sem horários duplicados."
+      },
+      {
+        "title": "Orçamento que vira agendamento",
+        "text": "Mande o orçamento, receba o sinal e o horário já fica reservado."
+      },
+      {
+        "title": "Financeiro simples",
+        "text": "Veja o que entrou, o que saiu e quanto cada atendimento rendeu."
+      },
+      {
+        "title": "Clientes na palma da mão",
+        "text": "Histórico, contatos e observações de cada cliente em um lugar só."
+      },
+      {
+        "title": "Equipe com papéis",
+        "text": "Convide recepção e profissionais, cada um vê só o que precisa."
+      },
+      {
+        "title": "Seus dados protegidos",
+        "text": "Cada negócio tem os próprios dados, isolados dos demais."
+      }
+    ],
+    "plansTitle": "Planos",
+    "plansIntro": "Todos começam com {days} dias de teste. Cancele antes do fim e não paga nada.",
+    "plansError": "Não conseguimos carregar os planos agora. Tente de novo em instantes.",
+    "perMonth": "por mês",
+    "perYear": "por ano",
+    "yearlyNote": "No plano anual você economiza {amount}",
+    "choosePlan": "Quero este plano",
+    "includes": "Inclui",
+    "unlimited": "sem limite",
+    "upTo": "até {limit}",
+    "howTitle": "Como funciona",
+    "steps": [
+      {
+        "title": "Crie sua conta",
+        "text": "Informe seu negócio, escolha o plano e cadastre a forma de pagamento. Leva poucos minutos."
+      },
+      {
+        "title": "Teste por 7 dias",
+        "text": "Acesso completo, sem cobrança. Cancele quando quiser antes do fim."
+      },
+      {
+        "title": "Continue ou cancele",
+        "text": "No fim do teste a primeira cobrança acontece. Se cancelou, nada é cobrado."
+      }
+    ],
+    "contactTitle": "Ficou com dúvida?",
+    "contactIntro": "Deixe seu contato e a gente responde.",
+    "ctaTitle": "Pronto para começar?",
+    "ctaText": "Crie a conta agora e teste por 7 dias."
+  },
+  "features": {
+    "agenda.publica": "Agenda pública para clientes",
+    "integracao.google_calendar": "Integração com Google Agenda",
+    "orcamento": "Orçamentos",
+    "relatorios.exportar": "Relatórios e exportação",
+    "usuarios.max": "Usuários"
+  },
+  "contact": {
+    "name": "Nome",
+    "email": "E-mail",
+    "phone": "Telefone (opcional)",
+    "phoneHint": "Com código do país e DDD, por exemplo +5511999998888",
+    "niche": "Seu nicho (opcional)",
+    "nicheNone": "Prefiro não informar",
+    "message": "Mensagem (opcional)",
+    "privacy": "Li e aceito a política de privacidade",
+    "submit": "Enviar contato",
+    "sending": "Enviando…",
+    "success": "Recebemos seu contato. Em breve falamos com você.",
+    "successTitle": "Contato enviado",
+    "captchaUnavailable": "Não foi possível confirmar que você é uma pessoa. Recarregue a página e tente de novo.",
+    "rateLimited": "Muitos envios em pouco tempo. Tente de novo mais tarde.",
+    "decoy": "Não preencha este campo"
+  },
+  "signup": {
+    "title": "Criar conta",
+    "subtitle": "Teste por {days} dias, sem cobrança antes do fim.",
+    "stepLabel": "Passo {n} de {total}",
+    "stepsNav": "Passos do cadastro",
+    "steps": {
+      "business": "Seu negócio",
+      "owner": "Você",
+      "plan": "Plano",
+      "payment": "Pagamento"
+    },
+    "businessName": "Nome do negócio",
+    "businessNameHint": "Como seus clientes conhecem você",
+    "slug": "Endereço do seu painel",
+    "slugHint": "Seu painel ficará em {slug}.{domain}",
+    "slugChecking": "Conferindo se está livre…",
+    "slugFree": "Endereço livre",
+    "slugTaken": "Este endereço já está em uso",
+    "slugReserved": "Este endereço não pode ser usado",
+    "slugInvalid": "Use de 3 a 30 letras minúsculas, números ou hífen (sem hífen no começo ou no fim)",
+    "niche": "Seu nicho",
+    "nichePlaceholder": "Escolha",
+    "ownerName": "Seu nome",
+    "ownerEmail": "Seu e-mail",
+    "ownerEmailHint": "É com ele que você entra",
+    "password": "Senha",
+    "passwordHint": "No mínimo 12 caracteres",
+    "passwordMissing": "Faltam {n} caracteres",
+    "passwordTooLong": "A senha pode ter até 72 caracteres",
+    "passwordOk": "Senha com tamanho bom",
+    "showPassword": "Mostrar senha",
+    "planTitle": "Escolha o plano",
+    "cycle": "Cobrança",
+    "monthly": "Mensal",
+    "yearly": "Anual",
+    "yearlySave": "economize {amount}",
+    "coupon": "Cupom (opcional)",
+    "couponApply": "Aplicar cupom",
+    "couponApplied": "Cupom aplicado: {percent}% de desconto",
+    "couponInvalid": "Cupom inválido ou indisponível.",
+    "couponCourtesy": "Sem cobrança com este cupom.",
+    "payment": "Forma de pagamento",
+    "paymentTestNotice": "Ambiente de teste: nenhum cartão real é usado e nada é cobrado de verdade.",
+    "payOk": "Cartão de teste aprovado",
+    "payFail": "Cartão de teste que recusa na cobrança",
+    "payDeclined": "Cartão de teste recusado agora",
+    "paymentUnavailable": "O pagamento real ainda não está disponível neste ambiente.",
+    "noPayment": "Não é preciso cadastrar pagamento com este cupom.",
+    "summary": "Resumo",
+    "summaryPlan": "Plano {plan}, cobrança {cycle}",
+    "summaryPrice": "{price} por {period}",
+    "summaryTrial": "{days} dias grátis. A primeira cobrança é no fim do teste. Cancele antes, quando quiser, sem custo.",
+    "summaryFree": "Sem cobrança.",
+    "terms": "Li e aceito os termos de uso",
+    "termsLink": "Ver os termos",
+    "termsRequired": "É preciso aceitar os termos para continuar",
+    "next": "Continuar",
+    "back": "Voltar",
+    "submit": "Criar minha conta",
+    "submitting": "Criando sua conta…",
+    "required": "Preencha este campo",
+    "emailInvalid": "Informe um e-mail válido",
+    "rateLimited": "Muitos pedidos em pouco tempo. Tente de novo mais tarde.",
+    "inProgress": "Seu pedido ainda está sendo processado. Tente de novo em instantes.",
+    "doneTitle": "Tudo pronto!",
+    "doneText": "Sua conta foi criada e o teste já começou.",
+    "doneAddress": "Seu painel fica em",
+    "doneTrial": "Teste grátis até {date}.",
+    "doneEmail": "Enviamos um e-mail de boas-vindas.",
+    "doneCta": "Entrar no meu painel",
+    "doneNoData": "Não encontramos os dados do cadastro. Se você acabou de criar a conta, entre pelo endereço do seu painel.",
+    "periodMonth": "mês",
+    "periodYear": "ano"
+  },
+  "findStudio": {
+    "title": "Entrar no meu painel",
+    "text": "Digite o endereço do seu negócio para ir ao login.",
+    "label": "Endereço do negócio",
+    "hint": "Só o nome, por exemplo estudiotinta",
+    "submit": "Continuar",
+    "invalid": "Endereço inválido: use de 3 a 30 letras minúsculas, números ou hífen",
+    "noAccount": "Ainda não tem conta?",
+    "createAccount": "Criar conta"
+  },
+  "legal": {
+    "provisional": "Texto provisório. O texto definitivo será definido com o apoio jurídico antes do lançamento.",
+    "termsTitle": "Termos de uso",
+    "termsBody": "Estes termos descrevem como o serviço pode ser usado: a conta é pessoal, o teste dura 7 dias, o cancelamento antes do fim do teste não gera cobrança, a primeira cobrança acontece ao fim do teste e o acesso é suspenso se o pagamento não for aprovado.",
+    "privacyTitle": "Política de privacidade",
+    "privacyBody": "Guardamos só os dados necessários para prestar o serviço e para responder a seus contatos: nome, e-mail, telefone e a origem do acesso. Você pode pedir a exclusão dos seus dados a qualquer momento."
   }
 }

@@ -57,6 +57,9 @@ services:
       API_URL: http://api:8000
       NEXT_PUBLIC_APP_NAME: ${APP_NAME:-App}
       APP_BASE_DOMAIN: ${APP_BASE_DOMAIN:-localhost}
+      # Desenvolvimento: pagamento e anti-robô de teste (em outros ambientes, deixe vazio).
+      NEXT_PUBLIC_PAYMENT_MODE: ${NEXT_PUBLIC_PAYMENT_MODE:-fake}
+      NEXT_PUBLIC_CAPTCHA_MODE: ${NEXT_PUBLIC_CAPTCHA_MODE:-fake}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       # Só `true` quando o web fica atrás do nosso balanceador (senão o cabeçalho do cliente é descartado).
       TRUST_FORWARDED_FOR: ${TRUST_FORWARDED_FOR:-false}
