@@ -11,7 +11,7 @@ paths:
       summary: Histórico de mudanças do negócio (dona e gerente)
       security: [{ bearerAuth: [] }]
       parameters:
-        - { name: entity_type, in: query, schema: { type: string, maxLength: 40 } }
+        - { name: entity_type, in: query, schema: { type: string, maxLength: 40, pattern: "^[a-z_]+$" } }
         - { name: entity_id, in: query, schema: { type: string, format: uuid } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
         - { name: cursor, in: query, schema: { type: string } }
@@ -24,6 +24,7 @@ paths:
         "401": { $ref: "#/components/responses/Problem" }
         "403": { $ref: "#/components/responses/Problem" }
         "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:
     bearerAuth:
@@ -46,10 +47,11 @@ components:
         action: { type: string, enum: [created, updated, deleted] }
         actor:
           type: [object, "null"]
-          required: [id, name]
+          required: [id, name, support]
           properties:
             id: { type: [string, "null"], format: uuid }
             name: { type: string }
+            support: { type: boolean, description: Verdadeiro quando a equipe da plataforma agiu como a pessoa (acesso de suporte) }
         before: { type: [object, "null"] }
         after: { type: [object, "null"] }
         created_at: { type: string, format: date-time }

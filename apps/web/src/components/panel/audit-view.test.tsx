@@ -25,7 +25,7 @@ const log = (over: Partial<AuditLog> = {}): AuditLog => ({
   entity_type: 'client',
   entity_id: 'e1',
   action: 'updated',
-  actor: { id: 'u1', name: 'Ana Souza' },
+  actor: { id: 'u1', name: 'Ana Souza', support: false },
   before: { name: 'Bia' },
   after: { name: 'Beatriz' },
   created_at: '2026-11-01T12:00:00Z',
@@ -90,7 +90,9 @@ describe('AuditView', () => {
     call.mockResolvedValue({
       status: 200,
       data: {
-        data: [log({ id: 'l9', actor: { id: 'u', name: 'Caio' } })],
+        data: [
+          log({ id: 'l9', actor: { id: 'u', name: 'Caio', support: false } }),
+        ],
         next_cursor: 'c2',
       },
     });

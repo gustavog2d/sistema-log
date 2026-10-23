@@ -1,11 +1,6 @@
 import { t } from '@/i18n';
-import { changesOf, labelOf, type AuditLog } from '@/lib/audit';
-import { formatDate } from '@/lib/format';
+import { changesOf, formatDateTime, labelOf, type AuditLog } from '@/lib/audit';
 import { Badge } from '@/components/ui/badge';
-
-function time(iso: string): string {
-  return `${formatDate(iso)} ${new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
-}
 
 /** Linha do tempo de mudanças: quem, quando, o que e a mudança campo a campo (antes → depois). */
 export function AuditList({
@@ -28,6 +23,9 @@ export function AuditList({
                 ? log.actor.name || t('audit.unknownPerson')
                 : t('audit.system')}
             </span>
+            {log.actor?.support ? (
+              <Badge tone="warning">{t('audit.support')}</Badge>
+            ) : null}
             <Badge
               tone={
                 log.action === 'created'
@@ -43,7 +41,7 @@ export function AuditList({
               <span>{labelOf('audit.entity', log.entity_type)}</span>
             ) : null}
             <time className="ml-auto text-muted" dateTime={log.created_at}>
-              {time(log.created_at)}
+              {formatDateTime(log.created_at)}
             </time>
           </p>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
@@ -53,10 +51,12 @@ export function AuditList({
                 <dd className="break-words text-ink">
                   {change.before !== undefined && change.after !== undefined ? (
                     <>
+                      <span className="sr-only">{t('audit.from')} </span>
                       <span className="text-muted line-through">
                         {change.before}
                       </span>
-                      {' → '}
+                      <span aria-hidden="true">{' → '}</span>
+                      <span className="sr-only"> {t('audit.to')} </span>
                       <span className="font-medium">{change.after}</span>
                     </>
                   ) : (

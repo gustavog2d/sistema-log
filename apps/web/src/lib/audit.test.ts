@@ -6,7 +6,7 @@ const log = (over: Partial<AuditLog> = {}): AuditLog => ({
   entity_type: 'client',
   entity_id: 'e1',
   action: 'updated',
-  actor: { id: 'u1', name: 'Ana' },
+  actor: { id: 'u1', name: 'Ana', support: false },
   before: { name: 'Bia', price_cents: 5000 },
   after: { name: 'Beatriz', price_cents: 6000 },
   created_at: '2026-11-01T12:00:00Z',

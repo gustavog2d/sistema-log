@@ -63,6 +63,25 @@ it('CA-09 refuses an invalid limit, entity id and entity type', function (string
     ['?limit=0', 'limit'], ['?limit=51', 'limit'], ['?entity_id=nao-e-uuid', 'entity_id'], ['?entity_type=Cliente%20X', 'entity_type'],
 ]);
 
+it('CA-09 breaks ties by id and starts over when the cursor is not valid', function () {
+    [$ws, $token] = ownerOf($this, 'neg');
+    $ids = seedLogs($ws, 3, ['created_at' => '2026-11-01 10:00:00']);
+    sort($ids);
+
+    $first = auditApi($this, $token, 'neg', '?limit=2')->assertOk();
+    $second = auditApi($this, $token, 'neg', '?limit=2&cursor='.urlencode($first->json('next_cursor')))->assertOk();
+
+    expect(collect($first->json('data'))->pluck('id')->merge(collect($second->json('data'))->pluck('id'))->all())->toBe(array_reverse($ids));
+    expect(auditApi($this, $token, 'neg', '?limit=2&cursor=lixo')->assertOk()->json('data'))->toHaveCount(2);
+});
+
+it('CA-09 shows who acted in a support access', function () {
+    [$ws, $token] = ownerOf($this, 'neg');
+    seedLogs($ws, 1, ['impersonated_by' => (string) Str::uuid()]);
+
+    expect(auditApi($this, $token, 'neg')->json('data.0.actor.support'))->toBeTrue();
+});
+
 it('CA-09 shows only the history of the business of the host', function () {
     [$a, $tokenA] = ownerOf($this, 'negocioa');
     [$b] = ownerOf($this, 'negociob');

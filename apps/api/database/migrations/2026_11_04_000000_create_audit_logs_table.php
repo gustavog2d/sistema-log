@@ -15,6 +15,8 @@ return new class extends Migration
             $table->tenantId();
             $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('actor_name', 100)->nullable();
+            // Acesso de suporte: quem da equipe da plataforma agiu como a pessoa (sem FK: o histórico sobrevive à equipe).
+            $table->uuid('impersonated_by')->nullable();
             $table->string('entity_type', 40);
             $table->uuid('entity_id');
             $table->string('action', 10);

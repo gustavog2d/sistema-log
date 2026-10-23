@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
  * @property string $action
  * @property string|null $user_id
  * @property string|null $actor_name
+ * @property string|null $impersonated_by
  * @property array<string, mixed>|null $before
  * @property array<string, mixed>|null $after
  * @property Carbon $created_at
@@ -42,7 +43,7 @@ class AuditLog extends Model
             'entity_type' => $this->entity_type,
             'entity_id' => $this->entity_id,
             'action' => $this->action,
-            'actor' => $this->actor_name === null && $this->user_id === null ? null : ['id' => $this->user_id, 'name' => (string) $this->actor_name],
+            'actor' => $this->actor_name === null && $this->user_id === null ? null : ['id' => $this->user_id, 'name' => (string) $this->actor_name, 'support' => $this->impersonated_by !== null],
             'before' => $this->before,
             'after' => $this->after,
             'created_at' => $this->created_at->toIso8601String(),

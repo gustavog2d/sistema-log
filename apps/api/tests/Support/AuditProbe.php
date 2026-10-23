@@ -21,6 +21,11 @@ class AuditProbe extends Model implements AuditedEntity
 
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return ['price_cents' => 'integer', 'meta' => 'array'];
+    }
+
     public function auditedFields(): array
     {
         return ['name', 'price_cents'];
@@ -33,5 +38,23 @@ class AuditProbeWithSecret extends AuditProbe
     public function auditedFields(): array
     {
         return ['name', 'password'];
+    }
+}
+
+/** Entidade de teste que audita um campo JSON com uma chave sensível dentro. */
+class AuditProbeWithJson extends AuditProbe
+{
+    public function auditedFields(): array
+    {
+        return ['name', 'meta'];
+    }
+}
+
+/** Entidade de teste sem campos auditados. */
+class AuditProbeEmpty extends AuditProbe
+{
+    public function auditedFields(): array
+    {
+        return [];
     }
 }

@@ -15,6 +15,7 @@ function createAuditProbeTable(): void
         $table->integer('price_cents')->default(0);
         $table->string('note')->nullable();
         $table->string('password')->nullable();
+        $table->jsonb('meta')->nullable();
     });
     Schema::connection('pgsql_admin')->enableTenantRls('audit_probes');
 }

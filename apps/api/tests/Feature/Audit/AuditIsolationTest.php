@@ -51,6 +51,7 @@ it('CA-06 does not let the API role edit or erase the history', function () {
 
     expect(fn () => DB::table('audit_logs')->where('id', $id)->update(['action' => 'deleted']))->toThrow(QueryException::class);
     expect(fn () => DB::table('audit_logs')->where('id', $id)->delete())->toThrow(QueryException::class);
+    expect(fn () => DB::statement('TRUNCATE audit_logs'))->toThrow(QueryException::class);
     expect(auditRows())->toHaveCount(1);
 });
 

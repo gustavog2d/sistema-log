@@ -45,7 +45,7 @@ Decisões de Gustavo: o pagamento real (INT-001) e o domínio ficam por último;
 | FIN-001 | Pagamentos do atendimento (sinal, parcelas, final), forma, comissão e avaliação | AGD-003 | Total recebido nunca passa do valor; cancelado não conta como receita | A especificar |
 | FIN-002 | Despesas e categorias (categoria com despesas não é apagada) | FND-008 | Categoria com despesas é bloqueada | A especificar |
 | FIN-003 | Dashboard e receita: no momento, prevista e líquida, meta do mês configurável, balanço de 12 meses, calendário | FIN-001, FIN-002 | Cancelados fora de todas as somas; valores batem com os pagamentos | A especificar |
-| PLT-016 | Retenção após o cancelamento: exportação dos dados e limpeza programada (`retention:run`) | FIN-003 | Dados vencidos são apagados; registros fiscais ficam | A especificar |
+| PLT-016 | Retenção após o cancelamento: exportação dos dados, limpeza programada (`retention:run`), retenção e anonimização do histórico de auditoria (pedido de eliminação do titular) | FIN-003 | Dados vencidos são apagados; registros fiscais ficam; o histórico do titular é anonimizado | A especificar |
 
 ### Retenção de dados após o cancelamento (proposta; revisável depois dos testes)
 
