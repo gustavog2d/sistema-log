@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- FND-008: auditoria do assinante: registro de criação, edição e exclusão com antes e depois (`Audited`), somente de acréscimo e isolado por negócio, `GET /audit-logs` (dona e gerente) e tela de histórico.
 - PLT-013: troca de plano pela dona (API e painel): upgrade vale na hora com cobrança proporcional, downgrade agendado para o fim do período, bloqueio quando o uso passa do limite do plano novo, simulação antes de confirmar e troca agendada que pode ser desfeita.
 - PLT-001b: painel web da equipe da plataforma em `/admin` (entrar com 2FA, resumo, assinantes com busca e detalhe, suspender, reativar, estender teste, exceções de funcionalidade e acesso de suporte, planos, cupons e leads), com perfis super admin (escreve) e suporte (consulta).
 - PLT-015: painel web do assinante (entrar com 2FA, recuperar e redefinir senha, aceitar convite, início, assinatura com cartão, cancelamento e faturas, equipe e conta) no endereço do negócio, com entrada do acesso de suporte e faixa de suporte; links dos e-mails passam a usar o endereço do painel (`APP_WEB_HOST`).

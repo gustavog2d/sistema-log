@@ -17,6 +17,7 @@ const ALLOWED = [
   /^auth\/.+$/,
   /^subscription(\/.*)?$/,
   /^users(\/.*)?$/,
+  /^audit-logs$/,
   /^platform\/.+$/,
 ];
 
@@ -130,6 +131,7 @@ const SITE_ONLY = [/^platform\//, /^signup(\/|$)/, /^leads$/];
 const TENANT_ONLY = [
   /^auth\//,
   /^users(\/|$)/,
+  /^audit-logs$/,
   /^subscription(\/|$)/,
   /^tenant\/current$/,
 ];

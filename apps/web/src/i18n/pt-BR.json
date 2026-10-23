@@ -315,7 +315,8 @@
       "home": "Início",
       "subscription": "Assinatura",
       "team": "Equipe",
-      "account": "Minha conta"
+      "account": "Minha conta",
+      "audit": "Histórico"
     },
     "area": "Painel do negócio",
     "banner": {
@@ -745,5 +746,61 @@
     "limitChanged": "O uso mudou e passa do limite do novo plano. Confira o resumo e tente de novo.",
     "cancelPendingFirst": "Desfaça o cancelamento da assinatura antes de trocar de plano.",
     "suspendedFirst": "Regularize o pagamento antes de trocar de plano."
+  },
+  "audit": {
+    "title": "Histórico de mudanças",
+    "text": "Quem criou, mudou ou apagou cada registro do negócio, e o que havia antes.",
+    "filter": "Tipo de registro",
+    "all": "Todos",
+    "empty": "Nenhuma mudança registrada ainda.",
+    "loadError": "Não foi possível carregar o histórico agora.",
+    "loadMore": "Carregar mais",
+    "caption": "Mudanças do negócio",
+    "when": "Quando",
+    "who": "Quem",
+    "what": "O quê",
+    "changes": "Mudança",
+    "system": "Sistema",
+    "unknownPerson": "Pessoa removida",
+    "action": {
+      "created": "criou",
+      "updated": "alterou",
+      "deleted": "apagou"
+    },
+    "entity": {
+      "label": "{entity}",
+      "client": "Cliente",
+      "service": "Serviço",
+      "service_category": "Categoria de serviço",
+      "professional": "Profissional",
+      "working_hours": "Expediente",
+      "time_off": "Folga",
+      "appointment": "Agendamento",
+      "payment": "Pagamento",
+      "expense": "Despesa",
+      "expense_category": "Categoria de despesa",
+      "setting": "Configuração"
+    },
+    "field": {
+      "name": "Nome",
+      "phone": "Telefone",
+      "email": "E-mail",
+      "instagram": "Instagram",
+      "notes": "Notas",
+      "description": "Descrição",
+      "status": "Situação",
+      "price_cents": "Preço",
+      "duration_minutes": "Duração (min)"
+    },
+    "yes": "Sim",
+    "no": "Não",
+    "empty_value": "vazio",
+    "from": "de",
+    "to": "para",
+    "created": "{who} criou {entity}",
+    "updated": "{who} alterou {entity}",
+    "deleted": "{who} apagou {entity}",
+    "entityHistory": "Histórico deste registro",
+    "entityEmpty": "Sem mudanças registradas para este registro."
   }
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { safeAdminReturnPath, safeReturnPath } from './safe-path';
 
 describe('safeReturnPath', () => {
-  it.each(['/', '/assinatura', '/equipe', '/conta'])(
+  it.each(['/', '/assinatura', '/equipe', '/historico', '/conta'])(
     'CA-03 keeps %s',
     (path) => {
       expect(safeReturnPath(path)).toBe(path);

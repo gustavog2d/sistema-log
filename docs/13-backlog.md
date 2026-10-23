@@ -31,6 +31,37 @@ Status possíveis: `A especificar` → `Spec em revisão` → `Pronto para dev` 
 | PLT-015 | Painel web do assinante: entrar (2FA), recuperar senha, aceitar convite, início, assinatura (cartão, cancelar, faturas) e equipe | FND-006, PLT-006, PLT-007, PLT-008 | Suspenso só lê e consegue regularizar; papel sem permissão não vê a tela | Entregue |
 | INT-001 | Gateway real de pagamento (Asaas): checkout, webhooks, conciliação, nota fiscal e reserva da fatura em estado `pending` antes de cobrar (cobrança fora da transação) | PLT-004, ADR 0003 | Webhook repetido não duplica cobrança; ciclo de vida completo no sandbox | A especificar (por último, depende da conta do Asaas) |
 
+## Fase 2 · Núcleo (decidido em 2026-10-23)
+
+Decisões de Gustavo: o pagamento real (INT-001) e o domínio ficam por último; **tudo liberado em todos os planos por enquanto** (as regras de limite por plano voltam depois dos testes); a receita mostra todas as formas (no momento, prevista, líquida); retenção após o cancelamento segue a proposta abaixo. Cada item entrega API e telas do painel do assinante.
+
+| ID | Item | Depende de | Teste crítico | Status |
+| --- | --- | --- | --- | --- |
+| FND-008 | Auditoria do assinante: registro de quem mudou o quê (antes e depois) para todas as entidades de negócio, com tela de histórico | PLT-015 | Toda criação, edição e exclusão gera registro com antes e depois; um negócio nunca vê o log de outro | Entregue |
+| CLI-001 | Clientes: cadastro, busca, telefone E.164 único por negócio, Instagram, notas, média de avaliação, criação rápida | FND-008 | Telefone duplicado no mesmo negócio é recusado; em outro negócio é aceito | A especificar |
+| AGD-001 | Serviços e categorias: catálogo com duração (min), preço base ou "sob orçamento", intervalos | FND-008 | Serviço usado em agendamento não pode ser apagado, só arquivado | A especificar |
+| AGD-002 | Profissionais, expediente e folgas | AGD-001 | Horário livre = expediente − folgas − agendamentos | A especificar |
+| AGD-003 | Agenda: agendamentos com status, tipo, sessões, conflito barrado no banco e visão calendário | CLI-001, AGD-002 | Dois agendamentos do mesmo profissional nunca se sobrepõem (nem em corrida) | A especificar |
+| FIN-001 | Pagamentos do atendimento (sinal, parcelas, final), forma, comissão e avaliação | AGD-003 | Total recebido nunca passa do valor; cancelado não conta como receita | A especificar |
+| FIN-002 | Despesas e categorias (categoria com despesas não é apagada) | FND-008 | Categoria com despesas é bloqueada | A especificar |
+| FIN-003 | Dashboard e receita: no momento, prevista e líquida, meta do mês configurável, balanço de 12 meses, calendário | FIN-001, FIN-002 | Cancelados fora de todas as somas; valores batem com os pagamentos | A especificar |
+| PLT-016 | Retenção após o cancelamento: exportação dos dados e limpeza programada (`retention:run`) | FIN-003 | Dados vencidos são apagados; registros fiscais ficam | A especificar |
+
+### Retenção de dados após o cancelamento (proposta; revisável depois dos testes)
+
+- **Dia 0 a 30:** o negócio fica em somente leitura e a dona pode exportar tudo (clientes, agenda, financeiro). Reativar restaura o acesso.
+- **Dia 31 a 90:** o painel fecha; os dados ficam guardados só para reativação ou pedido formal.
+- **Dia 90:** dados pessoais de clientes e do negócio são apagados ou anonimizados; usuários desativados.
+- **Cinco anos:** só faturas e registros de cobrança (obrigação fiscal), sem dados dos clientes finais.
+- Pedido de exclusão (LGPD) vale a qualquer momento e antecipa a limpeza.
+
+### Receita (decidido em 2026-10-23: mostrar todas)
+
+- **Recebida (no momento):** soma dos pagamentos recebidos no período.
+- **Prevista:** valor total dos atendimentos não cancelados do período (recebida + a receber).
+- **A receber:** prevista − recebida.
+- **Líquida:** recebida − comissões dos atendimentos; também mostrada a prevista líquida.
+
 ```mermaid
 flowchart LR
     FND001[FND-001] --> FND002[FND-002] --> FND003[FND-003]

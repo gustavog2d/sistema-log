@@ -17,6 +17,7 @@ const ALL_NAV: NavItem[] = [
     area: 'subscription',
   },
   { href: '/equipe', label: 'panel.nav.team', area: 'team' },
+  { href: '/historico', label: 'panel.nav.audit', area: 'audit' },
   { href: '/conta', label: 'panel.nav.account', area: 'account' },
 ];
 
