@@ -48,7 +48,8 @@ return new class extends Migration
                 END IF;
                 IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_runtime') THEN
                     -- A API só lê cupons (consulta pública do preço); quem escreve é o papel de plataforma.
-                    REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON coupons FROM app_runtime;
+                    -- Nem os códigos a API lê: quem usa cupons é o papel de plataforma.
+                    REVOKE ALL ON coupons FROM app_runtime;
                     -- Os registros de uso ligam cupom e negócio: nada disso é da API.
                     REVOKE ALL ON coupon_redemptions FROM app_runtime;
                 END IF;

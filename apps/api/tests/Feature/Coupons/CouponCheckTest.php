@@ -20,7 +20,7 @@ it('CA-11 shows the final price without consuming the coupon', function () {
 });
 
 it('CA-11 says a full discount does not need a payment method', function () {
-    makeCoupon(['code' => 'CORTESIA', 'percent_off' => 100]);
+    makeCoupon(['code' => 'CORTESIA', 'percent_off' => 100, 'max_redemptions' => 5]);
 
     check($this, ['code' => 'CORTESIA', 'plan' => 'estudio', 'cycle' => 'yearly'])->assertOk()->assertJsonPath('final_price_cents', 0)->assertJsonPath('requires_payment_method', false);
 });

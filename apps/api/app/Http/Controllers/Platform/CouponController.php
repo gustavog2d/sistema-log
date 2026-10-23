@@ -20,9 +20,10 @@ class CouponController extends Controller
     {
         /** @var array<string, mixed> $data */
         $data = $request->validate([
-            'code' => ['required', 'string', 'min:3', 'max:40', 'regex:/^[A-Za-z0-9-]+$/'],
+            'code' => ['required', 'string', 'min:6', 'max:40', 'regex:/^[A-Za-z0-9-]+$/'],
             'percent_off' => ['required', 'integer', 'between:1,100'],
-            'max_redemptions' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:1000000'],
+            // Cortesia (100%) sempre com teto de usos: um código vazado não pode abrir contas sem limite.
+            'max_redemptions' => [Rule::requiredIf($request->integer('percent_off') === 100), 'nullable', 'integer', 'min:1', 'max:1000000'],
             'valid_from' => ['sometimes', 'nullable', 'date'],
             'valid_until' => ['sometimes', 'nullable', 'date', 'after:valid_from'],
             'description' => ['sometimes', 'nullable', 'string', 'max:200'],

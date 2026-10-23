@@ -85,7 +85,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/CouponQuote" }
-        "422": { $ref: "#/components/responses/Problem" }
+        "422":
+          description: Cupom indisponível (erro na chave `code`, ao contrário do cadastro, que usa `coupon_code`) ou dados inválidos
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "429": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:

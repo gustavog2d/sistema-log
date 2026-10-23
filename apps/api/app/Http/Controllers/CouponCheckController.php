@@ -20,13 +20,12 @@ class CouponCheckController extends Controller
         ]);
 
         $plan = Plan::query()->where('key', $request->string('plan')->toString())->where('status', 'active')->firstOrFail();
-        $price = $request->string('cycle')->toString() === 'yearly' ? ($plan->yearlyPriceCents() ?? 0) : ($plan->monthly_price_cents ?? 0);
-        $coupon = $coupons->availableOrFail($request->string('code')->toString(), 'code');
-        $final = CouponService::priceAfter($price, CouponService::percentOf($coupon));
+        $quote = $coupons->quote($plan, $request->string('cycle')->toString(), $request->string('code')->toString(), 'code');
 
         return response()->json([
-            'percent_off' => CouponService::percentOf($coupon), 'price_cents' => $price, 'final_price_cents' => $final,
-            'currency' => $plan->currency, 'requires_payment_method' => $final > 0,
+            'percent_off' => $quote['coupon'] === null ? 0 : CouponService::percentOf($quote['coupon']),
+            'price_cents' => $quote['price'], 'final_price_cents' => $quote['final'],
+            'currency' => $plan->currency, 'requires_payment_method' => ! $quote['courtesy'],
         ]);
     }
 }

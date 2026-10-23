@@ -40,19 +40,23 @@ class SignupService
         $this->assertAvailable($data);
 
         $plan = Plan::query()->where('key', $data->plan)->where('status', 'active')->firstOrFail();
-        $priceCents = $data->cycle === 'yearly' ? (int) $plan->yearlyPriceCents() : (int) $plan->monthly_price_cents;
 
         // O cupom é conferido antes de qualquer chamada ao gateway; o uso só é contado na gravação.
-        $couponCode = $data->couponCode;
-        $coupon = $couponCode === null ? null : $this->coupons->availableOrFail($couponCode, 'coupon_code');
-        $originalCents = $priceCents;
-        $priceCents = $coupon === null ? $priceCents : CouponService::priceAfter($priceCents, CouponService::percentOf($coupon));
+        $quote = $this->coupons->quote($plan, $data->cycle, $data->couponCode, 'coupon_code');
+        $coupon = $quote['coupon'];
+        $originalCents = $quote['price'];
+        $priceCents = $quote['final'];
+        $token = $data->paymentMethodToken;
 
-        if ($priceCents > 0 && $data->paymentMethodToken === null) {
+        // Só o cupom de 100% dispensa o cartão: preço zero por outro motivo (plano sem preço, arredondamento) não.
+        // Na cortesia um cartão enviado é ignorado (nem cliente no gateway nem recusa por causa dele).
+        if ($quote['courtesy']) {
+            [$customerRef, $method] = [null, null];
+        } elseif ($token === null) {
             throw ValidationException::withMessages(['payment_method_token' => 'Informe o meio de pagamento.']);
+        } else {
+            [$customerRef, $method] = $this->attachPayment($data, $token);
         }
-
-        [$customerRef, $method] = $data->paymentMethodToken === null ? [null, null] : $this->attachPayment($data, $data->paymentMethodToken);
 
         // O hash (lento de propósito) é feito antes de abrir a transação, para não segurar conexão e linhas.
         $passwordHash = bcrypt($data->password);
@@ -62,7 +66,7 @@ class SignupService
 
         try {
             DB::connection('pgsql_platform')->transaction(
-                fn (Connection $db) => $this->persist($db, $data, $passwordHash, $plan, $priceCents, $customerRef, $method, $ids, $now, $trialEnds, $coupon === null ? null : [$couponCode, $originalCents]),
+                fn (Connection $db) => $this->persist($db, $data, $passwordHash, $plan, $priceCents, $customerRef, $method, $ids, $now, $trialEnds, $coupon === null ? null : [$coupon, $originalCents]),
             );
         } catch (UniqueConstraintViolationException $e) {
             // Dois cadastros simultâneos com o mesmo endereço ou e-mail: o banco decide, a resposta é 422.
@@ -84,7 +88,12 @@ class SignupService
         ]);
 
         if ($coupon !== null) {
-            $this->coupons->recordRedeemed($coupon, $ids->tenant);
+            try {
+                $this->coupons->recordRedeemed($coupon, $ids->tenant);
+            } catch (Throwable $e) {
+                // O cadastro já está gravado (e o uso, registrado em `coupon_redemptions`): falha de auditoria não o derruba.
+                report($e);
+            }
         }
 
         return $this->result($data, $plan, $priceCents, $method, $ids, $trialEnds, $coupon);
@@ -123,7 +132,7 @@ class SignupService
         }
     }
 
-    /** @param  array{0: string|null, 1: int}|null  $couponUse  código e preço original, quando há cupom */
+    /** @param  array{0: \stdClass, 1: int}|null  $couponUse  cupom e preço original, quando há cupom */
     private function persist(Connection $db, SignupData $data, string $passwordHash, Plan $plan, int $priceCents, ?string $customerRef, ?PaymentMethodInfo $method, SignupIds $ids, Carbon $now, Carbon $trialEnds, ?array $couponUse): void
     {
         // Escopo da transação: a tabela de vínculos tem RLS e exige o tenant informado.
@@ -159,9 +168,9 @@ class SignupService
             'created_at' => $now, 'updated_at' => $now,
         ]);
 
-        if ($couponUse !== null && $couponUse[0] !== null) {
+        if ($couponUse !== null) {
             // Cupom travado na mesma transação: se o limite acabou entre a conferência e aqui, o cadastro inteiro volta atrás.
-            $this->coupons->redeem($db, $couponUse[0], $ids->tenant, $ids->subscription, $couponUse[1], $priceCents);
+            $this->coupons->redeem($db, is_string($couponUse[0]->code) ? $couponUse[0]->code : '', $ids->tenant, $ids->subscription, $couponUse[1], $priceCents);
         }
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Coupons;
 
+use App\Models\Plan;
 use App\Models\PlatformUser;
 use App\Platform\Auth\PlatformAudit;
 use Illuminate\Database\Connection;
@@ -51,6 +52,26 @@ class CouponService
         return $coupon->status === 'active' && $started && $notEnded && $hasRoom ? $coupon : null;
     }
 
+    /**
+     * Preço do ciclo e preço final com o cupom (se houver). Só o cupom de 100% é cortesia e dispensa o cartão.
+     *
+     * @return array{price: int, final: int, coupon: stdClass|null, courtesy: bool}
+     *
+     * @throws ValidationException
+     */
+    public function quote(Plan $plan, string $cycle, ?string $code, string $field): array
+    {
+        $price = $cycle === 'yearly' ? ($plan->yearlyPriceCents() ?? 0) : ($plan->monthly_price_cents ?? 0);
+        $coupon = $code === null ? null : $this->availableOrFail($code, $field);
+
+        return [
+            'price' => $price,
+            'final' => $coupon === null ? $price : self::priceAfter($price, self::percentOf($coupon)),
+            'coupon' => $coupon,
+            'courtesy' => $coupon !== null && self::percentOf($coupon) === 100,
+        ];
+    }
+
     /** @throws ValidationException */
     public function availableOrFail(string $code, string $field, ?Connection $db = null, bool $lock = false): stdClass
     {
@@ -98,8 +119,8 @@ class CouponService
         try {
             DB::connection('pgsql_platform')->table('coupons')->insert([
                 'id' => $id, 'code' => self::normalize(self::text($data['code'])), 'percent_off' => $data['percent_off'],
-                'max_redemptions' => $data['max_redemptions'] ?? null, 'valid_from' => $data['valid_from'] ?? null,
-                'valid_until' => $data['valid_until'] ?? null, 'description' => $data['description'] ?? null,
+                'max_redemptions' => $data['max_redemptions'] ?? null, 'valid_from' => self::utc($data['valid_from'] ?? null),
+                'valid_until' => self::utc($data['valid_until'] ?? null), 'description' => $data['description'] ?? null,
                 'created_at' => now(), 'updated_at' => now(),
             ]);
         } catch (UniqueConstraintViolationException) {
@@ -117,12 +138,19 @@ class CouponService
      */
     public function update(PlatformUser $actor, string $id, array $data): array
     {
-        $changes = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($id, $data): array {
+        $before = [];
+        $changes = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($id, $data, &$before): array {
             $coupon = $db->table('coupons')->where('id', $id)->lockForUpdate()->first();
             abort_unless($coupon instanceof stdClass, 404);
 
             if (array_key_exists('max_redemptions', $data) && $data['max_redemptions'] !== null && self::int($data['max_redemptions']) < self::int($coupon->redeemed_count)) {
                 throw ValidationException::withMessages(['max_redemptions' => 'O limite não pode ser menor que os usos já feitos ('.self::int($coupon->redeemed_count).').']);
+            }
+
+            foreach (['valid_from', 'valid_until'] as $field) {
+                if (array_key_exists($field, $data)) {
+                    $data[$field] = self::utc($data[$field]);
+                }
             }
 
             $from = array_key_exists('valid_from', $data) ? $data['valid_from'] : $coupon->valid_from;
@@ -132,6 +160,13 @@ class CouponService
                 throw ValidationException::withMessages(['valid_until' => 'O fim da validade precisa ser depois do início.']);
             }
 
+            // Cortesia nunca fica sem teto, nem depois de criada.
+            if ($coupon->percent_off === 100 && array_key_exists('max_redemptions', $data) && $data['max_redemptions'] === null) {
+                throw ValidationException::withMessages(['max_redemptions' => 'Cupom de 100% precisa de um limite de usos.']);
+            }
+
+            $before = (array) $coupon;
+
             if ($data !== []) {
                 $db->table('coupons')->where('id', $id)->update($data + ['updated_at' => now()]);
             }
@@ -140,7 +175,7 @@ class CouponService
         });
 
         if ($changes !== []) {
-            $this->audit->record('coupon.updated', $actor, ['coupon' => $id, 'changes' => $changes]);
+            $this->audit->record('coupon.updated', $actor, ['coupon' => $id, 'before' => array_intersect_key($before, $changes), 'after' => $changes]);
         }
 
         return $this->present($this->row($id));
@@ -149,6 +184,12 @@ class CouponService
     public static function percentOf(stdClass $coupon): int
     {
         return self::int($coupon->percent_off);
+    }
+
+    /** O banco guarda UTC sem fuso: a data recebida com deslocamento (ex.: -03:00) é convertida antes de gravar. */
+    private static function utc(mixed $value): ?string
+    {
+        return is_string($value) && $value !== '' ? Carbon::parse($value)->utc()->format('Y-m-d H:i:s') : null;
     }
 
     private static function int(mixed $value): int

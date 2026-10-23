@@ -27,7 +27,8 @@ it('CA-02 refuses invalid coupons', function (array $data) {
     'percent too high' => [['percent_off' => 101]],
     'limit zero' => [['max_redemptions' => 0]],
     'inverted validity' => [['valid_from' => '2026-12-31T00:00:00Z', 'valid_until' => '2026-12-01T00:00:00Z']],
-    'short code' => [['code' => 'ab']],
+    'short code' => [['code' => 'abcde']],
+    'courtesy without limit' => [['percent_off' => 100]],
     'strange characters' => [['code' => 'a b!']],
 ]);
 
@@ -74,9 +75,32 @@ it('CA-14 lists the uses and the limit', function () {
 });
 
 it('CA-13 audits the creation and the change', function () {
-    $coupon = createCoupon($this, $this->adminToken(), ['code' => 'AUD-1', 'percent_off' => 10])->assertCreated();
+    $coupon = createCoupon($this, $this->adminToken(), ['code' => 'AUDIT-1', 'percent_off' => 10])->assertCreated();
     $this->asToken($this->adminToken(), 'PATCH', 'coupons/'.$coupon->json('id'), ['status' => 'inactive'])->assertOk();
 
     $events = DB::connection('pgsql_admin')->table('platform_audit_logs')->pluck('event')->all();
     expect($events)->toContain('coupon.created')->toContain('coupon.updated');
+});
+
+it('CA-04 never leaves a courtesy coupon without a limit', function () {
+    $coupon = makeCoupon(['code' => 'CORTESIA', 'percent_off' => 100, 'max_redemptions' => 3]);
+
+    $this->asToken($this->adminToken(), 'PATCH', "coupons/{$coupon->id}", ['max_redemptions' => null])->assertUnprocessable()->assertJsonValidationErrors('max_redemptions');
+});
+
+it('keeps the codes away from the API role', function () {
+    expect(DB::connection('pgsql_admin')->selectOne("select has_table_privilege('app_runtime', 'coupons', 'SELECT') as ok")->ok)->toBeFalse()
+        ->and(DB::connection('pgsql_admin')->selectOne("select has_table_privilege('app_runtime', 'coupon_redemptions', 'SELECT') as ok")->ok)->toBeFalse();
+});
+
+it('stores validity dates received with an offset in UTC', function () {
+    $response = createCoupon($this, $this->adminToken(), ['code' => 'FUSO-01', 'percent_off' => 10, 'valid_until' => '2027-01-01T00:00:00-03:00'])->assertCreated();
+
+    expect($response->json('valid_until'))->toBe('2027-01-01T03:00:00+00:00');
+});
+
+it('CA-04 refuses a validity end before the start on update', function () {
+    $coupon = makeCoupon(['valid_from' => '2026-12-01 00:00:00']);
+
+    $this->asToken($this->adminToken(), 'PATCH', "coupons/{$coupon->id}", ['valid_until' => '2026-11-01T00:00:00Z'])->assertUnprocessable()->assertJsonValidationErrors('valid_until');
 });

@@ -43,6 +43,7 @@ class PlatformServiceProvider extends ServiceProvider
         RateLimiter::for('coupon-check', fn (Request $request) => [
             Limit::perMinute(20)->by((string) $request->ip()),
             Limit::perHour(100)->by((string) $request->ip()),
+            Limit::perHour(600)->by('coupon-check-global'),
         ]);
         RateLimiter::for('slug-check', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('platform-login', fn (Request $request) => Limit::perMinute(10)->by((string) $request->ip()));

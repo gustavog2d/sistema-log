@@ -324,7 +324,7 @@ export type checkCouponResponse200 = {
 }
 
 export type checkCouponResponse422 = {
-  data: ProblemResponse
+  data: Problem
   status: 422
 }
 

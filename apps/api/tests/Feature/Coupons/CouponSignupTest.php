@@ -60,10 +60,24 @@ it('CA-07 creates a courtesy account without a card and without a customer in th
         ->and(DB::connection('pgsql_admin')->table('payment_methods')->count())->toBe(0);
 });
 
-it('CA-07 also lets a courtesy account come with a card, which is kept', function () {
+it('CA-07 ignores a card sent with a courtesy coupon (no gateway customer, no refusal because of it)', function () {
     makeCoupon(['code' => 'CORTESIA', 'percent_off' => 100]);
 
-    $this->signup(['coupon_code' => 'CORTESIA'])->assertCreated()->assertJsonPath('payment_method.last4', '4242');
+    $this->signup(['coupon_code' => 'CORTESIA', 'payment_method_token' => 'tok_declined'])->assertCreated()->assertJsonPath('payment_method', null);
+    expect(DB::connection('pgsql_admin')->table('subscriptions')->value('gateway_customer_ref'))->toBeNull();
+});
+
+it('CA-08 asks for the card when a plan has no price and there is no courtesy coupon', function () {
+    DB::connection('pgsql_admin')->table('plans')->where('key', 'profissional')->update(['monthly_price_cents' => 0]);
+
+    $this->signup(['payment_method_token' => null])->assertUnprocessable()->assertJsonValidationErrors('payment_method_token');
+});
+
+it('CA-08 asks for the card when a coupon brings the price to zero by rounding but is not 100%', function () {
+    DB::connection('pgsql_admin')->table('plans')->where('key', 'profissional')->update(['monthly_price_cents' => 1]);
+    makeCoupon(['code' => 'QUASEGRATIS', 'percent_off' => 99]);
+
+    $this->signup(['coupon_code' => 'QUASEGRATIS', 'payment_method_token' => null])->assertUnprocessable()->assertJsonValidationErrors('payment_method_token');
 });
 
 it('CA-08 still asks for the card when the price is above zero', function () {
