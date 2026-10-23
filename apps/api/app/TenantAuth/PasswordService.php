@@ -45,7 +45,7 @@ class PasswordService
         // Um pedido novo substitui o anterior: só o último link vale.
         $db->table('password_reset_tokens')->updateOrInsert(['email' => $email], ['token_hash' => hash('sha256', $token), 'created_at' => now()]);
 
-        $link = sprintf('%s://%s.%s/redefinir-senha?token=%s&email=%s', $scheme, $tenant->slug, Config::string('tenancy.base_domain'), $token, urlencode($email));
+        $link = sprintf('%s://%s.%s/redefinir-senha?token=%s&email=%s', $scheme, $tenant->slug, Config::string('tenancy.web_host'), $token, urlencode($email));
 
         $mail = new PasswordResetMail($tenant->name, $link, $token);
 

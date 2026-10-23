@@ -90,7 +90,7 @@ class TeamService
             ]);
         });
 
-        $link = sprintf('%s://%s.%s/aceitar-convite?token=%s&email=%s', Config::string('tenancy.scheme'), $tenant->slug, Config::string('tenancy.base_domain'), $token, urlencode($email));
+        $link = sprintf('%s://%s.%s/aceitar-convite?token=%s&email=%s', Config::string('tenancy.scheme'), $tenant->slug, Config::string('tenancy.web_host'), $token, urlencode($email));
         $mail = new InvitationMail($tenant->name, $name, $link);
 
         // Depois da resposta: o envio não atrasa o pedido nem revela nada pelo tempo.

@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- PLT-015: painel web do assinante (entrar com 2FA, recuperar e redefinir senha, aceitar convite, início, assinatura com cartão, cancelamento e faturas, equipe e conta) no endereço do negócio, com entrada do acesso de suporte e faixa de suporte; links dos e-mails passam a usar o endereço do painel (`APP_WEB_HOST`).
 - PLT-014: site público (landing com os planos da API, contato que vira lead, cadastro em 4 passos com cupom e cartão de teste, confirmação, busca do painel e termos provisórios).
 - FND-006: design system (tokens com teste de contraste, componentes acessíveis, layouts do site e dos painéis), ponte do web com a API (cookie HttpOnly, proteção contra CSRF) e roteamento por endereço (site, painel da equipe e painel do assinante). Guia de estilo em `/guia-de-estilo` e sugestão de paleta e logotipo em `docs/16-design-system.md`.
 - PLT-011: captura de leads da landing (API) com UTM, consentimento LGPD, anti-robô (reCAPTCHA com verificador de teste local), campo isca, deduplicação em 24 horas, limite por hora, tela de gestão da equipe (lista, status, notas) e retenção de 12 meses.

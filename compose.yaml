@@ -18,6 +18,9 @@ x-api: &api
     DB_ADMIN_USERNAME: ${DB_ADMIN_USERNAME:-app}
     DB_ADMIN_PASSWORD: ${DB_ADMIN_PASSWORD:-app}
     APP_BASE_DOMAIN: ${APP_BASE_DOMAIN:-localhost}
+    # Links dos e-mails (convite, recuperação): o endereço do web com a porta e o esquema.
+    APP_WEB_HOST: ${APP_WEB_HOST:-localhost:3000}
+    APP_TENANT_SCHEME: ${APP_TENANT_SCHEME:-http}
     DB_DATABASE: ${DB_DATABASE:-app}
     REDIS_HOST: redis
     MAIL_HOST: mailpit

@@ -141,7 +141,7 @@ class Notifier
         }
 
         $data = $this->localDates($data, is_string($business->timezone) ? $business->timezone : 'UTC');
-        $data += ['url' => sprintf('%s://%s.%s', Config::string('tenancy.scheme'), is_string($business->slug) ? $business->slug : '', Config::string('tenancy.base_domain'))];
+        $data += ['url' => sprintf('%s://%s.%s', Config::string('tenancy.scheme'), is_string($business->slug) ? $business->slug : '', Config::string('tenancy.web_host'))];
 
         try {
             Mail::to($email)->queue(new TransactionalMail($kind, $name, is_string($business->name) ? $business->name : '', $data));

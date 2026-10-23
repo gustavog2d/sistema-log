@@ -60,6 +60,7 @@ describe('no hardcoded text', () => {
     ...files(join(ROOT, 'ui')),
     ...files(join(ROOT, 'layout')),
     ...files(join(ROOT, 'site')),
+    ...files(join(ROOT, 'panel')),
   ];
 
   it('finds the components to check', () => {
