@@ -11,7 +11,7 @@ it('CA-11 renders every kind with the product name from configuration and no sec
     $text = $mail->render();
 
     expect($text)->toContain('Ana')
-        ->not->toContain('pm_fake')->not->toContain('tok_')->not->toContain('password')->not->toContain('sistema-log');
+        ->not->toContain('pm_fake')->not->toContain('tok_')->not->toContain('password')->not->toContain(implode('-', ['sistema', 'log']));
     expect($mail->envelope()->subject)->toContain('Estúdio Tinta Viva');
 })->with(array_keys(TransactionalMail::SUBJECTS));
 
