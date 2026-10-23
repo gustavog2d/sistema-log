@@ -2,6 +2,7 @@
 
 use App\Providers\AppServiceProvider;
 use App\Providers\BillingServiceProvider;
+use App\Providers\LeadsServiceProvider;
 use App\Providers\PlatformServiceProvider;
 use App\Providers\TenancyServiceProvider;
 
@@ -10,4 +11,5 @@ return [
     TenancyServiceProvider::class,
     PlatformServiceProvider::class,
     BillingServiceProvider::class,
+    LeadsServiceProvider::class,
 ];

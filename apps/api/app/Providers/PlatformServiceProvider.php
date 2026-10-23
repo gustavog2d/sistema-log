@@ -48,6 +48,10 @@ class PlatformServiceProvider extends ServiceProvider
         ]);
         RateLimiter::for('tenant-sensitive', fn (Request $request) => Limit::perHour(10)->by(app(TenantContext::class)->id().'|'.self::personKey($request)));
         RateLimiter::for('platform-impersonate', fn (Request $request) => Limit::perHour(10)->by('impersonate:'.($request->user() instanceof PlatformUser ? $request->user()->id : $request->ip())));
+        RateLimiter::for('lead-capture', fn (Request $request) => [
+            Limit::perHour(5)->by((string) $request->ip()),
+            Limit::perHour(300)->by('lead-capture-global'),
+        ]);
         RateLimiter::for('slug-check', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('platform-login', fn (Request $request) => Limit::perMinute(10)->by((string) $request->ip()));
         RateLimiter::for('platform-verify', fn (Request $request) => Limit::perMinute(20)->by((string) $request->ip()));

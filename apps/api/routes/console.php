@@ -1,5 +1,6 @@
 <?php
 
+use App\Leads\LeadService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -25,3 +26,6 @@ Schedule::command('notifications:run')->everyFifteenMinutes()->withoutOverlappin
 // Registro de avisos enviados: só serve para não repetir; guardado por 90 dias.
 Schedule::call(fn () => DB::connection('pgsql_platform')->table('notification_log')->where('created_at', '<', now()->subDays(90))->delete())
     ->name('notification-log:prune')->daily();
+
+// Leads descartados ou parados há mais de 12 meses saem da base (LGPD); os convertidos ficam (PLT-011).
+Schedule::call(fn () => app(LeadService::class)->prune())->name('leads:prune')->daily();

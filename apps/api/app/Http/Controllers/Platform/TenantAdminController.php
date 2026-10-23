@@ -6,6 +6,7 @@ use App\Admin\TenantAdminActions;
 use App\Admin\TenantDirectory;
 use App\Http\Controllers\Controller;
 use App\Platform\Auth\AuthenticatedPlatformUser;
+use App\Support\CursorRule;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,7 @@ class TenantAdminController extends Controller
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'status' => ['sometimes', Rule::in(['trialing', 'active', 'suspended', 'canceled'])],
             'limit' => ['sometimes', 'integer', 'between:1,50'],
-            'cursor' => ['sometimes', 'string', 'max:500', self::cursorRule()],
+            'cursor' => ['sometimes', 'string', 'max:500', CursorRule::for(['tenants.id' => 'uuid', 'tenants.created_at' => 'date'])],
         ]);
 
         try {
@@ -99,22 +100,5 @@ class TenantAdminController extends Controller
     private function item(string $id): JsonResponse
     {
         return response()->json($this->directory->find($id) ?? abort(404));
-    }
-
-    /** O cursor é nosso (a página devolve `next_cursor`): aceita só o formato que ela gera. */
-    private static function cursorRule(): \Closure
-    {
-        return function (string $attribute, mixed $value, \Closure $fail): void {
-            $decoded = is_string($value) ? json_decode((string) base64_decode(strtr($value, '-_', '+/'), true), true) : null;
-
-            $valid = is_array($decoded)
-                && is_string($decoded['tenants.id'] ?? null) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $decoded['tenants.id']) === 1
-                && is_string($decoded['tenants.created_at'] ?? null) && strtotime($decoded['tenants.created_at']) !== false
-                && is_bool($decoded['_pointsToNextItems'] ?? null);
-
-            if (! $valid) {
-                $fail('O cursor é inválido.');
-            }
-        };
     }
 }

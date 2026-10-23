@@ -25,6 +25,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Env;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Exceptions\MissingAbilityException;
 use Laravel\Sanctum\Http\Middleware\CheckAbilities;
@@ -40,6 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // API sem redirecionamentos: quem não está autenticado recebe 401, nunca um redirect para /login.
         $middleware->redirectGuestsTo(fn () => null);
+
+        // O IP do visitante (limites de tentativas, hash dos leads, captcha) só é lido de X-Forwarded-For vindo de proxy declarado.
+        // A configuração ainda não foi carregada neste ponto da subida: lê direto do ambiente (funciona com a configuração em cache).
+        $proxies = array_values(array_filter(array_map('trim', explode(',', (is_string($configured = Env::get('TRUSTED_PROXIES')) ? $configured : '')))));
+        $middleware->trustProxies(at: $proxies === [] ? [] : (in_array('*', $proxies, true) ? '*' : $proxies));
 
         // O host da plataforma é checado antes da autenticação: em host de assinante a rota nem existe (404).
         $middleware->prependToPriorityList(before: AuthenticatesRequests::class, prepend: PlatformOnly::class);

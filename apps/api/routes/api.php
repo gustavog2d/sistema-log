@@ -3,9 +3,11 @@
 use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\LeadCaptureController;
 use App\Http\Controllers\Platform\AuthController;
 use App\Http\Controllers\Platform\CouponController;
 use App\Http\Controllers\Platform\FeatureController;
+use App\Http\Controllers\Platform\LeadController;
 use App\Http\Controllers\Platform\MeController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\PlanFeatureController;
@@ -84,6 +86,7 @@ Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(func
 // Cadastro do assinante (PLT-003): público, só nos hosts da plataforma.
 Route::middleware('platform')->group(function () {
     Route::get('signup/slug-availability', [SignupController::class, 'slugAvailability'])->middleware('throttle:slug-check');
+    Route::post('leads', LeadCaptureController::class)->middleware('throttle:lead-capture');
     Route::post('signup/coupon-check', CouponCheckController::class)->middleware('throttle:coupon-check');
     Route::post('signup', [SignupController::class, 'store'])->middleware(['throttle:signup', 'idempotent:signup']);
 });
@@ -112,6 +115,8 @@ Route::middleware('platform')->prefix('platform')->group(function () {
             Route::get('features', [FeatureController::class, 'index']);
 
             Route::get('coupons', [CouponController::class, 'index']);
+            Route::get('leads', [LeadController::class, 'index']);
+            Route::patch('leads/{id}', [LeadController::class, 'update'])->whereUuid('id');
 
             // Assinantes (PLT-009): a equipe lê e entra como assinante; as exceções e a suspensão são do super admin.
             Route::get('tenants', [TenantAdminController::class, 'index']);
@@ -124,6 +129,7 @@ Route::middleware('platform')->prefix('platform')->group(function () {
                 Route::post('tenants/{id}/extend-trial', [TenantAdminController::class, 'extendTrial'])->whereUuid('id');
                 Route::put('tenants/{id}/entitlements/{feature}', [TenantAdminController::class, 'setEntitlement'])->whereUuid('id');
                 Route::delete('tenants/{id}/entitlements/{feature}', [TenantAdminController::class, 'resetEntitlement'])->whereUuid('id');
+                Route::delete('leads/{id}', [LeadController::class, 'destroy'])->whereUuid('id');
                 Route::post('coupons', [CouponController::class, 'store']);
                 Route::patch('coupons/{id}', [CouponController::class, 'update'])->whereUuid('id');
                 Route::post('plans', [PlanController::class, 'store']);
