@@ -12,6 +12,7 @@ it('CA-05 shows the person, the role, the business and whether writing is allowe
             'user' => ['id' => $ws->user_id, 'name' => 'Pessoa owner', 'email' => 'ana@exemplo.com', 'role' => 'owner'],
             'tenant' => ['id' => $ws->tenant_id, 'name' => 'Neg', 'slug' => 'neg'],
             'can_write' => true,
+            'impersonating' => false,
             'two_factor_enabled' => false,
         ]);
 });

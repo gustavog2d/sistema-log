@@ -25,6 +25,7 @@ class TransactionalMail extends Mailable
         'subscription_canceled' => 'Sua assinatura foi encerrada',
         'password_changed' => 'Sua senha foi alterada',
         'two_factor_disabled' => 'A verificação em duas etapas foi desligada',
+        'support_access' => 'A equipe de suporte acessou a sua conta',
     ];
 
     /** @param  array<string, string>  $data  só texto já formatado (valor, data, motivo, endereço) */

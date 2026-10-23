@@ -9,6 +9,7 @@ use App\Http\Controllers\Platform\FeatureController;
 use App\Http\Controllers\Platform\MeController;
 use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\PlanFeatureController;
+use App\Http\Controllers\Platform\TenantAdminController;
 use App\Http\Controllers\Platform\TwoFactorController;
 use App\Http\Controllers\PublicPlanController;
 use App\Http\Controllers\SignupController;
@@ -39,16 +40,17 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.
 Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager'])->prefix('users')->group(function () {
     Route::get('/', [TeamController::class, 'index']);
-    Route::post('invitations', [TeamController::class, 'invite'])->middleware('throttle:team-invite');
-    Route::delete('invitations/{id}', [TeamController::class, 'cancelInvitation'])->whereUuid('id');
-    Route::patch('{id}', [TeamController::class, 'changeRole'])->whereUuid('id');
-    Route::post('{id}/deactivate', [TeamController::class, 'deactivate'])->whereUuid('id');
-    Route::post('{id}/reactivate', [TeamController::class, 'reactivate'])->whereUuid('id');
+    // O acesso de suporte só lê a equipe: um convite ou uma mudança de papel sobreviveria ao token de 30 minutos.
+    Route::post('invitations', [TeamController::class, 'invite'])->middleware(['no.impersonation', 'throttle:team-invite']);
+    Route::delete('invitations/{id}', [TeamController::class, 'cancelInvitation'])->whereUuid('id')->middleware('no.impersonation');
+    Route::patch('{id}', [TeamController::class, 'changeRole'])->whereUuid('id')->middleware('no.impersonation');
+    Route::post('{id}/deactivate', [TeamController::class, 'deactivate'])->whereUuid('id')->middleware('no.impersonation');
+    Route::post('{id}/reactivate', [TeamController::class, 'reactivate'])->whereUuid('id')->middleware('no.impersonation');
 });
 
 // Gestão da assinatura pela dona (PLT-007). Funciona também com a assinatura suspensa ou cancelada (`subscription.exempt`):
 // é por aqui que se regulariza o pagamento.
-Route::middleware(['tenant', 'subscription.exempt', 'auth.tenant', 'owner', 'throttle:subscription-manage'])->prefix('subscription')->group(function () {
+Route::middleware(['tenant', 'subscription.exempt', 'auth.tenant', 'no.impersonation', 'owner', 'throttle:subscription-manage'])->prefix('subscription')->group(function () {
     Route::put('payment-method', [SubscriptionManagementController::class, 'paymentMethod'])->middleware('idempotent:payment-method');
     Route::post('cancel', [SubscriptionManagementController::class, 'cancel']);
     Route::post('reactivate', [SubscriptionManagementController::class, 'reactivate']);
@@ -68,12 +70,12 @@ Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(func
     Route::middleware('auth.tenant')->group(function () {
         Route::get('me', [SessionController::class, 'me']);
         Route::post('logout', [SessionController::class, 'logout']);
-        Route::post('logout-all', [SessionController::class, 'logoutAll']);
-        Route::post('password/change', [PasswordController::class, 'change'])->middleware('throttle:tenant-sensitive');
-        Route::post('2fa/disable', [TenantTwoFactorController::class, 'disable'])->middleware('throttle:tenant-sensitive');
+        Route::post('logout-all', [SessionController::class, 'logoutAll'])->middleware('no.impersonation');
+        Route::post('password/change', [PasswordController::class, 'change'])->middleware(['no.impersonation', 'throttle:tenant-sensitive']);
+        Route::post('2fa/disable', [TenantTwoFactorController::class, 'disable'])->middleware(['no.impersonation', 'throttle:tenant-sensitive']);
     });
 
-    Route::middleware('auth.tenant:access,setup')->group(function () {
+    Route::middleware(['auth.tenant:access,setup', 'no.impersonation'])->group(function () {
         Route::post('2fa/setup', [TenantTwoFactorController::class, 'setup']);
         Route::post('2fa/confirm', [TenantTwoFactorController::class, 'confirm'])->middleware('throttle:tenant-verify');
     });
@@ -111,7 +113,17 @@ Route::middleware('platform')->prefix('platform')->group(function () {
 
             Route::get('coupons', [CouponController::class, 'index']);
 
+            // Assinantes (PLT-009): a equipe lê e entra como assinante; as exceções e a suspensão são do super admin.
+            Route::get('tenants', [TenantAdminController::class, 'index']);
+            Route::get('tenants/{id}', [TenantAdminController::class, 'show'])->whereUuid('id');
+            Route::post('tenants/{id}/impersonate', [TenantAdminController::class, 'impersonate'])->whereUuid('id')->middleware('throttle:platform-impersonate');
+
             Route::middleware('platform.role:super_admin')->group(function () {
+                Route::post('tenants/{id}/suspend', [TenantAdminController::class, 'suspend'])->whereUuid('id');
+                Route::post('tenants/{id}/unsuspend', [TenantAdminController::class, 'unsuspend'])->whereUuid('id');
+                Route::post('tenants/{id}/extend-trial', [TenantAdminController::class, 'extendTrial'])->whereUuid('id');
+                Route::put('tenants/{id}/entitlements/{feature}', [TenantAdminController::class, 'setEntitlement'])->whereUuid('id');
+                Route::delete('tenants/{id}/entitlements/{feature}', [TenantAdminController::class, 'resetEntitlement'])->whereUuid('id');
                 Route::post('coupons', [CouponController::class, 'store']);
                 Route::patch('coupons/{id}', [CouponController::class, 'update'])->whereUuid('id');
                 Route::post('plans', [PlanController::class, 'store']);

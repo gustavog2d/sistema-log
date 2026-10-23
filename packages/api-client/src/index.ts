@@ -7,4 +7,5 @@ export * as platform from './generated/platform';
 export * as signup from './generated/signup';
 export * as subscription from './generated/subscription';
 export * as team from './generated/team';
+export * as tenants from './generated/tenants';
 export * as tenant from './generated/tenant';

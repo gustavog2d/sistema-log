@@ -19,6 +19,7 @@ export default defineConfig({
   plans: contract('plans', 'PLT-002-catalogo-de-planos'),
   signup: contract('signup', 'PLT-003-cadastro-do-assinante'),
   subscription: contract('subscription', 'PLT-005-bloqueio-por-status'),
+  tenants: contract('tenants', 'PLT-009-gestao-de-assinantes'),
   coupons: contract('coupons', 'PLT-012-cupons-e-cortesia'),
   team: contract('team', 'PLT-008-usuarios-e-papeis'),
   management: contract('management', 'PLT-007-gestao-da-assinatura'),

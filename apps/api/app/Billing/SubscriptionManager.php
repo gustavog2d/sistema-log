@@ -48,6 +48,11 @@ class SubscriptionManager
                 throw ValidationException::withMessages(['payment_method_token' => 'O meio de pagamento foi recusado.']);
             }
 
+            // Suspensão feita pela equipe (com motivo) não se desfaz pagando: quem tira é a equipe.
+            if ($sub->status === 'suspended' && $sub->suspended_reason !== null) {
+                throw new SubscriptionConflict('A assinatura foi suspensa pela equipe. Fale com o suporte.', 'suspended_by_support');
+            }
+
             $suspended = $sub->status === 'suspended';
             $price = is_numeric($sub->price_cents) ? (int) $sub->price_cents : 0;
             $currency = is_string($sub->currency) ? $sub->currency : 'BRL';
