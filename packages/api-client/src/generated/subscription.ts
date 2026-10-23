@@ -40,6 +40,21 @@ export type SubscriptionPaymentMethod = {
   last4: string | null;
 } | null;
 
+export type SubscriptionPendingPlanChangePlan = {
+  key: string;
+  name: string;
+};
+
+/**
+ * Troca de plano agendada para o fim do período (PLT-013)
+ * @nullable
+ */
+export type SubscriptionPendingPlanChange = {
+  plan: SubscriptionPendingPlanChangePlan;
+  price_cents: number;
+  effective_at: string;
+} | null;
+
 export interface Subscription {
   status: SubscriptionStatus;
   plan: SubscriptionPlan;
@@ -66,6 +81,11 @@ export interface Subscription {
   payment_method: SubscriptionPaymentMethod;
   /** Verdadeiro quando há cancelamento pedido e ainda não efetivado (PLT-007) */
   cancel_at_period_end: boolean;
+  /**
+     * Troca de plano agendada para o fim do período (PLT-013)
+     * @nullable
+     */
+  pending_plan_change?: SubscriptionPendingPlanChange;
 }
 
 export type SubscriptionBlockedStatus = typeof SubscriptionBlockedStatus[keyof typeof SubscriptionBlockedStatus];

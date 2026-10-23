@@ -23,6 +23,7 @@ class SubscriptionBilling
         private readonly PaymentGateway $gateway,
         private readonly PlatformAudit $audit,
         private readonly Notifier $notifier,
+        private readonly PlanChanger $plans,
     ) {}
 
     public function run(Carbon $asOf): BillingRunSummary
@@ -90,6 +91,10 @@ class SubscriptionBilling
             return [['subscription.canceled', ['subscription' => $sub->id, 'tenant' => $sub->tenantId], ['mark' => 'end']]];
         }
 
+        // Troca de plano agendada (downgrade): vale a partir desta renovação, antes de cobrar.
+        [$row, $planEvents] = $this->plans->applyPending($db, $row);
+        $sub = DueSubscription::fromRow($row);
+
         [$start, $end] = $this->period($due, $sub->cycle, $asOf, $sub->billingDay());
         $result = $this->charge($db, $sub, $due);
 
@@ -108,7 +113,7 @@ class SubscriptionBilling
                 'status' => 'active', 'current_period_start' => $start, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
 
-            return [['billing.charged', $context, ['mark' => $start->format('YmdHis'), 'amount' => Money::brl($sub->priceCents), 'period_end' => $end->toIso8601String()]]];
+            return [...$planEvents, ['billing.charged', $context, ['mark' => $start->format('YmdHis'), 'amount' => Money::brl($sub->priceCents), 'period_end' => $end->toIso8601String()]]];
         }
 
         // Pagamento não aprovado: suspensão imediata, sem carência e sem nova tentativa automática.
@@ -116,7 +121,7 @@ class SubscriptionBilling
 
         $notice = ['mark' => $due->format('YmdHis'), 'reason' => self::reasonText((string) $result->failureReason)];
 
-        return [['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $context, $notice]];
+        return [...$planEvents, ['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $context, $notice]];
     }
 
     private function charge(Connection $db, DueSubscription $sub, Carbon $due): ChargeResult

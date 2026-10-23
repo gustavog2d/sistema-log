@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Billing\PlanChanger;
 use App\Billing\SubscriptionManager;
 use App\Models\Subscription;
 use App\Tenancy\TenantContext;
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 /** Gestão da assinatura pela dona (PLT-007). Só traduz o pedido; as regras estão em `SubscriptionManager`. */
 class SubscriptionManagementController extends Controller
 {
-    public function __construct(private readonly TenantContext $context, private readonly SubscriptionManager $manager) {}
+    public function __construct(private readonly TenantContext $context, private readonly SubscriptionManager $manager, private readonly PlanChanger $planChanger) {}
 
     public function paymentMethod(Request $request): JsonResponse
     {
@@ -34,6 +35,28 @@ class SubscriptionManagementController extends Controller
     public function reactivate(Request $request): JsonResponse
     {
         $this->manager->reactivate($this->tenantId(), $this->actor($request));
+
+        return $this->state();
+    }
+
+    public function previewPlanChange(Request $request): JsonResponse
+    {
+        $request->validate(['plan' => ['required', 'string', 'max:40']]);
+
+        return response()->json($this->planChanger->preview($this->tenantId(), $request->string('plan')->toString()));
+    }
+
+    public function changePlan(Request $request): JsonResponse
+    {
+        $request->validate(['plan' => ['required', 'string', 'max:40']]);
+        $change = $this->planChanger->change($this->tenantId(), $request->string('plan')->toString(), $this->actor($request));
+
+        return response()->json($this->stateArray() + ['plan_change' => $change]);
+    }
+
+    public function cancelPlanChange(Request $request): JsonResponse
+    {
+        $this->planChanger->cancelPending($this->tenantId(), $this->actor($request));
 
         return $this->state();
     }
@@ -83,6 +106,12 @@ class SubscriptionManagementController extends Controller
 
     private function state(): JsonResponse
     {
-        return response()->json(SubscriptionManager::summary(Subscription::query()->where('tenant_id', $this->tenantId())->firstOrFail()));
+        return response()->json($this->stateArray());
+    }
+
+    /** @return array<string, mixed> */
+    private function stateArray(): array
+    {
+        return SubscriptionManager::summary(Subscription::query()->where('tenant_id', $this->tenantId())->firstOrFail());
     }
 }

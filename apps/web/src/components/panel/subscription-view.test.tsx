@@ -38,7 +38,7 @@ describe('SubscriptionView: overview', () => {
   it('CA-06 shows plan, cycle, price, next charge and only the brand and the last digits of the card', () => {
     render(view());
 
-    expect(screen.getByText('Profissional')).toBeInTheDocument();
+    expect(screen.getAllByText('Profissional').length).toBeGreaterThan(0);
     expect(screen.getByText('Mensal')).toBeInTheDocument();
     expect(screen.getAllByText(/R\$\s?50,00/).length).toBeGreaterThan(0);
     expect(screen.getByText('20/11/2026')).toBeInTheDocument();
