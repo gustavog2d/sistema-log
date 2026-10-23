@@ -21,3 +21,7 @@ Schedule::command('billing:run')->everyFiveMinutes()->withoutOverlapping();
 
 // Avisos agendados: fim do teste chegando (PLT-010).
 Schedule::command('notifications:run')->everyFifteenMinutes()->withoutOverlapping();
+
+// Registro de avisos enviados: só serve para não repetir; guardado por 90 dias.
+Schedule::call(fn () => DB::connection('pgsql_platform')->table('notification_log')->where('created_at', '<', now()->subDays(90))->delete())
+    ->name('notification-log:prune')->daily();

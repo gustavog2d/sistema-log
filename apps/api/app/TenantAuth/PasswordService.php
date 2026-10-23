@@ -90,7 +90,7 @@ class PasswordService
             $tx->table('password_reset_tokens')->where('email', $email)->delete();
         });
 
-        $this->notifier->toPerson($tenantId, $email, is_string($user->name) ? $user->name : '', 'password_changed', 'password_changed:'.(is_string($user->id) ? $user->id : '').':'.now()->format('YmdHisu'));
+        $this->notifier->toPerson($tenantId, $email, is_string($user->name) ? $user->name : '', 'password_changed', 'password_changed:'.(is_string($user->id) ? $user->id : '').':'.intdiv(time(), 300));
     }
 
     /**
@@ -114,7 +114,7 @@ class PasswordService
             'password' => Hash::make($new), 'tokens_valid_after' => Instant::now(), 'failed_attempts' => 0, 'updated_at' => now(),
         ]);
 
-        $this->notifier->toPerson($this->tokens->tenantId(), $person->email, $person->name, 'password_changed', 'password_changed:'.$person->id.':'.now()->format('YmdHisu'));
+        $this->notifier->toPerson($this->tokens->tenantId(), $person->email, $person->name, 'password_changed', 'password_changed:'.$person->id.':'.intdiv(time(), 300));
 
         // O acesso novo nasce depois do corte: só ele vale.
         $fresh = $db->table('users')->where('id', $user->id)->first();

@@ -48,7 +48,6 @@ it('CA-08 warns the person when the password is reset by the link', function () 
 it('CA-09 warns the person when 2fa is turned off', function () {
     $this->workspace('neg', 'ana@exemplo.com');
     $this->enableTwoFactor('neg');
-    $session = $this->tokenFor('neg') ?: '';
     $this->travel(31)->seconds();
     $challenge = $this->loginAt('neg')->json('challenge_token');
     $setup = DB::connection('pgsql_admin')->table('users')->first();

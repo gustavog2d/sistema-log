@@ -8,11 +8,6 @@ beforeEach(function () {
     $this->seedBillingCatalog();
 });
 
-function trialOf(string $slug, array $overrides = []): object
-{
-    return (fn () => $this->workspace($slug, "dona-{$slug}@exemplo.com", 'owner', 'trialing'))->call(test());
-}
-
 it('CA-02 warns once when the trial ends within two days', function () {
     $ws = $this->workspace('neg', 'dona@exemplo.com', 'owner', 'trialing');
     DB::connection('pgsql_admin')->table('subscriptions')->update(['trial_ends_at' => now()->addDays(2)->subHour()]);

@@ -35,9 +35,19 @@ class TransactionalMail extends Mailable
         public readonly array $data = [],
     ) {}
 
+    /** Tentativas do envio na fila (a espera cresce a cada falha). */
+    public int $tries = 3;
+
+    /** @return list<int> */
+    public function backoff(): array
+    {
+        return [60, 300];
+    }
+
     public function envelope(): Envelope
     {
-        return new Envelope(subject: self::SUBJECTS[$this->kind].' · '.$this->businessName);
+        // O nome do negócio é texto livre de quem se cadastrou: no assunto só entra depois que a pessoa é conhecida (não no boas-vindas).
+        return new Envelope(subject: $this->kind === 'welcome' ? self::SUBJECTS['welcome'] : self::SUBJECTS[$this->kind].' · '.$this->businessName);
     }
 
     public function content(): Content

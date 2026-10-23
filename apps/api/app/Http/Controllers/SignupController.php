@@ -22,10 +22,10 @@ class SignupController extends Controller
     public function store(Request $request, SignupService $signup): JsonResponse
     {
         $request->validate([
-            'business_name' => ['required', 'string', 'min:2', 'max:100'],
+            'business_name' => ['required', 'string', 'min:2', 'max:100', self::plainText()],
             'slug' => ['required', 'string', 'max:64'],
             'niche' => ['required', 'string', Rule::in(Config::array('tenancy.niches'))],
-            'owner_name' => ['required', 'string', 'min:2', 'max:100'],
+            'owner_name' => ['required', 'string', 'min:2', 'max:100', self::plainText()],
             // Só ASCII: letras de outros alfabetos poderiam imitar e-mails de outras contas.
             'owner_email' => ['required', 'string', 'email:rfc,strict', 'max:255', 'regex:/^[\x21-\x7E]+$/'],
             // O bcrypt só considera os primeiros 72 bytes: acima disso a senha perderia força sem aviso.
@@ -43,5 +43,15 @@ class SignupController extends Controller
         ]);
 
         return response()->json($signup->register(SignupData::fromRequest($request)), 201);
+    }
+
+    /** Nomes vão em e-mails e telas: sem caracteres de controle, endereços de internet nem de e-mail. */
+    private static function plainText(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            if (is_string($value) && (preg_match('/[\x00-\x1F\x7F]/', $value) === 1 || preg_match('~https?:|www\.|://|@~i', $value) === 1)) {
+                $fail('Use só o nome, sem endereços nem caracteres especiais de controle.');
+            }
+        };
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Notifications\Notifier;
+use App\Notifications\TransactionalMail;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -36,4 +37,44 @@ it('CA-14 sends nothing and does not fail when the business has no active owner'
 
 it('keeps the log away from the API role', function () {
     expect(DB::connection('pgsql_admin')->selectOne("select has_table_privilege('app_runtime', 'notification_log', 'SELECT') as ok")->ok)->toBeFalse();
+});
+
+it('rejects names with control characters or links in the signup (they end up in emails)', function (string $field, string $value) {
+    $this->seedCatalog();
+
+    $this->signup([$field => $value])->assertUnprocessable()->assertJsonValidationErrors($field);
+})->with([
+    ['business_name', "Estúdio\r\nBcc: x@y.com"],
+    ['business_name', 'Ligue já http://golpe.com'],
+    ['business_name', 'Veja www.golpe.com'],
+    ['owner_name', "Ana\nSouza"],
+    ['owner_name', 'ana@golpe.com'],
+]);
+
+it('does not put the business name in the subject of the welcome', function () {
+    $mail = new TransactionalMail('welcome', 'Ana', 'Nome Livre Do Negócio');
+
+    expect($mail->envelope()->subject)->not->toContain('Nome Livre');
+});
+
+it('warns about 2fa only when it was on, and not twice in the same minutes', function () {
+    Mail::fake();
+    $this->workspace('neg', 'ana@exemplo.com');
+    $token = $this->tokenFor('neg');
+
+    $this->asUser($token, 'POST', 'neg', 'auth/2fa/disable', ['current_password' => self::PASSWORD])->assertNoContent();
+
+    expect(allQueued())->toBe(0);
+});
+
+it('limits the sensitive account actions per person', function () {
+    $this->workspace('neg', 'ana@exemplo.com');
+    $token = $this->tokenFor('neg');
+
+    $status = null;
+    foreach (range(1, 12) as $i) {
+        $status = $this->asUser($token, 'POST', 'neg', 'auth/2fa/disable', ['current_password' => self::PASSWORD])->status();
+    }
+
+    expect($status)->toBe(429);
 });

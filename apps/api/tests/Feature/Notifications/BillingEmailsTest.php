@@ -1,6 +1,7 @@
 <?php
 
 use App\Notifications\TransactionalMail;
+use Illuminate\Contracts\Mail\Factory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -46,7 +47,7 @@ it('CA-12 sends no payment confirmation for a courtesy account', function () {
 });
 
 it('CA-06 confirms a regularization and sends nothing when it is refused', function () {
-    $ws = $this->workspace('neg', 'dona@exemplo.com', 'owner', 'suspended');
+    $this->workspace('neg', 'dona@exemplo.com', 'owner', 'suspended');
     $token = $this->tokenFor('neg', 'dona@exemplo.com');
 
     manage($this, $token, 'PUT', 'neg', 'subscription/payment-method', ['payment_method_token' => 'tok_fail_on_charge'], 'k1')->assertStatus(402);
@@ -57,7 +58,7 @@ it('CA-06 confirms a regularization and sends nothing when it is refused', funct
 });
 
 it('CA-07 confirms the cancellation request with the date, and the end of the subscription', function () {
-    $ws = $this->workspace('neg', 'dona@exemplo.com', 'owner', 'active');
+    $this->workspace('neg', 'dona@exemplo.com', 'owner', 'active');
     DB::connection('pgsql_admin')->table('subscriptions')->update(['current_period_end' => $this->at('2026-12-01 09:00:00')]);
     $token = $this->tokenFor('neg', 'dona@exemplo.com');
 
@@ -80,4 +81,44 @@ it('CA-07 tells a suspended subscription that was canceled', function () {
     manage($this, $token, 'POST', 'neg', 'subscription/cancel')->assertOk();
 
     expect(queuedCount('subscription_canceled', 'dona@exemplo.com'))->toBe(1);
+});
+
+it('CA-07 tells the trial end date when the cancellation is asked during the trial', function () {
+    $this->workspace('neg', 'dona@exemplo.com', 'owner', 'trialing');
+    DB::connection('pgsql_admin')->table('subscriptions')->update(['trial_ends_at' => $this->at('2026-12-05 15:00:00')]);
+    $token = $this->tokenFor('neg', 'dona@exemplo.com');
+
+    manage($this, $token, 'POST', 'neg', 'subscription/cancel')->assertOk();
+
+    Mail::assertQueued(TransactionalMail::class, fn ($m) => $m->kind === 'cancel_requested' && $m->data['until'] === '05/12/2026');
+});
+
+it('shows dates in the time zone of the business', function () {
+    $this->workspace('neg', 'dona@exemplo.com', 'owner', 'active');
+    DB::connection('pgsql_admin')->table('tenants')->update(['timezone' => 'Asia/Tokyo']);
+    DB::connection('pgsql_admin')->table('subscriptions')->update(['current_period_end' => $this->at('2026-12-01 20:00:00')]);
+    $token = $this->tokenFor('neg', 'dona@exemplo.com');
+
+    manage($this, $token, 'POST', 'neg', 'subscription/cancel')->assertOk();
+
+    Mail::assertQueued(TransactionalMail::class, fn ($m) => $m->kind === 'cancel_requested' && $m->data['until'] === '02/12/2026');
+});
+
+it('CA-10 keeps the charge when the queue is down', function () {
+    $ws = dueTrial($this);
+    Mail::swap(Mockery::mock(Factory::class, fn ($mock) => $mock->shouldReceive('to')->andThrow(new RuntimeException('fila fora do ar'))));
+
+    $this->artisan('billing:run')->assertSuccessful();
+
+    expect(DB::connection('pgsql_admin')->table('subscriptions')->where('tenant_id', $ws->tenant_id)->value('status'))->toBe('active')
+        ->and(DB::connection('pgsql_admin')->table('invoices')->count())->toBe(1);
+});
+
+it('says there is no payment method when that is the reason for the suspension', function () {
+    $ws = dueTrial($this);
+    DB::connection('pgsql_admin')->table('subscriptions')->where('tenant_id', $ws->tenant_id)->update(['payment_method_id' => null]);
+
+    $this->artisan('billing:run')->assertSuccessful();
+
+    Mail::assertQueued(TransactionalMail::class, fn ($m) => $m->kind === 'subscription_suspended' && str_contains($m->data['reason'], 'meio de pagamento'));
 });

@@ -14,6 +14,11 @@ Avisa a dona (e quem mexeu na conta) do que acontece com a assinatura e com a se
 - Os textos ficam em `resources/views/emails/notifications/` (texto simples). O nome do produto vem de `config('app.name')`; o texto nunca leva senha, token, número de cartão ou referência do gateway.
 - Em desenvolvimento os e-mails aparecem no Mailpit (http://localhost:8025); o worker precisa estar rodando para a fila.
 
+- Avisos de segurança (troca de senha, 2FA) repetem no máximo uma vez a cada 5 minutos por pessoa; `password/change` e `2fa/disable` têm limite de 10 por hora por pessoa. O `2fa/disable` só avisa se o 2FA estava ligado. Os avisos de regularização e de cancelamento pedido são um por pedido. `notification_log` guarda 90 dias.
+- O aviso de boas-vindas vai para um e-mail ainda não verificado: por isso o nome do negócio não entra no assunto e os nomes do cadastro não aceitam links, e-mails nem caracteres de controle.
+- Datas aparecem no fuso do negócio (`tenants.timezone`). Os links usam `APP_TENANT_SCHEME` (https em produção).
+- O worker tenta o envio 3 vezes; se a fila falhar depois de aceitar o aviso, ele se perde (o de fim do teste é refeito na rodada seguinte). Em produção, definir `MAIL_MAILER=smtp` (o padrão `log` grava o e-mail inteiro) e podar `failed_jobs`.
+
 ## Limitações
 
 - Sem tema HTML, sem preferências de envio, sem aviso de falha de entrega. A hora do fim do teste usa o fuso de São Paulo.

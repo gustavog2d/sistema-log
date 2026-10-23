@@ -90,7 +90,7 @@ class SubscriptionManager
                 'current_period_start' => $now, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
 
-            return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]], ['subscription.regularized', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor, 'amount_cents' => $price, 'mark' => $now->format('YmdHisu')]]];
+            return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]], ['subscription.regularized', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor, 'amount_cents' => $price], ['mark' => $now->format('YmdHisu')]]];
         });
 
         $this->record($events);
@@ -111,7 +111,7 @@ class SubscriptionManager
             if ($sub->status === 'suspended') {
                 $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'canceled', 'canceled_at' => now(), 'updated_at' => now()]);
 
-                return [['subscription.canceled', $context + ['mark' => 'now']]];
+                return [['subscription.canceled', $context, ['mark' => 'now']]];
             }
 
             if ($sub->canceled_at !== null) {
@@ -122,7 +122,7 @@ class SubscriptionManager
 
             $until = $sub->status === 'trialing' ? $sub->trial_ends_at : $sub->current_period_end;
 
-            return [['subscription.cancel_requested', $context + ['mark' => now()->format('YmdHisu'), 'until' => is_string($until) ? Carbon::parse($until, 'UTC')->setTimezone('America/Sao_Paulo')->format('d/m/Y') : 'o fim do período atual']]];
+            return [['subscription.cancel_requested', $context, ['mark' => now()->format('YmdHisu')] + (is_string($until) ? ['until' => Carbon::parse($until, 'UTC')->toIso8601String()] : [])]];
         });
 
         $this->record($events);
@@ -186,10 +186,11 @@ class SubscriptionManager
         }
     }
 
-    /** @param  list<array{0: string, 1: array<string, scalar>}>  $events */
+    /** @param  list<array{0: string, 1: array<string, scalar>, 2?: array<string, string>}>  $events */
     private function record(array $events): void
     {
-        foreach ($events as [$event, $metadata]) {
+        foreach ($events as $entry) {
+            [$event, $metadata] = $entry;
             try {
                 $this->audit->record($event, null, $metadata);
             } catch (Throwable $e) {
@@ -197,7 +198,7 @@ class SubscriptionManager
                 report($e);
             }
 
-            $this->notifier->forSubscriptionEvent($event, $metadata);
+            $this->notifier->forSubscriptionEvent($event, $metadata, $entry[2] ?? []);
         }
     }
 }

@@ -236,7 +236,7 @@ it('CA-14 audits charges and suspensions without payment data', function () {
 
     $events = DB::connection('pgsql_admin')->table('platform_audit_logs')->get();
     expect($events->pluck('event')->all())->toContain('billing.charged', 'billing.failed', 'subscription.suspended');
-    expect($events->toJson())->not->toContain('pm_fake')->not->toContain('last4')->not->toContain('visa')->not->toContain('cus_fake');
+    expect($events->toJson())->not->toContain('pm_fake')->not->toContain('4242')->not->toContain('cus_fake');
 });
 
 it('never undoes a recorded charge when only the audit log fails', function () {

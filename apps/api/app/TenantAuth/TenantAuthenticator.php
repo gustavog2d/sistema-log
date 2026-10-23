@@ -153,9 +153,13 @@ class TenantAuthenticator
     public function disableTwoFactor(AuthenticatedPerson $person, #[SensitiveParameter] string $password): void
     {
         $db = DB::connection('pgsql_auth');
-        $this->confirmPassword($db, $person, $password);
+        $user = $this->confirmPassword($db, $person, $password);
         $this->twoFactor->disable($db, $person->id);
-        $this->notifier->toPerson($this->tokens->tenantId(), $person->email, $person->name, 'two_factor_disabled', 'two_factor_disabled:'.$person->id.':'.now()->format('YmdHisu'));
+
+        // Só avisa quando havia 2FA ligado: desligar de novo não é um acontecimento.
+        if ($user->totp_confirmed_at !== null) {
+            $this->notifier->toPerson($this->tokens->tenantId(), $person->email, $person->name, 'two_factor_disabled', 'two_factor_disabled:'.$person->id.':'.intdiv(time(), 300));
+        }
     }
 
     /** @return array{secret: string, otpauth_uri: string} */

@@ -68,7 +68,7 @@ class SubscriptionBilling
     }
 
     /**
-     * @return list<array{0: string, 1: array<string, scalar>}> eventos de auditoria a gravar depois da transação
+     * @return list<array{0: string, 1: array<string, scalar>, 2?: array<string, string>}> eventos de auditoria a gravar depois da transação; o terceiro item é o conteúdo do aviso por e-mail
      */
     private function process(Connection $db, string $id, Carbon $asOf): array
     {
@@ -87,7 +87,7 @@ class SubscriptionBilling
         if ($row->canceled_at !== null) {
             $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'canceled', 'updated_at' => now()]);
 
-            return [['subscription.canceled', ['subscription' => $sub->id, 'tenant' => $sub->tenantId, 'mark' => 'end']]];
+            return [['subscription.canceled', ['subscription' => $sub->id, 'tenant' => $sub->tenantId], ['mark' => 'end']]];
         }
 
         [$start, $end] = $this->period($due, $sub->cycle, $asOf, $sub->billingDay());
@@ -108,15 +108,15 @@ class SubscriptionBilling
                 'status' => 'active', 'current_period_start' => $start, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
 
-            return [['billing.charged', $context + ['mark' => $start->format('YmdHis'), 'amount' => Money::brl($sub->priceCents), 'period_end' => $end->copy()->setTimezone('America/Sao_Paulo')->format('d/m/Y')]]];
+            return [['billing.charged', $context, ['mark' => $start->format('YmdHis'), 'amount' => Money::brl($sub->priceCents), 'period_end' => $end->toIso8601String()]]];
         }
 
         // Pagamento não aprovado: suspensão imediata, sem carência e sem nova tentativa automática.
         $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'suspended', 'suspended_at' => $asOf, 'updated_at' => now()]);
 
-        $suspended = $context + ['mark' => $due->format('YmdHis'), 'reason' => self::reasonText((string) $result->failureReason)];
+        $notice = ['mark' => $due->format('YmdHis'), 'reason' => self::reasonText((string) $result->failureReason)];
 
-        return [['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $suspended]];
+        return [['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $context, $notice]];
     }
 
     private function charge(Connection $db, DueSubscription $sub, Carbon $due): ChargeResult
@@ -176,10 +176,11 @@ class SubscriptionBilling
         };
     }
 
-    /** @param  list<array{0: string, 1: array<string, scalar>}>  $events */
+    /** @param  list<array{0: string, 1: array<string, scalar>, 2?: array<string, string>}>  $events */
     private function audit(array $events): void
     {
-        foreach ($events as [$event, $metadata]) {
+        foreach ($events as $entry) {
+            [$event, $metadata] = $entry;
             try {
                 $this->audit->record($event, null, $metadata);
             } catch (Throwable $e) {
@@ -188,7 +189,7 @@ class SubscriptionBilling
             }
 
             // O aviso por e-mail nunca atrapalha a cobrança (o Notifier trata os próprios erros).
-            $this->notifier->forSubscriptionEvent($event, $metadata);
+            $this->notifier->forSubscriptionEvent($event, $metadata, $entry[2] ?? []);
         }
     }
 }
