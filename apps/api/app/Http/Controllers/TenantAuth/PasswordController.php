@@ -9,6 +9,7 @@ use App\TenantAuth\PasswordService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Config;
 
 class PasswordController extends Controller
 {
@@ -17,7 +18,7 @@ class PasswordController extends Controller
     {
         $request->validate(['email' => ['required', 'string', 'email', 'max:255']]);
 
-        $passwords->sendResetLink($request->string('email')->toString(), $request->getScheme());
+        $passwords->sendResetLink($request->string('email')->toString(), Config::string('tenancy.scheme'));
 
         return response()->noContent(202);
     }
