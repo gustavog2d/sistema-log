@@ -69,8 +69,8 @@ Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(func
         Route::get('me', [SessionController::class, 'me']);
         Route::post('logout', [SessionController::class, 'logout']);
         Route::post('logout-all', [SessionController::class, 'logoutAll']);
-        Route::post('password/change', [PasswordController::class, 'change']);
-        Route::post('2fa/disable', [TenantTwoFactorController::class, 'disable']);
+        Route::post('password/change', [PasswordController::class, 'change'])->middleware('throttle:tenant-sensitive');
+        Route::post('2fa/disable', [TenantTwoFactorController::class, 'disable'])->middleware('throttle:tenant-sensitive');
     });
 
     Route::middleware('auth.tenant:access,setup')->group(function () {
