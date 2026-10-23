@@ -13,7 +13,6 @@ class InvitationMail extends Mailable
         public readonly string $businessName,
         public readonly string $inviteeName,
         public readonly string $link,
-        public readonly string $token,
     ) {}
 
     public function envelope(): Envelope

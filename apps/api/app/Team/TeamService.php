@@ -31,6 +31,9 @@ class TeamService
 {
     public const INVITE_DAYS = 7;
 
+    /** Papéis que podem ser dados por convite ou troca (a dona é única e vem do cadastro). */
+    public const ASSIGNABLE_ROLES = ['manager', 'professional', 'reception'];
+
     public function __construct(
         private readonly TenantContext $context,
         private readonly TenantAuthenticator $authenticator,
@@ -66,6 +69,7 @@ class TeamService
 
         DB::connection('pgsql_auth')->transaction(function (Connection $db) use ($actor, $name, $email, $role, $token, $id, $expires, $tenant): void {
             $this->scope($db, $tenant->id);
+            $this->lockTeam($db, $tenant->id);
 
             $user = $db->table('users')->where('email', $email)->first();
 
@@ -73,6 +77,7 @@ class TeamService
                 throw new TeamConflict('Esta pessoa já faz parte da equipe.', 'already_member');
             }
 
+            // O convite antigo sai antes da contagem (ele seria substituído); se o limite barrar, a transação desfaz a remoção.
             $db->table('invitations')->where('email', $email)->delete();
             $this->assertRoom($db, $tenant->id, 1);
 
@@ -83,8 +88,8 @@ class TeamService
             ]);
         });
 
-        $link = sprintf('%s://%s.%s/aceitar-convite?token=%s&email=%s', request()->getScheme(), $tenant->slug, Config::string('tenancy.base_domain'), $token, urlencode($email));
-        $mail = new InvitationMail($tenant->name, $name, $link, $token);
+        $link = sprintf('%s://%s.%s/aceitar-convite?token=%s&email=%s', parse_url(Config::string('app.url'), PHP_URL_SCHEME) ?: 'https', $tenant->slug, Config::string('tenancy.base_domain'), $token, urlencode($email));
+        $mail = new InvitationMail($tenant->name, $name, $link);
 
         // Depois da resposta: o envio não atrasa o pedido nem revela nada pelo tempo.
         defer(function () use ($email, $mail): void {
@@ -139,6 +144,7 @@ class TeamService
         return DB::connection('pgsql_auth')->transaction(function (Connection $db) use ($actor, $userId, $active): array {
             $tenantId = $this->tenant()->id;
             $this->scope($db, $tenantId);
+            $this->lockTeam($db, $tenantId);
             $target = $this->target($db, $actor, $userId);
 
             if ($active && $target->status !== 'active') {
@@ -171,6 +177,7 @@ class TeamService
 
         $result = DB::connection('pgsql_auth')->transaction(function (Connection $db) use ($email, $token, $password, $tenantId, $invalid): array {
             $this->scope($db, $tenantId);
+            $this->lockTeam($db, $tenantId);
             $invitation = $db->table('invitations')->where('email', $email)->lockForUpdate()->first();
 
             if (
@@ -200,7 +207,7 @@ class TeamService
                 $userId = (string) Str::uuid();
                 $db->table('users')->insert([
                     'id' => $userId, 'name' => $invitation->name, 'email' => $email, 'password' => Hash::make($password),
-                    'terms_accepted_at' => now(), 'terms_version' => Config::string('billing.terms_version'),
+                    'email_verified_at' => now(), 'terms_accepted_at' => now(), 'terms_version' => Config::string('billing.terms_version'),
                     'created_at' => now(), 'updated_at' => now(),
                 ]);
                 $user = $db->table('users')->where('id', $userId)->first();
@@ -278,10 +285,12 @@ class TeamService
         $subscription = Subscription::query()->where('tenant_id', $tenantId)->first();
         $plan = $subscription === null ? null : Plan::query()->find($subscription->plan_id);
 
+        // Sem assinatura ou plano não há regra para ler: o acesso de escrita já é barrado pelo bloqueio por status.
         if ($plan === null) {
             return null;
         }
 
+        // TODO(PLT-009): quando existirem exceções por assinante, passá-las ao resolver.
         $entitlement = $this->entitlements->forPlan($plan)->firstWhere('feature', 'usuarios.max');
 
         return $entitlement !== null && $entitlement->enabled ? $entitlement->limit : null;
@@ -298,6 +307,12 @@ class TeamService
     private function scope(Connection $db, string $tenantId): void
     {
         $db->statement("select set_config('app.tenant_id', ?, true)", [$tenantId]);
+    }
+
+    /** Serializa as mudanças de equipe do negócio: a contagem do limite e a gravação não se intercalam entre pedidos. */
+    private function lockTeam(Connection $db, string $tenantId): void
+    {
+        $db->statement('select pg_advisory_xact_lock(hashtext(?))', ['team:'.$tenantId]);
     }
 
     /**

@@ -16,6 +16,10 @@ A dona (e a gerente) monta a equipe do negócio: convida por e-mail, define o pa
 - `GET /users` lista pessoas e convites pendentes (sem segredos) e funciona mesmo com a assinatura suspensa; as mudanças exigem assinatura em teste ou ativa.
 - Escritas usam o papel de banco `app_auth`; a API só lê (e nunca vê o hash do token do convite).
 
+- O aceite exige `accept_terms` verdadeiro e registra os termos na conta nova. O aceite funciona com a assinatura suspensa e não confere o limite de novo (a vaga já foi contada no convite pendente).
+- Convites: o nome só aceita letras, números e pontuação simples; no máximo 3 convites por dia para o mesmo e-mail (entre todos os negócios).
+- Riscos aceitos: uma gerente pode rebaixar ou desativar outras gerentes (nunca a dona). O link do convite leva o token na URL (`/aceitar-convite?token=`); a tela deve limpar a URL e usar `Referrer-Policy: no-referrer`.
+
 ## Limitações
 
 - Sem transferência de titularidade, sem permissões finas por funcionalidade (chegam com cada módulo), sem auditoria do assinante e sem e-mails com tema (PLT-010). Sem tela.

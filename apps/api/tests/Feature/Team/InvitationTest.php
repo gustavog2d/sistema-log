@@ -79,7 +79,7 @@ it('CA-14 cancels a pending invitation and the link stops working', function () 
     team($this, $token, 'DELETE', 'neg', "users/invitations/{$id}")->assertNoContent();
     team($this, $token, 'DELETE', 'neg', "users/invitations/{$id}")->assertNotFound();
 
-    $this->postJson('http://neg.app.test/api/v1/auth/invitations/accept', ['email' => 'nova@exemplo.com', 'token' => $plain, 'password' => 'uma-senha-longa-123'])->assertUnprocessable();
+    $this->postJson('http://neg.app.test/api/v1/auth/invitations/accept', ['email' => 'nova@exemplo.com', 'token' => $plain, 'password' => 'uma-senha-longa-123', 'accept_terms' => true])->assertUnprocessable();
 });
 
 it('CA-13 lists people and pending invitations without any secret', function () {
@@ -92,4 +92,29 @@ it('CA-13 lists people and pending invitations without any secret', function () 
     expect(collect($response->json('members'))->pluck('role', 'email')->all())->toBe(['dona-neg@exemplo.com' => 'owner', 'prof@exemplo.com' => 'professional'])
         ->and($response->json('invitations.0.status'))->toBe('invited')
         ->and(json_encode($response->json()))->not->toContain($plain)->not->toContain('token_hash')->not->toContain('password');
+});
+
+it('refuses names that could carry a link or break the email text', function (string $name) {
+    [$token] = teamOf($this);
+
+    team($this, $token, 'POST', 'neg', 'users/invitations', ['name' => $name, 'email' => 'nova@exemplo.com', 'role' => 'reception'])->assertUnprocessable()->assertJsonValidationErrors('name');
+})->with(["Maria\nhttp://x.com", 'Clique em http://golpe.com', 'A <b>', 'Maria@golpe']);
+
+it('limits the invitations to the same recipient across businesses', function () {
+    [$a] = teamOf($this, 'negocioa');
+    [$b] = teamOf($this, 'negociob');
+
+    foreach (range(1, 3) as $i) {
+        team($this, $i % 2 ? $a : $b, 'POST', $i % 2 ? 'negocioa' : 'negociob', 'users/invitations', ['name' => 'Alvo Fixo', 'email' => 'alvo@exemplo.com', 'role' => 'reception'])->assertCreated();
+    }
+
+    team($this, $a, 'POST', 'negocioa', 'users/invitations', ['name' => 'Alvo Fixo', 'email' => 'alvo@exemplo.com', 'role' => 'reception'])->assertStatus(429);
+});
+
+it('requires accepting the terms to join', function () {
+    [$token] = teamOf($this);
+    team($this, $token, 'POST', 'neg', 'users/invitations', ['name' => 'Nova Pessoa', 'email' => 'nova@exemplo.com', 'role' => 'reception'])->assertCreated();
+
+    $this->postJson('http://neg.app.test/api/v1/auth/invitations/accept', ['email' => 'nova@exemplo.com', 'token' => inviteToken('nova@exemplo.com'), 'password' => 'uma-senha-longa-123'])
+        ->assertUnprocessable()->assertJsonValidationErrors('accept_terms');
 });

@@ -143,6 +143,8 @@ export type ChangeRoleBody = {
 export type AcceptInvitationBody = {
   email: string;
   token: string;
+  /** Deve ser verdadeiro: quem aceita o convite aceita os termos de uso. */
+  accept_terms: boolean;
   /**
      * De 12 caracteres até 72 bytes (limite do bcrypt).
      * @minLength 12
@@ -527,6 +529,11 @@ export type acceptInvitationResponse422 = {
   status: 422
 }
 
+export type acceptInvitationResponse423 = {
+  data: ProblemResponse
+  status: 423
+}
+
 export type acceptInvitationResponse429 = {
   data: ProblemResponse
   status: 429
@@ -535,7 +542,7 @@ export type acceptInvitationResponse429 = {
 export type acceptInvitationResponseSuccess = (acceptInvitationResponse200) & {
   headers: Headers;
 };
-export type acceptInvitationResponseError = (acceptInvitationResponse422 | acceptInvitationResponse429) & {
+export type acceptInvitationResponseError = (acceptInvitationResponse422 | acceptInvitationResponse423 | acceptInvitationResponse429) & {
   headers: Headers;
 };
 

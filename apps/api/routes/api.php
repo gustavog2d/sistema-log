@@ -35,7 +35,7 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.
-Route::middleware(['tenant', 'subscription.access', 'auth.tenant', 'role:owner,manager'])->prefix('users')->group(function () {
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager'])->prefix('users')->group(function () {
     Route::get('/', [TeamController::class, 'index']);
     Route::post('invitations', [TeamController::class, 'invite'])->middleware('throttle:team-invite');
     Route::delete('invitations/{id}', [TeamController::class, 'cancelInvitation'])->whereUuid('id');

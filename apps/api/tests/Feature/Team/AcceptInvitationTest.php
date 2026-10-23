@@ -9,7 +9,7 @@ beforeEach(function () {
 
 function accept($test, string $email, string $token, string $password = 'uma-senha-longa-123', string $slug = 'neg')
 {
-    return $test->postJson("http://{$slug}.app.test/api/v1/auth/invitations/accept", ['email' => $email, 'token' => $token, 'password' => $password]);
+    return $test->postJson("http://{$slug}.app.test/api/v1/auth/invitations/accept", ['email' => $email, 'token' => $token, 'password' => $password, 'accept_terms' => true]);
 }
 
 function invited($test, string $email = 'nova@exemplo.com', string $role = 'professional', string $slug = 'neg'): string
@@ -94,4 +94,24 @@ it('rate limits the acceptance attempts', function () {
     }
 
     expect($last)->toBe(429);
+});
+
+it('CA-07 counts wrong passwords against the lock and does not consume the invitation (423)', function () {
+    $this->workspace('outro', 'viajante@exemplo.com');
+    $plain = invited($this, 'viajante@exemplo.com');
+
+    foreach (range(1, 5) as $i) {
+        accept($this, 'viajante@exemplo.com', $plain, 'senha-errada-12345')->assertUnprocessable();
+    }
+
+    accept($this, 'viajante@exemplo.com', $plain, self::PASSWORD)->assertStatus(423);
+    expect(DB::connection('pgsql_admin')->table('invitations')->count())->toBe(1);
+});
+
+it('CA-08 shows the hidden cases separately: used invitation and wrong email', function () {
+    $plain = invited($this);
+
+    accept($this, 'nova@exemplo.com', $plain)->assertOk();
+    accept($this, 'nova@exemplo.com', $plain)->assertUnprocessable()->assertJsonValidationErrors('token');
+    accept($this, 'outra@exemplo.com', $plain)->assertUnprocessable()->assertJsonValidationErrors('token');
 });

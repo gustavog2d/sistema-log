@@ -128,10 +128,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, token, password]
+              required: [email, token, password, accept_terms]
               properties:
                 email: { type: string, format: email }
                 token: { type: string }
+                accept_terms: { type: boolean, description: "Deve ser verdadeiro: quem aceita o convite aceita os termos de uso." }
                 password: { type: string, minLength: 12, description: "De 12 caracteres até 72 bytes (limite do bcrypt)." }
       responses:
         "200":
@@ -143,6 +144,7 @@ paths:
                   - { $ref: "#/components/schemas/Session" }
                   - { $ref: "#/components/schemas/Challenge" }
         "422": { $ref: "#/components/responses/Problem" }
+        "423": { $ref: "#/components/responses/Problem" }
         "429": { $ref: "#/components/responses/Problem" }
 components:
   securitySchemes:

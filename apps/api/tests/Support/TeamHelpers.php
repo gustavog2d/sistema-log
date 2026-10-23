@@ -33,7 +33,10 @@ function tokenOf($test, string $slug, string $email): string
 
 function inviteToken(string $email): string
 {
-    return Mail::sent(InvitationMail::class, fn ($m) => $m->hasTo($email))->last()->token;
+    $link = Mail::sent(InvitationMail::class, fn ($m) => $m->hasTo($email))->last()->link;
+    parse_str((string) parse_url($link, PHP_URL_QUERY), $query);
+
+    return (string) $query['token'];
 }
 
 function setLimit($test, int $limit): void

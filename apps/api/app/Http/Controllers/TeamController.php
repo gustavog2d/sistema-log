@@ -22,9 +22,10 @@ class TeamController extends Controller
     public function invite(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'min:2', 'max:100'],
+            // Só letras, números e pontuação simples: o nome vai no texto do e-mail, sem quebra de linha nem endereço.
+            'name' => ['required', 'string', 'min:2', 'max:100', "regex:/^[\\p{L}\\p{N} .'\\-]+$/u"],
             'email' => ['required', 'string', 'email', 'max:255'],
-            'role' => ['required', 'string', Rule::in(['manager', 'professional', 'reception'])],
+            'role' => ['required', 'string', Rule::in(TeamService::ASSIGNABLE_ROLES)],
         ]);
 
         return response()->json($this->team->invite(
@@ -41,7 +42,7 @@ class TeamController extends Controller
 
     public function changeRole(Request $request, string $id): JsonResponse
     {
-        $request->validate(['role' => ['required', 'string', Rule::in(['manager', 'professional', 'reception'])]]);
+        $request->validate(['role' => ['required', 'string', Rule::in(TeamService::ASSIGNABLE_ROLES)]]);
 
         return response()->json($this->team->changeRole($this->actor($request), $id, $request->string('role')->toString()));
     }

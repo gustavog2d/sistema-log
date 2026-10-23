@@ -82,3 +82,46 @@ it('answers 404 for a person who is not in this business', function () {
     team($this, $owner, 'POST', 'neg', 'users/'.Str::uuid().'/deactivate')->assertNotFound();
     team($this, $owner, 'PATCH', 'neg', 'users/'.Str::uuid(), ['role' => 'reception'])->assertNotFound();
 });
+
+it('CA-09 lets a manager change the role of another member but not give the owner role', function () {
+    teamOf($this, 'neg', ['gerente@exemplo.com' => 'manager', 'prof@exemplo.com' => 'professional']);
+    $manager = tokenOf($this, 'neg', 'gerente@exemplo.com');
+    $id = membershipOf('prof@exemplo.com')->user_id;
+
+    team($this, $manager, 'PATCH', 'neg', "users/{$id}", ['role' => 'reception'])->assertOk()->assertJsonPath('role', 'reception');
+    team($this, $manager, 'PATCH', 'neg', "users/{$id}", ['role' => 'owner'])->assertUnprocessable();
+});
+
+it('CA-13 shows inactive people, hides expired invitations and invitations of other businesses', function () {
+    [$owner] = teamOf($this, 'neg', ['prof@exemplo.com' => 'professional']);
+    [$otherOwner] = teamOf($this, 'outro');
+    DB::connection('pgsql_admin')->table('memberships')->where('user_id', membershipOf('prof@exemplo.com')->user_id)->update(['status' => 'inactive']);
+
+    team($this, $owner, 'POST', 'neg', 'users/invitations', ['name' => 'Velha', 'email' => 'velha@exemplo.com', 'role' => 'reception'])->assertCreated();
+    team($this, $owner, 'POST', 'neg', 'users/invitations', ['name' => 'Nova', 'email' => 'nova@exemplo.com', 'role' => 'reception'])->assertCreated();
+    team($this, $otherOwner, 'POST', 'outro', 'users/invitations', ['name' => 'Alheia', 'email' => 'alheia@exemplo.com', 'role' => 'reception'])->assertCreated();
+    DB::connection('pgsql_admin')->table('invitations')->where('email', 'velha@exemplo.com')->update(['expires_at' => now()->subMinute()]);
+
+    $list = team($this, $owner, 'GET', 'neg', 'users')->assertOk();
+
+    expect(collect($list->json('members'))->firstWhere('email', 'prof@exemplo.com')['status'])->toBe('inactive')
+        ->and(collect($list->json('invitations'))->pluck('email')->all())->toBe(['nova@exemplo.com']);
+});
+
+it('CA-16 refuses every team change while the subscription is suspended', function () {
+    [$owner, $ws] = teamOf($this, 'neg', ['prof@exemplo.com' => 'professional']);
+    $id = membershipOf('prof@exemplo.com')->user_id;
+    $inviteId = team($this, $owner, 'POST', 'neg', 'users/invitations', ['name' => 'Nova', 'email' => 'nova@exemplo.com', 'role' => 'reception'])->json('id');
+    DB::connection('pgsql_admin')->table('subscriptions')->where('tenant_id', $ws->tenant_id)->update(['status' => 'suspended']);
+
+    foreach ([['PATCH', "users/{$id}", ['role' => 'reception']], ['POST', "users/{$id}/deactivate", []], ['POST', "users/{$id}/reactivate", []], ['DELETE', "users/invitations/{$inviteId}", []]] as [$method, $path, $body]) {
+        team($this, $owner, $method, 'neg', $path, $body)->assertForbidden()->assertJsonPath('code', 'subscription_suspended');
+    }
+});
+
+it('CA-01 answers 401 (not 403) to a write without login even when the subscription is suspended', function () {
+    [, $ws] = teamOf($this);
+    DB::connection('pgsql_admin')->table('subscriptions')->where('tenant_id', $ws->tenant_id)->update(['status' => 'suspended']);
+
+    $this->postJson('http://neg.app.test/api/v1/users/invitations', ['name' => 'Nova', 'email' => 'nova@exemplo.com', 'role' => 'reception'])->assertUnauthorized();
+});

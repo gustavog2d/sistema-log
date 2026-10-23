@@ -22,7 +22,7 @@ it('CA-17 returns bodies that respect the openapi contract', function () {
         ->and($this->schemaErrors(team($this, $token, 'POST', 'neg', "users/{$id}/deactivate")->assertOk()->json(), 'Member'))->toBe([])
         ->and($this->schemaErrors(team($this, $token, 'POST', 'neg', "users/{$id}/reactivate")->assertOk()->json(), 'Member'))->toBe([]);
 
-    $accepted = $this->postJson('http://neg.app.test/api/v1/auth/invitations/accept', ['email' => 'nova@exemplo.com', 'token' => inviteToken('nova@exemplo.com'), 'password' => 'uma-senha-longa-123'])->assertOk();
+    $accepted = $this->postJson('http://neg.app.test/api/v1/auth/invitations/accept', ['email' => 'nova@exemplo.com', 'token' => inviteToken('nova@exemplo.com'), 'password' => 'uma-senha-longa-123', 'accept_terms' => true])->assertOk();
     expect($this->schemaErrors($accepted->json(), 'Session'))->toBe([]);
 });
 
@@ -35,7 +35,7 @@ it('CA-17 documents every status the routes can answer', function () {
         '/users/{id}' => ['patch' => ['200', '401', '403', '404', '422']],
         '/users/{id}/deactivate' => ['post' => ['200', '401', '403', '404', '422']],
         '/users/{id}/reactivate' => ['post' => ['200', '401', '403', '404', '409']],
-        '/auth/invitations/accept' => ['post' => ['200', '422', '429']],
+        '/auth/invitations/accept' => ['post' => ['200', '422', '423', '429']],
     ];
 
     foreach ($expected as $path => $operations) {

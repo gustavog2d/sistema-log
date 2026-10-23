@@ -30,10 +30,15 @@ class PlatformServiceProvider extends ServiceProvider
         RateLimiter::for('tenant-reset', fn (Request $request) => Limit::perHour(10)->by((string) $request->ip()));
         RateLimiter::for('subscription-status', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('subscription-manage', fn (Request $request) => Limit::perMinute(30)->by((string) $request->ip()));
-        RateLimiter::for('team-invite', fn (Request $request) => Limit::perHour(30)->by(app(TenantContext::class)->id().'|'.self::personKey($request)));
+        RateLimiter::for('team-invite', fn (Request $request) => [
+            Limit::perHour(30)->by(app(TenantContext::class)->id().'|'.self::personKey($request)),
+            Limit::perHour(60)->by('invite-tenant:'.app(TenantContext::class)->id()),
+            // Por destinatário, entre todos os negócios: o convite não serve para encher a caixa de ninguém.
+            Limit::perDay(3)->by('invite-to:'.self::emailKey($request)),
+        ]);
         RateLimiter::for('invitation-accept', fn (Request $request) => [
             Limit::perMinute(10)->by((string) $request->ip()),
-            Limit::perHour(20)->by(app(TenantContext::class)->id().'|'.self::emailKey($request)),
+            Limit::perHour(20)->by(app(TenantContext::class)->id().'|'.self::emailKey($request).'|'.$request->ip()),
         ]);
         RateLimiter::for('slug-check', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('platform-login', fn (Request $request) => Limit::perMinute(10)->by((string) $request->ip()));
