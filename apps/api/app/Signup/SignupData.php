@@ -16,7 +16,8 @@ final readonly class SignupData
         public string $password,
         public string $plan,
         public string $cycle,
-        public string $paymentMethodToken,
+        public ?string $paymentMethodToken,
+        public ?string $couponCode = null,
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -30,7 +31,8 @@ final readonly class SignupData
             password: $request->string('password')->toString(),
             plan: $request->string('plan')->toString(),
             cycle: $request->string('cycle')->toString(),
-            paymentMethodToken: $request->string('payment_method_token')->toString(),
+            paymentMethodToken: $request->filled('payment_method_token') ? $request->string('payment_method_token')->toString() : null,
+            couponCode: $request->filled('coupon_code') ? $request->string('coupon_code')->toString() : null,
         );
     }
 }

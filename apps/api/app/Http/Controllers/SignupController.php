@@ -36,10 +36,10 @@ class SignupController extends Controller
             }],
             'plan' => ['required', 'string', Rule::exists('plans', 'key')->where('status', 'active')],
             'cycle' => ['required', Rule::in(['monthly', 'yearly'])],
-            'payment_method_token' => ['required', 'string', 'max:200'],
+            // Obrigatório quando o preço final é maior que zero (a regra está no serviço: um cupom de 100% dispensa).
+            'payment_method_token' => ['nullable', 'string', 'max:200'],
             'accept_terms' => ['required', 'accepted'],
-            // Cupom entra no PLT-012: até lá o campo é recusado, nunca ignorado em silêncio.
-            'coupon_code' => ['prohibited'],
+            'coupon_code' => ['nullable', 'string', 'max:40'],
         ]);
 
         return response()->json($signup->register(SignupData::fromRequest($request)), 201);

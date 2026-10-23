@@ -1,6 +1,7 @@
 <?php
 
 use App\Billing\PaymentGateway;
+use App\Coupons\CouponService;
 use App\Http\Middleware\IdempotentRequest;
 use App\Platform\Auth\PlatformAudit;
 use App\Signup\SignupData;
@@ -121,7 +122,7 @@ it('CA-17 rolls everything back and removes the gateway customer when a later st
         'id' => (string) Str::uuid(), 'name' => 'Existente', 'email' => 'ana@exemplo.com', 'password' => 'x',
         'created_at' => now(), 'updated_at' => now(),
     ]);
-    $this->app->bind(SignupService::class, fn () => new class(app(PaymentGateway::class), app(PlatformAudit::class), app(SlugAvailability::class)) extends SignupService
+    $this->app->bind(SignupService::class, fn () => new class(app(PaymentGateway::class), app(PlatformAudit::class), app(SlugAvailability::class), app(CouponService::class)) extends SignupService
     {
         protected function assertAvailable(SignupData $data): void {}
     });
@@ -140,7 +141,7 @@ it('B3 answers 422, not 500, when two signups race for the same address', functi
         'id' => (string) Str::uuid(), 'name' => 'Primeiro', 'slug' => 'tintaviva', 'status' => 'active',
         'timezone' => 'UTC', 'currency' => 'BRL', 'created_at' => now(), 'updated_at' => now(),
     ]);
-    $this->app->bind(SignupService::class, fn () => new class(app(PaymentGateway::class), app(PlatformAudit::class), app(SlugAvailability::class)) extends SignupService
+    $this->app->bind(SignupService::class, fn () => new class(app(PaymentGateway::class), app(PlatformAudit::class), app(SlugAvailability::class), app(CouponService::class)) extends SignupService
     {
         protected function assertAvailable(SignupData $data): void {}
     });
@@ -191,7 +192,7 @@ it('S3 treats the same body with keys in another order as the same request', fun
     expect($this->countAll('tenants'))->toBe(1);
 });
 
-it('RN-13 refuses a coupon code until coupons exist', function () {
+it('RN-13 refuses a coupon code that does not exist', function () {
     $this->signup(['coupon_code' => 'PROMO100'])->assertStatus(422)->assertJsonValidationErrors('coupon_code');
     $this->nothingWasCreated();
 });
