@@ -713,5 +713,37 @@
       "converted": "Convertido",
       "discarded": "Descartado"
     }
+  },
+  "planChange": {
+    "title": "Plano",
+    "change": "Trocar de plano",
+    "pending": "Troca agendada: {plan} a partir de {date} ({price} por período).",
+    "undo": "Desfazer a troca",
+    "undone": "Troca de plano desfeita.",
+    "dialogTitle": "Trocar de plano",
+    "dialogText": "Escolha o novo plano. O ciclo ({cycle}) continua o mesmo.",
+    "current": "Plano atual",
+    "loadingPlans": "Carregando os planos…",
+    "plansError": "Não foi possível carregar os planos agora.",
+    "noOthers": "Não há outros planos disponíveis.",
+    "choose": "Novo plano",
+    "perCycle": "{price} por período",
+    "preview": "Resumo da troca",
+    "previewLoading": "Calculando…",
+    "now": "Vale agora. Você paga {charge} hoje (a diferença proporcional ao que falta do período) e, a partir da próxima cobrança, {price}.",
+    "nowFree": "Vale agora, sem cobrança hoje. A partir da próxima cobrança, {price}.",
+    "trial": "Vale agora, sem cobrança durante o teste. A primeira cobrança será de {price}.",
+    "nextCycle": "Vale a partir de {date}. Até lá você continua no plano atual, sem cobrança extra. Depois, {price} por período.",
+    "blocked": "Você usa mais do que o novo plano permite:",
+    "users": "Usuários: o plano permite {limit}, você tem {usage} (pessoas e convites pendentes).",
+    "other": "{feature}: o plano permite {limit}, você usa {usage}.",
+    "blockedHint": "Reduza o uso e tente de novo.",
+    "confirm": "Confirmar a troca",
+    "done": "Plano trocado. Você já usa o plano {plan}.",
+    "scheduled": "Troca agendada para {date}.",
+    "declined": "O pagamento da diferença foi recusado. Troque o meio de pagamento e tente de novo.",
+    "limitChanged": "O uso mudou e passa do limite do novo plano. Confira o resumo e tente de novo.",
+    "cancelPendingFirst": "Desfaça o cancelamento da assinatura antes de trocar de plano.",
+    "suspendedFirst": "Regularize o pagamento antes de trocar de plano."
   }
 }

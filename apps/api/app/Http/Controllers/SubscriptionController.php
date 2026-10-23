@@ -37,6 +37,7 @@ class SubscriptionController extends Controller
             'can_write' => SubscriptionAccess::canWrite($subscription->status),
             'payment_method' => $summary['payment_method'],
             'cancel_at_period_end' => $summary['cancel_at_period_end'],
+            'pending_plan_change' => $summary['pending_plan_change'],
         ]);
     }
 }

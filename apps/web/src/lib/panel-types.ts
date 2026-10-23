@@ -31,6 +31,23 @@ export type Subscription = {
   can_write: boolean;
   payment_method: PaymentMethod | null;
   cancel_at_period_end: boolean;
+  pending_plan_change?: PendingPlanChange | null;
+};
+
+export type PendingPlanChange = {
+  plan: { key: string; name: string };
+  price_cents: number;
+  effective_at: string;
+};
+
+export type PlanChangePreview = {
+  kind: 'now' | 'next_cycle';
+  plan: { key: string; name: string };
+  price_cents: number;
+  currency: string;
+  charge_now_cents: number;
+  effective_at: string;
+  violations: Array<{ feature: string; limit: number; usage: number }>;
 };
 
 export type Invoice = {

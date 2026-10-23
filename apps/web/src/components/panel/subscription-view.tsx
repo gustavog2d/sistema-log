@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader } from '@/components/ui/card';
 import { Dialog } from '@/components/ui/dialog';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { PlanChangeCard } from './plan-change';
 import { StatusBadge } from './status-badge';
 
 export type InvoicePage = { data: Invoice[]; next_cursor: string | null };
@@ -232,6 +233,14 @@ export function SubscriptionView({
           <StatusBadge subscription={subscription} />
         </p>
       </Card>
+
+      {!canceled && !suspended ? (
+        <PlanChangeCard
+          subscription={subscription}
+          disabled={blocked}
+          onNotice={setNotice}
+        />
+      ) : null}
 
       <Card>
         <CardHeader title={t('subscription.payment')} />

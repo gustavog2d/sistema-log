@@ -12,7 +12,7 @@ A dona precisa trocar de plano sem falar com ninguém: subir de plano e usar os 
 
 ## Regras de negócio
 
-- **RN-01** — Só a dona (`owner`) troca de plano; rotas em `subscription/` com `subscription.exempt`, login e sem acesso de suporte. A troca mantém o **ciclo** (mensal ou anual); trocar de ciclo fica para outra entrega. O plano novo precisa estar ativo e ser diferente do atual (422 em `plan`).
+- **RN-01** — Só a dona (`owner`) troca de plano; rotas em `subscription/` **sem** `subscription.exempt` (suspensa ou cancelada fica somente leitura), com login, sem acesso de suporte. A troca mantém o **ciclo** (mensal ou anual); trocar de ciclo fica para outra entrega. O plano novo precisa estar ativo e ser diferente do atual (422 em `plan`).
 - **RN-02** — Preço do plano novo: o preço do ciclo atual do plano novo, com o **mesmo percentual de cupom** da assinatura, se houver (cupom de 100% mantém a cortesia). O preço da assinatura passa a ser esse valor (congelado até a próxima troca).
 - **RN-03** — Em **teste** a troca vale na hora, para subir ou descer, sem cobrança; o fim do teste cobra o preço do plano novo.
 - **RN-04** — **Ativa, preço novo maior que o atual (upgrade):** vale na hora. Cobra-se agora a diferença proporcional ao que falta do período: `diferença × segundos restantes ÷ segundos do período`, arredondado para o centavo, com o meio de pagamento da assinatura. Cobrança aprovada: grava fatura paga do valor cobrado (período de agora até o fim do período atual), troca plano e preço e mantém as datas. Cobrança recusada: 402 `payment_failed`, **nada muda** e a assinatura não é suspensa. Cobrança de valor zero não chama o gateway nem gera fatura.
@@ -20,7 +20,7 @@ A dona precisa trocar de plano sem falar com ninguém: subir de plano e usar os 
 - **RN-06** — **Limites:** antes de trocar (e de novo ao aplicar a troca agendada), cada funcionalidade com limite do plano novo (já com as exceções do negócio) é comparada ao uso. Uso hoje: `usuarios.max` = pessoas ativas + convites pendentes; funcionalidades sem medição ainda contam 0. Se o uso passa do limite: 409 `plan_limit_exceeded` com `violations` (`feature`, `limit`, `usage`) e nada muda.
 - **RN-07** — **Troca agendada na renovação:** `billing:run` aplica a troca antes de cobrar (cobra o preço novo). Se, na hora, o uso passar do limite do plano novo, **a troca não é aplicada**: a assinatura segue no plano atual, a troca pendente é limpa e a auditoria registra `subscription.plan_change_skipped`. Cancelamento pedido tem prioridade: a assinatura termina sem aplicar a troca.
 - **RN-08** — `DELETE /subscription/plan-change` desfaz a troca pendente (409 se não há).
-- **RN-09** — Suspensa: 409 `subscription_suspended` (regularize antes); cancelada: 409; com cancelamento pedido: 409 `cancel_pending` (desfaça o cancelamento antes).
+- **RN-09** — Suspensa: `PUT`/`DELETE` dão 403 `subscription_suspended` (bloqueio de escrita; regularize antes) e a simulação dá 409 com o mesmo `code`; cancelada: 403/409 `subscription_canceled`; com cancelamento pedido: 409 `cancel_pending` (desfaça o cancelamento antes).
 - **RN-10** — `GET /subscription/plan-change/preview?plan=` mostra, sem gravar: tipo (`now` ou `next_cycle`), preço novo, valor a cobrar agora, data em que vale e as violações de limite. `GET /subscription` passa a trazer `pending_plan_change` (plano, preço, data) ou `null`.
 - **RN-11** — Auditoria (sem pessoa): `subscription.plan_changed`, `subscription.plan_change_scheduled`, `subscription.plan_change_canceled`, `subscription.plan_change_applied`, `subscription.plan_change_skipped`. Repetir o `PUT` com a mesma `Idempotency-Key` devolve a mesma resposta sem cobrar de novo.
 - **RN-12** — Cada negócio só enxerga e altera a própria assinatura; 30 pedidos por minuto por IP (limite já usado na gestão da assinatura).
@@ -40,7 +40,7 @@ A dona precisa trocar de plano sem falar com ninguém: subir de plano e usar os 
 | CA-09 | RN-07 | Troca agendada, uso acima do limite na renovação | `billing:run` | Mantém o plano atual, limpa a pendência, cobra o preço atual e audita `plan_change_skipped` |
 | CA-10 | RN-07 | Troca agendada e cancelamento pedido | `billing:run` | Cancela sem aplicar a troca |
 | CA-11 | RN-08 | Troca pendente; sem troca pendente | `DELETE /subscription/plan-change` | Limpa; 409 |
-| CA-12 | RN-09 | Suspensa; cancelada; cancelamento pedido | `PUT /subscription/plan` | 409 com `code` correto |
+| CA-12 | RN-09 | Suspensa; cancelada; cancelamento pedido | `PUT /subscription/plan` e simulação | 403 (escrita) e 409 (simulação) com `code` correto; 409 `cancel_pending` |
 | CA-13 | RN-02 | Assinatura com cupom de 20%; com cortesia | Troca de plano | Preço novo com o mesmo percentual; cortesia segue sem cobrança |
 | CA-14 | RN-10 | Qualquer situação | Preview | Tipo, valor, data e violações corretos; nada gravado |
 | CA-15 | RN-10 | Com e sem troca pendente | `GET /subscription` | `pending_plan_change` preenchido ou nulo |
@@ -57,6 +57,7 @@ Contrato em `openapi.yaml`.
 | --- | --- | --- | --- |
 | GET | `/subscription/plan-change/preview?plan=` | Simulação (sem gravar) | 401, 403, 422 |
 | PUT | `/subscription/plan` | Troca de plano (`Idempotency-Key`) | 401, 402, 403, 409, 422 |
+
 | DELETE | `/subscription/plan-change` | Desfaz a troca pendente | 401, 403, 409 |
 | GET | `/subscription` | Passa a trazer `pending_plan_change` | — |
 
