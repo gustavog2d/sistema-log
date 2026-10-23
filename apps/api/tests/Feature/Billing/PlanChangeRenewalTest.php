@@ -9,12 +9,6 @@ beforeEach(function () {
 
 afterEach(fn () => Carbon::setTestNow());
 
-function renewAt($test, string $asOf): void
-{
-    Carbon::setTestNow(Carbon::parse($asOf, 'UTC'));
-    $test->artisan('billing:run', ['--as-of' => $asOf])->assertSuccessful();
-}
-
 it('CA-08 applies the scheduled downgrade at the renewal and charges the new price', function () {
     [$ws, $token] = planOwner($this);
     changePlan($this, $token, 'neg', 'essencial')->assertOk();

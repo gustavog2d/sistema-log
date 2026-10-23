@@ -78,7 +78,7 @@ class PlanChanger
                 $event = ['subscription.plan_change_scheduled', $base + ['price_cents' => $plan['price']]];
             } else {
                 $this->applyNow($db, $sub, $target, $plan);
-                $event = ['subscription.plan_changed', $base + ['price_cents' => $plan['price'], 'charged_cents' => $plan['charge']]];
+                $event = ['subscription.plan_changed', $base + ['price_cents' => $plan['price'], 'charged_cents' => $plan['charge'], 'cleared_pending' => $sub->pending_plan_id !== null]];
             }
 
             return [[
@@ -130,7 +130,7 @@ class PlanChanger
         if ($target === null || $target->status !== 'active') {
             $db->table('subscriptions')->where('id', $row->id)->update($clear);
 
-            return [$this->fresh($db, $row), [['subscription.plan_change_skipped', $context + ['reason' => 'plan_unavailable']]]];
+            return [$this->fresh($db, $row), [['subscription.plan_change_skipped', $context + ['reason' => 'plan_unavailable', 'to' => $this->text($row->pending_plan_id)]]]];
         }
 
         if ($this->limits->violations($db, $this->text($row->tenant_id), $target) !== []) {
@@ -163,7 +163,7 @@ class PlanChanger
 
             $charge = $this->gateway->charge(
                 $sub->gateway_customer_ref, $ref, $plan['charge'], $this->text($sub->currency),
-                'plan:'.$this->text($sub->id).':'.$target->id.':'.$this->text($sub->current_period_end),
+                'plan:'.$this->text($sub->id).':'.$target->id.':'.$this->text($sub->current_period_end).':'.$this->text($sub->payment_method_id).':'.$db->table('invoices')->where('subscription_id', $sub->id)->count(),
             );
 
             if (! $charge->paid) {
@@ -190,7 +190,13 @@ class PlanChanger
     private function evaluate(Connection $db, stdClass $sub, Plan $target): array
     {
         $cycle = $this->text($sub->cycle);
-        $list = $cycle === 'yearly' ? ($target->yearlyPriceCents() ?? 0) : ($target->monthly_price_cents ?? 0);
+        $listed = $cycle === 'yearly' ? $target->yearlyPriceCents() : $target->monthly_price_cents;
+
+        if ($listed === null) {
+            throw ValidationException::withMessages(['plan' => 'Este plano não tem preço para o ciclo da assinatura.']);
+        }
+
+        $list = $listed;
         $percent = $db->table('coupon_redemptions')->where('tenant_id', $sub->tenant_id)->value('percent_off');
         $price = is_numeric($percent) ? CouponService::priceAfter($list, (int) $percent) : $list;
         $current = is_numeric($sub->price_cents) ? (int) $sub->price_cents : 0;
@@ -221,7 +227,8 @@ class PlanChanger
     {
         $target = Plan::query()->where('key', $planKey)->where('status', 'active')->first();
 
-        if ($target === null || $target->id === $sub->plan_id) {
+        // Mesma moeda da assinatura: a cobrança usa a moeda dela.
+        if ($target === null || $target->id === $sub->plan_id || $target->currency !== $sub->currency) {
             throw ValidationException::withMessages(['plan' => 'Escolha outro plano ativo.']);
         }
 

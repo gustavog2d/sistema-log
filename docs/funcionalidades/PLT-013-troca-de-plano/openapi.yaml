@@ -20,7 +20,11 @@ paths:
               schema: { $ref: "#/components/schemas/PlanChangePreview" }
         "401": { $ref: "#/components/responses/Problem" }
         "403": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+        "409":
+          description: "Assinatura cancelada, suspensa ou com cancelamento pedido (`code`: `subscription_canceled`, `subscription_suspended`, `cancel_pending`)"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
         "422": { $ref: "#/components/responses/Problem" }
   /subscription/plan:
     put:
@@ -47,7 +51,12 @@ paths:
         "401": { $ref: "#/components/responses/Problem" }
         "402": { $ref: "#/components/responses/Problem" }
         "403": { $ref: "#/components/responses/Problem" }
-        "409": { $ref: "#/components/responses/Problem" }
+        "409":
+          description: "`plan_limit_exceeded` (com `violations`), `cancel_pending`"
+          content:
+            application/problem+json:
+              schema: { $ref: "#/components/schemas/Problem" }
+        "415": { $ref: "#/components/responses/Problem" }
         "422": { $ref: "#/components/responses/Problem" }
   /subscription/plan-change:
     delete:

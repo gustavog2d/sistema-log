@@ -218,6 +218,64 @@ describe('PlanChangeCard', () => {
     expect(keys).toHaveLength(1);
   });
 
+  it('CA-06 uses a new idempotency key for the next change after one succeeded', async () => {
+    respond(preview());
+    const user = userEvent.setup();
+    render(card());
+
+    for (let round = 0; round < 2; round += 1) {
+      await user.click(screen.getByRole('button', { name: 'Trocar de plano' }));
+      await user.click(await screen.findByLabelText(/^Estúdio/));
+      await screen.findByText(/Você paga/);
+      await user.click(
+        screen.getByRole('button', { name: 'Confirmar a troca' }),
+      );
+      await waitFor(() => expect(refresh).toHaveBeenCalledTimes(round + 1));
+    }
+
+    const keys = call.mock.calls
+      .filter(([method]) => method === 'PUT')
+      .map(
+        ([, , options]) =>
+          (options as { idempotencyKey: string }).idempotencyKey,
+      );
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).not.toBe(keys[1]);
+  });
+
+  it('CA-04 ignores a late simulation of a plan that is no longer the chosen one', async () => {
+    let releaseFirst!: (value: unknown) => void;
+    call.mockImplementation((method: string, path: string) => {
+      if (path === 'plans')
+        return Promise.resolve({ status: 200, data: PLANS });
+      if (path.endsWith('plan=essencial'))
+        return new Promise((done) => (releaseFirst = done));
+
+      return Promise.resolve({ status: 200, data: preview() });
+    });
+    const user = userEvent.setup();
+    render(card());
+
+    await user.click(screen.getByRole('button', { name: 'Trocar de plano' }));
+    await user.click(await screen.findByLabelText(/^Essencial/));
+    await user.click(screen.getByLabelText(/^Estúdio/));
+    await screen.findByText(/Você paga R\$\s?133,33/);
+    releaseFirst({
+      status: 200,
+      data: preview({
+        kind: 'next_cycle',
+        plan: { key: 'essencial', name: 'Essencial' },
+        price_cents: 1500,
+        charge_now_cents: 0,
+      }),
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Vale a partir de/)).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Você paga R\$\s?133,33/)).toBeInTheDocument();
+  });
+
   it('CA-11 shows the scheduled change and undoes it', async () => {
     call.mockResolvedValue({ status: 200, data: {} });
     const user = userEvent.setup();

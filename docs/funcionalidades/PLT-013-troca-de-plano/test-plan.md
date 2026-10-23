@@ -13,3 +13,4 @@
 | T-04 | CA-08, CA-09, CA-10 | Feature | `tests/Feature/Billing/PlanChangeRenewalTest.php` | passando |
 | T-05 | CA-19 | Contrato | `tests/Feature/Billing/PlanChangeContractTest.php` | passando |
 | T-06 | CA-01..CA-14 (web) | Componente | `apps/web/src/components/panel/plan-change.test.tsx` | passando |
+| T-07 | CA-02..CA-18 (bordas) | Feature | `tests/Feature/Billing/PlanChangeEdgeTest.php` | passando |

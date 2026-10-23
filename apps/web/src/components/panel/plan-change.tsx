@@ -45,6 +45,8 @@ export function PlanChangeCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const attempt = useRef<{ plan: string; key: string } | null>(null);
+  // Plano da simulação mais recente: respostas atrasadas de outro plano são ignoradas.
+  const latest = useRef<string | null>(null);
 
   const pending = subscription.pending_plan_change ?? null;
   const changeable =
@@ -54,6 +56,8 @@ export function PlanChangeCard({
 
   async function openDialog() {
     setOpen(true);
+    attempt.current = null;
+    latest.current = null;
     setChosen(null);
     setPreview(null);
     setError(null);
@@ -74,6 +78,7 @@ export function PlanChangeCard({
   }
 
   async function choose(key: string) {
+    latest.current = key;
     setChosen(key);
     setPreview(null);
     setError(null);
@@ -84,11 +89,11 @@ export function PlanChangeCard({
         'GET',
         `subscription/plan-change/preview?plan=${encodeURIComponent(key)}`,
       );
-      setPreview(data);
+      if (latest.current === key) setPreview(data);
     } catch (failure) {
-      setError(explain(failure));
+      if (latest.current === key) setError(explain(failure));
     } finally {
-      setPreviewing(false);
+      if (latest.current === key) setPreviewing(false);
     }
   }
 
@@ -123,6 +128,8 @@ export function PlanChangeCard({
         body: { plan: chosen },
         idempotencyKey: attempt.current.key,
       });
+      // Pedido concluído: a próxima troca (mesmo para o mesmo plano) é outro pedido.
+      attempt.current = null;
       setOpen(false);
       onNotice({
         tone: 'success',

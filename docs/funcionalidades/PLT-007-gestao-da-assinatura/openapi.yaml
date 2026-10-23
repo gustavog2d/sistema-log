@@ -104,6 +104,19 @@ components:
       properties:
         status: { type: string, enum: [trialing, active, suspended, canceled] }
         cancel_at_period_end: { type: boolean }
+        pending_plan_change:
+          type: [object, "null"]
+          description: Troca de plano agendada para o fim do período (PLT-013)
+          required: [plan, price_cents, effective_at]
+          properties:
+            plan:
+              type: object
+              required: [key, name]
+              properties:
+                key: { type: string }
+                name: { type: string }
+            price_cents: { type: integer }
+            effective_at: { type: string, format: date-time }
         can_write: { type: boolean }
         current_period_end: { type: [string, "null"], format: date-time }
         payment_method:

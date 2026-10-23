@@ -60,7 +60,7 @@ Route::middleware(['tenant', 'subscription.exempt', 'auth.tenant', 'no.impersona
 });
 
 // Troca de plano pela dona (PLT-013). Não é isenta: suspensa ou cancelada fica somente leitura (regularize antes).
-Route::middleware(['tenant', 'subscription.access', 'auth.tenant', 'no.impersonation', 'owner', 'throttle:subscription-manage'])->prefix('subscription')->group(function () {
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'no.impersonation', 'owner', 'throttle:subscription-manage'])->prefix('subscription')->group(function () {
     Route::get('plan-change/preview', [SubscriptionManagementController::class, 'previewPlanChange']);
     Route::put('plan', [SubscriptionManagementController::class, 'changePlan'])->middleware('idempotent:plan-change');
     Route::delete('plan-change', [SubscriptionManagementController::class, 'cancelPlanChange']);

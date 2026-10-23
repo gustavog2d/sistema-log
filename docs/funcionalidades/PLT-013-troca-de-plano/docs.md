@@ -31,3 +31,9 @@ A dona troca de plano em **Assinatura → Plano → Trocar de plano** (`/assinat
 
 - Troca de ciclo (mensal ↔ anual) e e-mails de aviso da troca ficam para outra entrega.
 - Só `usuarios.max` tem medição de uso; as demais funcionalidades com limite contam 0 até existirem.
+
+## Pendências registradas nas revisões
+
+- **Antes de ligar o gateway real (INT-001):** a cobrança do upgrade acontece dentro da transação. Se a gravação falhar depois da cobrança, o cliente fica cobrado sem o plano novo; é preciso gravar uma intenção de cobrança antes de chamar o gateway (ou reconciliar/estornar) e fixar o valor da simulação na janela de nova tentativa. A chave do gateway já inclui o meio de pagamento, para a recusa não "grudar" depois de trocar o cartão.
+- **Regra de negócio a confirmar:** o percentual do cupom vale para qualquer plano novo; com cupom de 100% (cortesia) a dona poderia subir para qualquer plano sem pagar. Hoje é o comportamento implementado.
+- A chamada ao gateway segura a linha da assinatura durante a cobrança (contenção, não risco de dados).

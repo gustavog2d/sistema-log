@@ -54,3 +54,9 @@ function auditCount(string $event): int
 {
     return DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', $event)->count();
 }
+
+function renewAt($test, string $asOf): void
+{
+    Carbon::setTestNow(Carbon::parse($asOf, 'UTC'));
+    $test->artisan('billing:run', ['--as-of' => $asOf])->assertSuccessful();
+}
