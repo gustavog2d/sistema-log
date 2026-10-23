@@ -24,6 +24,7 @@ const calls = (path: string) =>
 
 beforeEach(() => {
   vi.stubEnv('NEXT_PUBLIC_PAYMENT_MODE', 'fake');
+  vi.stubEnv('NEXT_PUBLIC_CAPTCHA_MODE', 'fake');
   call.mockReset();
   push.mockReset();
   call.mockImplementation(async (_method: string, path: string) => {
@@ -365,6 +366,7 @@ describe('SignupFlow: step 4 (payment) and submit', () => {
       cycle: 'monthly',
       accept_terms: true,
       payment_method_token: 'tok_ok',
+      captcha_token: 'captcha_ok',
     });
   });
 
@@ -652,6 +654,210 @@ describe('SignupFlow: step 4 (payment) and submit', () => {
       error.mock.calls,
     ]);
     expect(everything).not.toContain('uma-senha-forte-123');
+  });
+});
+
+describe('SignupFlow: review fixes', () => {
+  async function toPlanStep(user: User) {
+    await toStep2(user);
+    await step2(user);
+  }
+
+  it('I-1 checks a typed but not applied coupon before moving on, and stays when it is invalid', async () => {
+    call.mockImplementation(async (_m: string, path: string) => {
+      if (path === 'signup/coupon-check')
+        throw new ApiError('x', 422, {
+          code: 'Cupom inválido ou indisponível.',
+        });
+      if (path.startsWith('signup/slug'))
+        return { status: 200, data: { available: true } };
+
+      return { status: 200, data: null };
+    });
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} />);
+    await toPlanStep(user);
+    await user.type(screen.getByLabelText(/Cupom/), 'ERRADO');
+
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(
+      await screen.findByText('Cupom inválido ou indisponível.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Escolha o plano' }),
+    ).toBeInTheDocument();
+  });
+
+  it('I-1 applies a typed coupon on Continue so the summary matches what is sent', async () => {
+    call.mockImplementation(async (_m: string, path: string) => {
+      if (path === 'signup/coupon-check')
+        return {
+          status: 200,
+          data: {
+            percent_off: 100,
+            price_cents: 5000,
+            final_price_cents: 0,
+            requires_payment_method: false,
+          },
+        };
+      if (path.startsWith('signup/slug'))
+        return { status: 200, data: { available: true } };
+
+      return { status: 200, data: null };
+    });
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} />);
+    await toPlanStep(user);
+    await user.type(screen.getByLabelText(/Cupom/), 'CORTESIA');
+
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(await screen.findByText('Sem cobrança.')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('radio', { name: /Cartão de teste/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('I-2 ignores a slow answer of an old plan when the plan changed again', async () => {
+    const pending: Record<string, (value: unknown) => void> = {};
+    call.mockImplementation(
+      async (
+        _m: string,
+        path: string,
+        options?: { body?: { plan?: string } },
+      ) => {
+        if (path === 'signup/coupon-check') {
+          const plan = options?.body?.plan ?? '';
+          if (plan === 'essencial')
+            return new Promise((done) => (pending.essencial = done));
+
+          return {
+            status: 200,
+            data: {
+              percent_off: 10,
+              price_cents: 5000,
+              final_price_cents: 4500,
+              requires_payment_method: true,
+            },
+          };
+        }
+        if (path.startsWith('signup/slug'))
+          return { status: 200, data: { available: true } };
+
+        return { status: 200, data: null };
+      },
+    );
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} initialPlan="profissional" />);
+    await toPlanStep(user);
+    await user.type(screen.getByLabelText(/Cupom/), 'PROMO10');
+    await user.click(screen.getByRole('button', { name: 'Aplicar cupom' }));
+    await screen.findByText(/10% de desconto/);
+
+    await user.click(screen.getByRole('radio', { name: /Essencial/ }));
+    await user.click(screen.getByRole('radio', { name: /Estúdio/ }));
+    await waitFor(() => expect(calls('signup/coupon-check')).toHaveLength(3));
+    await act(async () =>
+      pending.essencial!({
+        status: 200,
+        data: {
+          percent_off: 99,
+          price_cents: 1,
+          final_price_cents: 1,
+          requires_payment_method: true,
+        },
+      }),
+    );
+
+    expect(screen.getByText(/10% de desconto/)).toBeInTheDocument();
+    expect(screen.queryByText(/99% de desconto/)).not.toBeInTheDocument();
+  });
+
+  it('I-3 moves the focus to the first invalid field when the step is refused', async () => {
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} />);
+
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+
+    expect(screen.getByLabelText(/Nome do negócio/)).toHaveFocus();
+  });
+
+  it('I-3 also focuses the field of a server error that stays on the same step', async () => {
+    call.mockImplementation(async (_m: string, path: string) => {
+      if (path.startsWith('signup/slug'))
+        return { status: 200, data: { available: true } };
+      if (path === 'signup')
+        throw new ApiError('x', 422, { password: 'A senha é muito comum.' });
+
+      return { status: 200, data: null };
+    });
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} />);
+    await toStep4(user);
+    await user.click(
+      screen.getByRole('radio', { name: 'Cartão de teste aprovado' }),
+    );
+    await user.click(screen.getByLabelText('Li e aceito os termos de uso'));
+    await user.click(screen.getByRole('button', { name: 'Criar minha conta' }));
+
+    expect(
+      await screen.findByText('A senha é muito comum.'),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Senha/)).toHaveFocus();
+  });
+
+  it('clears the server error of a field as soon as the person edits it', async () => {
+    call.mockImplementation(async (_m: string, path: string) => {
+      if (path.startsWith('signup/slug'))
+        return { status: 200, data: { available: true } };
+      if (path === 'signup')
+        throw new ApiError('x', 422, {
+          owner_email: 'Este e-mail já está cadastrado.',
+        });
+
+      return { status: 200, data: null };
+    });
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} />);
+    await toStep4(user);
+    await user.click(
+      screen.getByRole('radio', { name: 'Cartão de teste aprovado' }),
+    );
+    await user.click(screen.getByLabelText('Li e aceito os termos de uso'));
+    await user.click(screen.getByRole('button', { name: 'Criar minha conta' }));
+    await screen.findByText('Este e-mail já está cadastrado.');
+
+    await user.type(screen.getByLabelText(/Seu e-mail/), 'x');
+
+    expect(
+      screen.queryByText('Este e-mail já está cadastrado.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('announces a payment error and a plan error', async () => {
+    call.mockImplementation(async (_m: string, path: string) => {
+      if (path.startsWith('signup/slug'))
+        return { status: 200, data: { available: true } };
+      if (path === 'signup')
+        throw new ApiError('x', 422, {
+          payment_method_token: 'O meio de pagamento foi recusado.',
+        });
+
+      return { status: 200, data: null };
+    });
+    const user = userEvent.setup();
+    render(<SignupFlow plans={PLANS} />);
+    await toStep4(user);
+    await user.click(
+      screen.getByRole('radio', { name: 'Cartão de teste recusado agora' }),
+    );
+    await user.click(screen.getByLabelText('Li e aceito os termos de uso'));
+    await user.click(screen.getByRole('button', { name: 'Criar minha conta' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'O meio de pagamento foi recusado.',
+    );
   });
 });
 

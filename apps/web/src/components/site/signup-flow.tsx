@@ -8,6 +8,7 @@ import { ApiError, call } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { formatBRL, yearlySavings } from '@/lib/format';
 import { priceOf, type Cycle, type PublicPlan } from '@/lib/plans';
+import { CaptchaUnavailable, getCaptchaToken } from '@/lib/captcha';
 import { slugProblem, slugify } from '@/lib/slug';
 import { useLocation } from '@/lib/use-location';
 import { Alert } from '@/components/ui/alert';
@@ -32,6 +33,16 @@ const NICHES = [
   'estetica_automotiva',
 ] as const;
 const STEPS = ['business', 'owner', 'plan', 'payment'] as const;
+
+/** Nome do campo na API para cada campo do formulário (para limpar o erro certo). */
+const FIELD_API: Record<string, string> = {
+  businessName: 'business_name',
+  ownerName: 'owner_name',
+  ownerEmail: 'owner_email',
+  paymentToken: 'payment_method_token',
+  acceptTerms: 'accept_terms',
+  coupon: 'coupon_code',
+};
 const TEST_CARDS = [
   { token: 'tok_ok', label: 'signup.payOk' },
   { token: 'tok_fail_on_charge', label: 'signup.payFail' },
@@ -44,9 +55,21 @@ type SlugState =
 const paymentIsFake = () => process.env.NEXT_PUBLIC_PAYMENT_MODE === 'fake';
 
 function newKey(): string {
-  return (
-    globalThis.crypto?.randomUUID?.() ??
-    `k-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  const crypto = globalThis.crypto;
+
+  if (crypto?.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Navegador sem `randomUUID` (ex.: página em HTTP fora do localhost): 128 bits aleatórios do gerador seguro.
+  if (crypto?.getRandomValues) {
+    return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+      byte.toString(16).padStart(2, '0'),
+    ).join('');
+  }
+
+  throw new Error(
+    'Este navegador não tem gerador seguro de números aleatórios.',
   );
 }
 
@@ -83,13 +106,25 @@ export function SignupFlow({
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const moved = useRef(false);
   const attempt = useRef<{ body: string; key: string } | null>(null);
 
   const plan = plans?.find((candidate) => candidate.key === form.plan);
   const requiresPayment = quote ? quote.requires_payment_method : true;
-  const set = <K extends keyof SignupForm>(key: K, value: SignupForm[K]) =>
+  /** Tira o erro de um campo assim que a pessoa mexe nele (o estado ao vivo, como "endereço livre", volta a valer). */
+  const clearError = (...keys: string[]) =>
+    setErrors((current) =>
+      keys.some((key) => key in current)
+        ? Object.fromEntries(
+            Object.entries(current).filter(([key]) => !keys.includes(key)),
+          )
+        : current,
+    );
+  const set = <K extends keyof SignupForm>(key: K, value: SignupForm[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
+    clearError(key, FIELD_API[key] ?? key);
+  };
   const message = (key: string) =>
     key === 'signup.passwordMissing'
       ? tf(key, { n: Math.max(0, MIN_PASSWORD - form.password.length) })
@@ -103,6 +138,15 @@ export function SignupFlow({
 
     moved.current = true;
   }, [step]);
+
+  // Erros: o foco vai para o primeiro campo inválido (teclado e leitor de tela chegam direto ao problema).
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      formRef.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"], [data-error]')
+        ?.focus();
+    }
+  }, [errors, step]);
 
   // Disponibilidade do endereço: o formato se confere na hora; "livre ou ocupado" vem da API, com atraso,
   // sem travar a digitação e descartando respostas de endereços que já mudaram.
@@ -161,20 +205,34 @@ export function SignupFlow({
     };
   }, [form.slug]);
 
-  async function fetchQuote(plan: string, cycle: Cycle): Promise<void> {
+  const quoteSeq = useRef(0);
+
+  /** Confere o cupom para este plano e ciclo. Respostas antigas (o plano mudou no meio) são descartadas. */
+  async function fetchQuote(plan: string, cycle: Cycle): Promise<boolean> {
+    const mine = ++quoteSeq.current;
+
     try {
       const { data } = await call<CouponQuote>('POST', 'signup/coupon-check', {
         body: { code: form.coupon.trim(), plan, cycle },
       });
-      setQuote(data);
-      setCouponError(null);
+
+      if (mine === quoteSeq.current) {
+        setQuote(data);
+        setCouponError(null);
+      }
+
+      return true;
     } catch (error) {
-      setQuote(null);
-      setCouponError(
-        error instanceof ApiError && error.status === 429
-          ? t('signup.rateLimited')
-          : t('signup.couponInvalid'),
-      );
+      if (mine === quoteSeq.current) {
+        setQuote(null);
+        setCouponError(
+          error instanceof ApiError && error.status === 429
+            ? t('signup.rateLimited')
+            : t('signup.couponInvalid'),
+        );
+      }
+
+      return false;
     }
   }
 
@@ -193,6 +251,7 @@ export function SignupFlow({
   }
 
   function changeName(value: string) {
+    clearError('businessName', 'business_name', 'slug');
     setForm((current) => ({
       ...current,
       businessName: value,
@@ -200,7 +259,7 @@ export function SignupFlow({
     }));
   }
 
-  function next(event: FormEvent) {
+  async function next(event: FormEvent) {
     event.preventDefault();
     const found = validateStep(step, form, { slugState, requiresPayment });
 
@@ -211,6 +270,16 @@ export function SignupFlow({
         ),
       );
 
+      return;
+    }
+
+    // Cupom digitado e não aplicado: confere antes de seguir, para o resumo e o envio dizerem o mesmo.
+    if (
+      step === 2 &&
+      form.coupon.trim() &&
+      !quote &&
+      !(await fetchQuote(form.plan, form.cycle))
+    ) {
       return;
     }
 
@@ -238,11 +307,16 @@ export function SignupFlow({
     setNotice(null);
 
     try {
+      // O token do anti-robô vale para um envio só: vai a cada tentativa, e a API o ignora ao comparar repetições.
+      const captcha_token = await getCaptchaToken('signup');
       const { data } = await call<{ subscription: { trial_ends_at: string } }>(
         'POST',
         'signup',
         {
-          body: JSON.parse(body) as unknown,
+          body: {
+            ...(JSON.parse(body) as Record<string, unknown>),
+            captcha_token,
+          },
           idempotencyKey: attempt.current.key,
         },
       );
@@ -251,6 +325,11 @@ export function SignupFlow({
       );
     } catch (error) {
       if (
+        error instanceof CaptchaUnavailable ||
+        (error instanceof ApiError && error.fieldErrors.captcha_token)
+      ) {
+        setNotice(t('contact.captchaUnavailable'));
+      } else if (
         error instanceof ApiError &&
         error.fieldErrors &&
         Object.keys(error.fieldErrors).length > 0
@@ -321,7 +400,12 @@ export function SignupFlow({
       </nav>
 
       <Card>
-        <form onSubmit={next} noValidate className="flex flex-col gap-5">
+        <form
+          ref={formRef}
+          onSubmit={(event) => void next(event)}
+          noValidate
+          className="flex flex-col gap-5"
+        >
           <div>
             <p className="text-sm text-muted">
               {tf('signup.stepLabel', { n: step + 1, total: STEP_COUNT })}
@@ -356,13 +440,14 @@ export function SignupFlow({
                 label={t('signup.slug')}
                 hint={slugHint}
                 value={form.slug}
-                onChange={(e) =>
+                onChange={(e) => {
+                  clearError('slug');
                   setForm((c) => ({
                     ...c,
                     slug: e.target.value.toLowerCase(),
                     slugEdited: true,
-                  }))
-                }
+                  }));
+                }}
                 error={slugError}
                 autoComplete="off"
                 autoCapitalize="none"
@@ -513,6 +598,16 @@ export function SignupFlow({
                   );
                 })}
               </fieldset>
+              {errors.plan ? (
+                <p
+                  role="alert"
+                  tabIndex={-1}
+                  data-error
+                  className="text-sm font-medium text-danger-fg outline-none"
+                >
+                  {errors.plan}
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-end gap-3">
                 <TextField
                   className="min-w-48 flex-1"
@@ -576,7 +671,12 @@ export function SignupFlow({
                       </label>
                     ))}
                     {(errors.paymentToken ?? errors.payment_method_token) ? (
-                      <p className="text-sm font-medium text-danger-fg">
+                      <p
+                        role="alert"
+                        tabIndex={-1}
+                        data-error
+                        className="text-sm font-medium text-danger-fg outline-none"
+                      >
                         {errors.paymentToken ?? errors.payment_method_token}
                       </p>
                     ) : null}

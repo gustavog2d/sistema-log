@@ -12,6 +12,21 @@ export type Origin = Partial<Record<(typeof KEYS)[number], string>> & {
   landing_path?: string;
 };
 
+/** Só as chaves de origem, só texto: o que está guardado no navegador não pode trazer outros campos para o envio. */
+function clean(raw: Record<string, unknown>): Origin {
+  const origin: Origin = {};
+
+  for (const key of [...KEYS, 'referrer', 'landing_path'] as const) {
+    const value = raw[key];
+
+    if (typeof value === 'string' && value) {
+      origin[key] = value.slice(0, 255);
+    }
+  }
+
+  return origin;
+}
+
 function safeStorage(): Storage | null {
   try {
     return window.sessionStorage;
@@ -30,7 +45,7 @@ export function readOrigin(): Origin {
 
   if (saved) {
     try {
-      return JSON.parse(saved) as Origin;
+      return clean(JSON.parse(saved) as Record<string, unknown>);
     } catch {
       // Valor estragado: lê de novo da página.
     }

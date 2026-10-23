@@ -9,6 +9,7 @@ use Closure;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,7 +38,8 @@ class IdempotentRequest
             throw ValidationException::withMessages(['Idempotency-Key' => 'Informe o cabeçalho Idempotency-Key (até 255 caracteres).']);
         }
 
-        $hash = hash('sha256', (string) json_encode($this->normalized($request->json()->all())));
+        // O token do anti-robô é novo a cada tentativa: fora da comparação, para repetir o mesmo pedido continuar valendo.
+        $hash = hash('sha256', (string) json_encode($this->normalized(Arr::except($request->json()->all(), ['captcha_token']))));
         $db = DB::connection('pgsql_platform');
         // A chave vale só para quem a criou (mesmo IP): adivinhar a chave de outra pessoa não devolve a resposta dela.
         $where = ['scope' => $scope.':'.substr(hash('sha256', $request->ip().$this->owner($request)), 0, 16), 'key' => $key];

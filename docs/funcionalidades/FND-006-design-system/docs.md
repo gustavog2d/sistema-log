@@ -18,6 +18,8 @@ Uma base visual e técnica única para todas as telas: tokens, componentes acess
 - **Endereços reservados:** `www`, `app`, `admin` e `api` nunca são painel de assinante (a API os trata como hosts da plataforma).
 - **Variáveis:** `NEXT_PUBLIC_APP_NAME` (nome do produto), `APP_BASE_DOMAIN` (domínio base), `API_URL` (endereço interno da API), `COOKIE_SECURE` (cookies `Secure` por padrão fora de desenvolvimento), `TRUST_FORWARDED_FOR` e `STYLE_GUIDE`. `NEXT_PUBLIC_APP_NAME` é embutida na compilação do Next: em produção precisa existir já na build. Atrás do balanceador, declare o contêiner do web em `TRUSTED_PROXIES` da API (senão os limites por IP veem o IP do web).
 
+- **Cabeçalhos de segurança:** ver `docs/funcionalidades/PLT-014-site-e-cadastro/docs.md` (CSP, anti-clickjacking, HSTS) e as exigências de produção para o IP do visitante.
+
 ## Limitações
 
 - As páginas dos painéis (`src/app/t/`, `/admin`) ainda não existem: o roteamento já as separa, e elas chegam nos itens PLT-014, PLT-015 e PLT-001b (até lá, 404 do Next). `/guia-de-estilo` só abre em desenvolvimento (em produção só com `STYLE_GUIDE=true`).

@@ -64,6 +64,11 @@ export interface SignupRequest {
   payment_method_token?: string;
   accept_terms: true;
   /**
+     * Token do anti-robô (reCAPTCHA v3, ação `signup`); novo a cada tentativa e fora da comparação da idempotência
+     * @maxLength 4000
+     */
+  captcha_token: string;
+  /**
      * Cupom de desconto (PLT-012); cupom indisponível dá 422 em `coupon_code`
      * @maxLength 40
      */

@@ -27,6 +27,7 @@ trait SignupTestHelpers
             'cycle' => 'monthly',
             'payment_method_token' => 'tok_ok',
             'accept_terms' => true,
+            'captcha_token' => 'captcha_ok',
         ], $overrides);
     }
 

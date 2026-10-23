@@ -9,12 +9,12 @@
 | --- | --- | --- | --- | --- |
 | T-01 | CA-01 | Componente | `components/site/landing.test.tsx` | passando |
 | T-02 | CA-02 a CA-05 | Componente | `components/site/contact-form.test.tsx` | passando |
-| T-03 | CA-06, CA-07 | Componente | `components/site/signup-steps.test.tsx` | passando |
+| T-03 | CA-06, CA-07 | Componente | `components/site/signup-flow.test.tsx` | passando |
 | T-04 | CA-08 a CA-13, CA-16 | Componente | `components/site/signup-flow.test.tsx` | passando |
 | T-05 | CA-14 | Componente | `components/site/find-studio.test.tsx` | passando |
 | T-06 | CA-15 | Acessibilidade | os testes acima com axe | passando |
 | T-07 | CA-17 | Varredura | `components/ui/no-hardcoded-text.test.ts` (inclui `site/`) | passando |
-| T-08 | utilitários | Unidade | `lib/format.test.ts`, `lib/slug.test.ts`, `lib/utm.test.ts`, `lib/captcha.test.ts` | passando |
+| T-08 | utilitários | Unidade | `lib/lib.test.ts` | passando |
 
 ## Casos obrigatórios
 

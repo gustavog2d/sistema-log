@@ -81,6 +81,36 @@ describe('hostAwareFetch', () => {
     expect(response.headers.getSetCookie()).toEqual(['a=1', 'b=2']);
   });
 
+  it('never asks for a compressed response and refuses a body that is not text', async () => {
+    let encoding = '';
+    const base = await listen((request, response) => {
+      encoding = String(request.headers['accept-encoding']);
+      response.end('ok');
+    });
+
+    await hostAwareFetch(`${base}/x`, {
+      headers: { 'accept-encoding': 'gzip' },
+    });
+
+    expect(encoding).toBe('identity');
+    expect(() =>
+      hostAwareFetch(`${base}/x`, {
+        method: 'POST',
+        body: new Uint8Array([1]),
+      }),
+    ).toThrow(TypeError);
+  });
+
+  it('stops a response above the size limit', async () => {
+    const base = await listen((_request, response) => {
+      response.write(Buffer.alloc(3 * 1024 * 1024));
+      response.write(Buffer.alloc(3 * 1024 * 1024));
+      response.end();
+    });
+
+    await expect(hostAwareFetch(`${base}/x`)).rejects.toBeTruthy();
+  });
+
   it('rejects when the server is down and when the call is aborted', async () => {
     await expect(hostAwareFetch('http://127.0.0.1:9/x')).rejects.toBeTruthy();
 

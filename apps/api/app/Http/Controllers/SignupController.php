@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Leads\CaptchaVerifier;
 use App\Signup\SignupData;
 use App\Signup\SignupService;
 use App\Signup\SlugAvailability;
@@ -9,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SignupController extends Controller
 {
@@ -19,7 +21,7 @@ class SignupController extends Controller
         return response()->json($availability->check($request->string('slug')->toString()));
     }
 
-    public function store(Request $request, SignupService $signup): JsonResponse
+    public function store(Request $request, SignupService $signup, CaptchaVerifier $captcha): JsonResponse
     {
         $request->validate([
             'business_name' => ['required', 'string', 'min:2', 'max:100', self::plainText()],
@@ -40,7 +42,13 @@ class SignupController extends Controller
             'payment_method_token' => ['nullable', 'string', 'max:200'],
             'accept_terms' => ['required', 'accepted'],
             'coupon_code' => ['nullable', 'string', 'max:40'],
+            // Anti-robô: o cadastro cria negócio e manda e-mail para o endereço informado.
+            'captcha_token' => [Config::boolean('leads.signup_captcha') ? 'required' : 'nullable', 'string', 'max:4000'],
         ]);
+
+        if (Config::boolean('leads.signup_captcha') && ! $captcha->verify($request->string('captcha_token')->toString(), $request->ip(), 'signup')) {
+            throw ValidationException::withMessages(['captcha_token' => 'Não foi possível confirmar que você é uma pessoa. Tente de novo.']);
+        }
 
         return response()->json($signup->register(SignupData::fromRequest($request)), 201);
     }
