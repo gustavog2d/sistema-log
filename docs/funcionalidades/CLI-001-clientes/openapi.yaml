@@ -1,0 +1,186 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /clients:
+    get:
+      operationId: listClients
+      summary: Lista clientes do negócio
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: q, in: query, schema: { type: string, minLength: 2, maxLength: 100 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Página de clientes
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClientPage" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createClient
+      summary: Cria um cliente
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientInput" }
+      responses:
+        "201":
+          description: Cliente criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /clients/quick:
+    post:
+      operationId: quickCreateClient
+      summary: Criação rápida; devolve o cliente existente quando o telefone já está cadastrado
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, phone]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+                phone: { type: string }
+      responses:
+        "200":
+          description: Já existia um cliente com este telefone
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuickClient" }
+        "201":
+          description: Cliente criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuickClient" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /clients/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getClient
+      summary: Detalhe do cliente
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Cliente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateClient
+      summary: Edita o cliente (campos parciais)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientPatch" }
+      responses:
+        "200":
+          description: Cliente atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Client" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteClient
+      summary: Exclui o cliente (dona e gerente)
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Cliente excluído }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Client:
+      type: object
+      required: [id, name, phone, email, instagram, notes, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        phone: { type: string, description: E.164 }
+        email: { type: [string, "null"] }
+        instagram: { type: [string, "null"] }
+        notes: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    QuickClient:
+      type: object
+      required: [client, existing]
+      properties:
+        client:
+          type: object
+          description: Só o necessário para escolher o cliente (sem e-mail, Instagram nem notas)
+          required: [id, name, phone]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            phone: { type: string }
+        existing: { type: boolean }
+    ClientInput:
+      type: object
+      required: [name, phone]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        phone: { type: string, description: "E.164 (`+5511999998888`); espaços, hífens e parênteses são removidos" }
+        email: { type: [string, "null"], format: email, maxLength: 255 }
+        instagram: { type: [string, "null"], maxLength: 31 }
+        notes: { type: [string, "null"], maxLength: 2000 }
+    ClientPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 2, maxLength: 100 }
+        phone: { type: string }
+        email: { type: [string, "null"], format: email, maxLength: 255 }
+        instagram: { type: [string, "null"], maxLength: 31 }
+        notes: { type: [string, "null"], maxLength: 2000 }
+    ClientPage:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Client" }
+        next_cursor: { type: [string, "null"] }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        errors: { type: object }

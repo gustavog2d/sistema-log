@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
 use App\Http\Controllers\HealthController;
@@ -40,6 +41,16 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
     Route::get('/subscription', SubscriptionController::class)->middleware(['auth.tenant', 'throttle:subscription-status']);
     // Histórico de mudanças (FND-008): dona e gerente, só leitura (funciona também com a assinatura suspensa).
     Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware(['auth.tenant', 'role:owner,manager', 'throttle:tenant-api']);
+});
+
+// Clientes (CLI-001): os quatro papéis leem e escrevem; só dona e gerente excluem. O acesso de suporte só lê.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:tenant-api'])->prefix('clients')->group(function () {
+    Route::get('/', [ClientController::class, 'index'])->middleware('throttle:tenant-people-list');
+    Route::get('{id}', [ClientController::class, 'show'])->whereUuid('id');
+    Route::post('/', [ClientController::class, 'store'])->middleware('no.impersonation');
+    Route::post('quick', [ClientController::class, 'quick'])->middleware('no.impersonation');
+    Route::patch('{id}', [ClientController::class, 'update'])->whereUuid('id')->middleware('no.impersonation');
+    Route::delete('{id}', [ClientController::class, 'destroy'])->whereUuid('id')->middleware(['no.impersonation', 'role:owner,manager']);
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.
