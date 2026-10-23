@@ -169,7 +169,7 @@ class TenantAdminActions
 
         return [
             'access_token' => $issued['token'], 'token_type' => 'Bearer', 'expires_at' => $issued['expires_at']->toIso8601String(),
-            'url' => sprintf('%s://%s.%s', Config::string('tenancy.scheme'), is_string($tenant->slug) ? $tenant->slug : '', Config::string('tenancy.base_domain')),
+            'url' => sprintf('%s://%s.%s', Config::string('tenancy.scheme'), is_string($tenant->slug) ? $tenant->slug : '', Config::string('tenancy.web_host')),
         ];
     }
 

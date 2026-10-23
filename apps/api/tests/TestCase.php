@@ -24,6 +24,8 @@ abstract class TestCase extends BaseTestCase
 
         // Fixo nos testes, independente do APP_BASE_DOMAIN do ambiente.
         $app['config']->set('tenancy.base_domain', 'app.test');
+        $app['config']->set('tenancy.web_host', 'app.test');
+        $app['config']->set('tenancy.scheme', 'http');
 
         return $app;
     }

@@ -13,14 +13,18 @@ export function proxy(request: NextRequest) {
     return new NextResponse('Not Found', { status: 404 });
   }
 
+  // O caminho que a pessoa pediu fica à disposição das páginas do servidor (para voltar a ele depois do login).
+  const forwarded = new Headers(request.headers);
+  forwarded.set('x-original-path', request.nextUrl.pathname);
+
   if (decision.action === 'rewrite') {
     const url = request.nextUrl.clone();
     url.pathname = decision.pathname;
 
-    return NextResponse.rewrite(url);
+    return NextResponse.rewrite(url, { request: { headers: forwarded } });
   }
 
-  return NextResponse.next();
+  return NextResponse.next({ request: { headers: forwarded } });
 }
 
 export const config = { matcher: ['/((?!_next/static|_next/image).*)'] };
