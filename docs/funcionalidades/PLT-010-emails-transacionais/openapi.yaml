@@ -1,0 +1,8 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+# PLT-010 não cria rotas: os e-mails são disparados por eventos e pelo comando `notifications:run`.
+paths: {}

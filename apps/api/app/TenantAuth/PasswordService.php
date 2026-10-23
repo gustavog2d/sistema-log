@@ -4,6 +4,7 @@ namespace App\TenantAuth;
 
 use App\Mail\PasswordResetMail;
 use App\Models\Tenant;
+use App\Notifications\Notifier;
 use App\Tenancy\TenantContext;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Carbon;
@@ -24,6 +25,7 @@ class PasswordService
         private readonly TenantAuthenticator $authenticator,
         private readonly AccessTokens $tokens,
         private readonly TenantContext $context,
+        private readonly Notifier $notifier,
     ) {}
 
     /** Envia o e-mail só se a pessoa tem vínculo com este negócio; quem chama sempre responde igual. */
@@ -87,6 +89,8 @@ class PasswordService
             ]);
             $tx->table('password_reset_tokens')->where('email', $email)->delete();
         });
+
+        $this->notifier->toPerson($tenantId, $email, is_string($user->name) ? $user->name : '', 'password_changed', 'password_changed:'.(is_string($user->id) ? $user->id : '').':'.now()->format('YmdHisu'));
     }
 
     /**
@@ -109,6 +113,8 @@ class PasswordService
         $db->table('users')->where('id', $user->id)->update([
             'password' => Hash::make($new), 'tokens_valid_after' => Instant::now(), 'failed_attempts' => 0, 'updated_at' => now(),
         ]);
+
+        $this->notifier->toPerson($this->tokens->tenantId(), $person->email, $person->name, 'password_changed', 'password_changed:'.$person->id.':'.now()->format('YmdHisu'));
 
         // O acesso novo nasce depois do corte: só ele vale.
         $fresh = $db->table('users')->where('id', $user->id)->first();

@@ -18,3 +18,6 @@ Schedule::call(fn () => DB::connection('pgsql_platform')->table('idempotency_key
 
 // Cobra o fim dos testes e as renovações; suspende quem não pagou (PLT-004).
 Schedule::command('billing:run')->everyFiveMinutes()->withoutOverlapping();
+
+// Avisos agendados: fim do teste chegando (PLT-010).
+Schedule::command('notifications:run')->everyFifteenMinutes()->withoutOverlapping();

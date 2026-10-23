@@ -2,6 +2,7 @@
 
 namespace App\TenantAuth;
 
+use App\Notifications\Notifier;
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
@@ -17,7 +18,7 @@ use stdClass;
  */
 class TenantAuthenticator
 {
-    public function __construct(private readonly AccessTokens $tokens, private readonly TenantTwoFactor $twoFactor) {}
+    public function __construct(private readonly AccessTokens $tokens, private readonly TenantTwoFactor $twoFactor, private readonly Notifier $notifier) {}
 
     /**
      * @return array<string, mixed> sessão, desafio de 2FA ou desafio de configuração
@@ -154,6 +155,7 @@ class TenantAuthenticator
         $db = DB::connection('pgsql_auth');
         $this->confirmPassword($db, $person, $password);
         $this->twoFactor->disable($db, $person->id);
+        $this->notifier->toPerson($this->tokens->tenantId(), $person->email, $person->name, 'two_factor_disabled', 'two_factor_disabled:'.$person->id.':'.now()->format('YmdHisu'));
     }
 
     /** @return array{secret: string, otpauth_uri: string} */
