@@ -39,6 +39,7 @@ export function LeadsView({
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
   const [source, setSource] = useState('');
+  const [applied, setApplied] = useState({ q: '', status: '', source: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(
     initial ? null : t('admin.loadError'),
@@ -56,14 +57,18 @@ export function LeadsView({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function load(append: boolean) {
+    // O "carregar mais" continua a busca que gerou o cursor, não o que está digitado agora.
+    const filters = append ? applied : { q, status, source };
+
     setBusy(true);
     setError(null);
 
     try {
       const { data } = await call<Page<Lead>>(
         'GET',
-        `platform/leads${queryString({ q, status, utm_source: source, limit: LIMIT, cursor: append ? cursor : null })}`,
+        `platform/leads${queryString({ q: filters.q, status: filters.status, utm_source: filters.source, limit: LIMIT, cursor: append ? cursor : null })}`,
       );
+      setApplied(filters);
       setRows((current) => (append ? [...current, ...data.data] : data.data));
       setCursor(data.next_cursor);
     } catch (failure) {

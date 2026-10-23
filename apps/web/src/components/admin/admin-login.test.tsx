@@ -91,6 +91,41 @@ describe('LoginForm (admin)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('15 min');
   });
 
+  it('CA-01 gives the same message for wrong credentials (401 and 422)', async () => {
+    const user = userEvent.setup();
+
+    for (const status of [401, 422]) {
+      failure = new ApiError('x', status);
+      const { unmount } = render(<LoginForm variant="admin" />);
+      await fill(user);
+      expect(await screen.findByRole('alert')).toHaveTextContent('incorretos');
+      unmount();
+    }
+  });
+
+  it('CA-01 tells how long to wait after too many attempts (429)', async () => {
+    failure = new ApiError('x', 429, {}, undefined, 120);
+    const user = userEvent.setup();
+    render(<LoginForm variant="admin" />);
+
+    await fill(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('2 min');
+  });
+
+  it('CA-02 gives one message for a wrong code and focuses it', async () => {
+    failure = new ApiError('x', 401);
+    const user = userEvent.setup();
+    render(<LoginForm variant="admin" startAt="code" />);
+
+    await user.type(screen.getByLabelText(/^Código/), '000000');
+    await user.click(screen.getByRole('button', { name: /Confirmar|Entrar/ }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Código incorreto');
+    expect(alert).toHaveFocus();
+  });
+
   it('CA-02 starts the two-factor setup when the account has none, with the platform routes', async () => {
     call.mockResolvedValue({
       status: 200,

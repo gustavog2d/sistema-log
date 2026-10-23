@@ -29,6 +29,8 @@
 
 ## Limites conhecidos
 
-- Edição das regras de funcionalidade por plano e do catálogo de funcionalidades fica para uma entrega futura (hoje só leitura via API).
+- As regras de funcionalidade de cada plano aparecem só para leitura (botão "Regras"); editar as regras e o catálogo de funcionalidades fica para uma entrega futura.
+- O acesso de suporte abre a nova aba sem `noopener` (para detectar pop-up bloqueado) e corta o vínculo logo depois; o painel da equipe usa `referrer: no-referrer`. O token só passa pelo JavaScript da página da equipe nesse momento (exceção `KEEP_TOKEN` da ponte). Ressalva registrada: a CSP ainda aceita `unsafe-inline` em scripts (usar nonce no futuro).
+- A tela de entrar como assinante aparece também para o perfil de suporte, como a API permite (PLT-009).
 - O resumo conta no máximo 50 itens por situação (mostra `50+`); contadores exatos pedem um endpoint de resumo na API.
 - Gestão de contas da própria equipe (criar, desativar, trocar senha) só pelo comando `platform:create-admin`.

@@ -14,7 +14,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SelectField, TextField } from '@/components/ui/inputs';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { fromDateInput, toDateInput } from './list-utils';
+import { fromDateInput, toDateInput, unmatchedFieldError } from './list-utils';
 
 type Form = {
   code: string;
@@ -119,6 +119,17 @@ export function CouponsView({
         Object.keys(failure.fieldErrors).length > 0
       ) {
         setFieldErrors(failure.fieldErrors);
+        setError(
+          unmatchedFieldError(failure.fieldErrors, [
+            'code',
+            'percent_off',
+            'status',
+            'max_redemptions',
+            'valid_from',
+            'valid_until',
+            'description',
+          ]),
+        );
       } else {
         setError(
           failure instanceof ApiError

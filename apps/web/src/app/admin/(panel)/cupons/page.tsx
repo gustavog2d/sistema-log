@@ -7,6 +7,7 @@ import { getAdminSession } from '@/server/admin-session';
 import { getPanelContext } from '@/server/request-context';
 import { apiGet } from '@/server/session';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: t('admin.coupons.title') };
 
 export default async function Page() {

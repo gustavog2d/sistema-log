@@ -10,7 +10,7 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TextField } from '@/components/ui/inputs';
-import { lockedText } from './locked-text';
+import { lockedText, rateLimitedText } from './locked-text';
 import { TwoFactorSetup } from './two-factor-setup';
 
 type Step = 'credentials' | 'code' | 'setup';
@@ -64,7 +64,7 @@ export function LoginForm({
     if (error instanceof ApiError && error.status === 423) {
       setNotice(lockedText(error));
     } else if (error instanceof ApiError && error.status === 429) {
-      setNotice(t('login.rateLimited'));
+      setNotice(rateLimitedText(error));
     } else if (
       error instanceof ApiError &&
       (error.status === 401 || error.status === 422)

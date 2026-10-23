@@ -279,7 +279,8 @@
     "setupDone": "Verificação ligada. Entre de novo para continuar.",
     "backToLogin": "Voltar ao login",
     "noAccount": "Ainda não tem conta?",
-    "createAccount": "Criar conta"
+    "createAccount": "Criar conta",
+    "rateLimitedFor": "Muitas tentativas em pouco tempo. Tente de novo em {minutes} min."
   },
   "recovery": {
     "forgotTitle": "Recuperar a senha",
@@ -587,7 +588,8 @@
       "invoices": "Faturas",
       "invoicesCaption": "Faturas do negócio",
       "period": "Período",
-      "paidAt": "Pago em"
+      "paidAt": "Pago em",
+      "popupBlocked": "O acesso de suporte foi criado, mas o navegador bloqueou a nova aba. Permita pop-ups para este endereço e entre de novo."
     },
     "dialog": {
       "suspend": {
@@ -673,7 +675,15 @@
       "saved": "Plano atualizado.",
       "draft": "Rascunho",
       "active": "Ativo",
-      "archived": "Arquivado"
+      "archived": "Arquivado",
+      "rules": "Regras",
+      "rulesTitle": "Regras do plano {name}",
+      "rulesText": "Funcionalidades liberadas, limites e visibilidade deste plano (somente leitura).",
+      "rulesEmpty": "Este plano não tem regras: vale o padrão de cada funcionalidade.",
+      "rulesLoading": "Carregando as regras…",
+      "feature": "Funcionalidade",
+      "visible": "Visível",
+      "rulesCaption": "Regras do plano"
     },
     "leads": {
       "title": "Leads",

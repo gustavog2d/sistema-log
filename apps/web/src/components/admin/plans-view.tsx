@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { t } from '@/i18n';
+import { t, tf } from '@/i18n';
 import { ApiError, call } from '@/lib/api';
-import type { Plan, PlanStatus } from '@/lib/admin-types';
+import type { Entitlement, Plan, PlanStatus } from '@/lib/admin-types';
 import { formatBRL } from '@/lib/format';
 import { PageHeader } from '@/components/layout/page-header';
 import { Alert } from '@/components/ui/alert';
@@ -14,7 +14,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SelectField, TextField } from '@/components/ui/inputs';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
-import { centsToReais, reaisToCents } from './list-utils';
+import { centsToReais, reaisToCents, unmatchedFieldError } from './list-utils';
 
 const TONES: Record<PlanStatus, Tone> = {
   active: 'success',
@@ -46,6 +46,29 @@ export function PlansView({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<string | null>(null);
+  const [rulesOf, setRulesOf] = useState<Plan | null>(null);
+  const [rules, setRules] = useState<Entitlement[] | null>(null);
+  const [rulesError, setRulesError] = useState<string | null>(null);
+
+  async function openRules(target: Plan) {
+    setRulesOf(target);
+    setRules(null);
+    setRulesError(null);
+
+    try {
+      const { data } = await call<{ data: Entitlement[] }>(
+        'GET',
+        `platform/plans/${target.key}/entitlements`,
+      );
+      setRules(data.data);
+    } catch (failure) {
+      setRulesError(
+        failure instanceof ApiError
+          ? failure.message
+          : t('common.genericError'),
+      );
+    }
+  }
 
   function open(plan: Plan) {
     setError(null);
@@ -104,6 +127,16 @@ export function PlansView({
         Object.keys(failure.fieldErrors).length > 0
       ) {
         setFieldErrors(failure.fieldErrors);
+        setError(
+          unmatchedFieldError(failure.fieldErrors, [
+            'name',
+            'status',
+            'monthly_price_cents',
+            'yearly_discount_percent',
+            'trial_days',
+            'position',
+          ]),
+        );
       } else {
         setError(
           failure instanceof ApiError
@@ -141,7 +174,7 @@ export function PlansView({
               <Th>{t('admin.plans.monthly')}</Th>
               <Th>{t('admin.plans.discount')}</Th>
               <Th>{t('admin.plans.yearly')}</Th>
-              {canWrite ? <Th>{t('admin.actions')}</Th> : null}
+              <Th>{t('admin.actions')}</Th>
             </Tr>
           </thead>
           <tbody>
@@ -170,17 +203,26 @@ export function PlansView({
                     ? '—'
                     : formatBRL(plan.yearly_price_cents)}
                 </Td>
-                {canWrite ? (
-                  <Td>
+                <Td>
+                  <span className="flex flex-wrap gap-2">
                     <Button
                       variant="secondary"
-                      onClick={() => open(plan)}
-                      aria-label={`${t('admin.plans.edit')}: ${plan.name}`}
+                      onClick={() => void openRules(plan)}
+                      aria-label={`${t('admin.plans.rules')}: ${plan.name}`}
                     >
-                      {t('admin.plans.edit')}
+                      {t('admin.plans.rules')}
                     </Button>
-                  </Td>
-                ) : null}
+                    {canWrite ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => open(plan)}
+                        aria-label={`${t('admin.plans.edit')}: ${plan.name}`}
+                      >
+                        {t('admin.plans.edit')}
+                      </Button>
+                    ) : null}
+                  </span>
+                </Td>
               </Tr>
             ))}
           </tbody>
@@ -284,6 +326,45 @@ export function PlansView({
               </Button>
             </div>
           </form>
+        ) : null}
+      </Dialog>
+
+      <Dialog
+        open={rulesOf !== null}
+        onClose={() => setRulesOf(null)}
+        title={
+          rulesOf ? tf('admin.plans.rulesTitle', { name: rulesOf.name }) : ''
+        }
+        description={t('admin.plans.rulesText')}
+      >
+        {rulesError ? <Alert tone="danger">{rulesError}</Alert> : null}
+        {!rules && !rulesError ? (
+          <p className="text-muted">{t('admin.plans.rulesLoading')}</p>
+        ) : null}
+        {rules && rules.length === 0 ? (
+          <p className="text-muted">{t('admin.plans.rulesEmpty')}</p>
+        ) : null}
+        {rules && rules.length > 0 ? (
+          <Table caption={t('admin.plans.rulesCaption')}>
+            <thead>
+              <Tr>
+                <Th>{t('admin.plans.feature')}</Th>
+                <Th>{t('admin.detail.enabled')}</Th>
+                <Th>{t('admin.detail.limit')}</Th>
+                <Th>{t('admin.plans.visible')}</Th>
+              </Tr>
+            </thead>
+            <tbody>
+              {rules.map((rule) => (
+                <Tr key={rule.feature}>
+                  <Td>{rule.feature}</Td>
+                  <Td>{rule.enabled ? t('admin.yes') : t('admin.no')}</Td>
+                  <Td>{rule.limit ?? '—'}</Td>
+                  <Td>{rule.visible ? t('admin.yes') : t('admin.no')}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
         ) : null}
       </Dialog>
     </div>

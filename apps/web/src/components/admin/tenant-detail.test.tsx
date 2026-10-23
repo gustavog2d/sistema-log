@@ -189,7 +189,8 @@ describe('TenantDetailView', () => {
         url: 'http://tintaviva.localhost:3000',
       },
     });
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const opened = { opener: 'x' } as unknown as Window;
+    const open = vi.spyOn(window, 'open').mockReturnValue(opened);
     const user = userEvent.setup();
     render(<TenantDetailView tenant={tenantDetail()} canWrite={false} />);
 
@@ -206,12 +207,12 @@ describe('TenantDetailView', () => {
     expect(call).toHaveBeenCalledWith('POST', `${BASE}/impersonate`, {
       body: { reason: 'Cliente pediu ajuda com a agenda' },
     });
-    const [url, target, features] = open.mock.calls[0]!;
+    const [url, target] = open.mock.calls[0]!;
     expect(url).toBe(
       'http://tintaviva.localhost:3000/suporte#token=id%7Csegredo',
     );
     expect(target).toBe('_blank');
-    expect(features).toContain('noopener');
+    expect(opened.opener).toBeNull();
     expect(document.body.textContent).not.toContain('segredo');
     open.mockRestore();
   });
@@ -237,6 +238,68 @@ describe('TenantDetailView', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(open).not.toHaveBeenCalled();
     open.mockRestore();
+  });
+
+  it('CA-09 tells when the browser blocked the new tab', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: {
+        access_token: 'id|segredo',
+        url: 'http://tintaviva.localhost:3000',
+      },
+    });
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    const user = userEvent.setup();
+    render(<TenantDetailView tenant={tenantDetail()} canWrite />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Entrar como assinante' }),
+    );
+    await user.type(
+      screen.getByLabelText(/^Motivo/),
+      'Cliente pediu ajuda com a agenda',
+    );
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(await screen.findByText(/bloqueou a nova aba/)).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        'Acesso de suporte aberto em outra aba (vale 30 minutos).',
+      ),
+    ).not.toBeInTheDocument();
+    open.mockRestore();
+  });
+
+  it('CA-08 shows the API message even when the field has no input in the dialog', async () => {
+    failure = new ApiError('x', 422, {
+      feature: 'Funcionalidade desconhecida.',
+    });
+    const user = userEvent.setup();
+    render(<TenantDetailView tenant={tenantDetail()} canWrite />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Definir exceção: usuarios.max' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Funcionalidade desconhecida.',
+    );
+  });
+
+  it('CA-07 validates the extension days on the API and shows the error in the dialog', async () => {
+    failure = new ApiError('x', 422, { days: 'Informe de 1 a 30 dias.' });
+    const user = userEvent.setup();
+    render(<TenantDetailView tenant={tenantDetail()} canWrite />);
+
+    await user.click(screen.getByRole('button', { name: 'Estender o teste' }));
+    await user.clear(screen.getByLabelText(/^Dias/));
+    await user.type(screen.getByLabelText(/^Dias/), '99');
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(
+      await screen.findByText('Informe de 1 a 30 dias.'),
+    ).toBeInTheDocument();
   });
 
   it('CA-04 shows "no permission" when the API refuses with 403', async () => {

@@ -47,3 +47,13 @@ export function reaisToCents(value: string): number | null {
 export function centsToReais(cents: number | null): string {
   return cents === null ? '' : (cents / 100).toFixed(2).replace('.', ',');
 }
+
+/** Primeira mensagem de erro de campo que não tem campo na tela (para não deixar o diálogo mudo). */
+export function unmatchedFieldError(
+  fieldErrors: Record<string, string>,
+  shown: string[],
+): string | null {
+  const key = Object.keys(fieldErrors).find((name) => !shown.includes(name));
+
+  return key ? (fieldErrors[key] ?? null) : null;
+}

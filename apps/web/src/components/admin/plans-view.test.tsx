@@ -61,6 +61,59 @@ describe('PlansView', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('CA-11 shows the rules of a plan read-only, for any profile', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: {
+        data: [
+          {
+            feature: 'usuarios.max',
+            enabled: true,
+            limit: 5,
+            visible: true,
+            source: 'plan',
+          },
+        ],
+      },
+    });
+    const user = userEvent.setup();
+    render(<PlansView canWrite={false} plans={[plan()]} />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Regras: Profissional' }),
+    );
+
+    const table = await screen.findByRole('table', { name: 'Regras do plano' });
+    expect(within(table).getByText('usuarios.max')).toBeInTheDocument();
+    expect(within(table).getByText('5')).toBeInTheDocument();
+    expect(call).toHaveBeenCalledWith(
+      'GET',
+      'platform/plans/profissional/entitlements',
+    );
+    expect(
+      screen.queryByRole('button', { name: /Alterar/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('CA-11 tells when the plan has no rules or the rules fail to load', async () => {
+    call.mockResolvedValue({ status: 200, data: { data: [] } });
+    const user = userEvent.setup();
+    const { unmount } = render(<PlansView canWrite plans={[plan()]} />);
+
+    await user.click(
+      screen.getByRole('button', { name: 'Regras: Profissional' }),
+    );
+    expect(await screen.findByText(/não tem regras/)).toBeInTheDocument();
+    unmount();
+
+    failure = new ApiError('Falhou', 500);
+    render(<PlansView canWrite plans={[plan()]} />);
+    await user.click(
+      screen.getByRole('button', { name: 'Regras: Profissional' }),
+    );
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
   it('CA-11 edits a plan converting reais to cents', async () => {
     const user = userEvent.setup();
     render(<PlansView canWrite plans={[plan()]} />);

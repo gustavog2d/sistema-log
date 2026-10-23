@@ -99,6 +99,33 @@ describe('TenantsView', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('CA-05 keeps the applied filters on "load more" even if the typed text changed', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: { data: [tenantItem({ id: 'y' })], next_cursor: 'c2' },
+    });
+    const user = userEvent.setup();
+    render(<TenantsView initial={page()} />);
+
+    await user.type(
+      screen.getByLabelText('Buscar por nome ou endereço'),
+      'tinta',
+    );
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
+    await screen.findByRole('button', { name: 'Carregar mais' });
+    await user.type(
+      screen.getByLabelText('Buscar por nome ou endereço'),
+      'outra',
+    );
+    await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
+
+    await waitFor(() => expect(call).toHaveBeenCalledTimes(2));
+    expect(call).toHaveBeenLastCalledWith(
+      'GET',
+      'platform/tenants?q=tinta&limit=20&cursor=c2',
+    );
+  });
+
   it('CA-05 shows an error when the first load failed and when a search fails', async () => {
     failure = new ApiError('Falhou', 500);
     const user = userEvent.setup();

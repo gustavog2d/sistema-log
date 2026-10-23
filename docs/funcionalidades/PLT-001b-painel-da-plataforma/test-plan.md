@@ -8,7 +8,7 @@
 | Caso | Critério | Camada | Arquivo do teste | Situação |
 | --- | --- | --- | --- | --- |
 | T-01 | CA-01, CA-02 | Componente | `components/admin/admin-login.test.tsx` | passando |
-| T-02 | CA-03, CA-15 | Servidor e unidade | `server/admin-session.test.ts`, `lib/safe-path.test.ts`, `components/admin/list-utils.test.ts` | passando |
+| T-02 | CA-03, CA-15 | Servidor e unidade | `server/admin-session.test.ts`, `app/admin/(panel)/layout.test.tsx`, `app/admin/(public)/entrar/page.test.tsx`, `lib/safe-path.test.ts`, `components/admin/list-utils.test.ts` | passando |
 | T-03 | CA-04, CA-14 | Componente | `components/admin/admin-frame.test.tsx` | passando |
 | T-04 | CA-05, CA-06 | Componente | `components/admin/tenants-view.test.tsx`, `tenant-detail.test.tsx`, `dashboard-view.test.tsx` | passando |
 | T-05 | CA-07, CA-08, CA-09 | Componente | `components/admin/tenant-detail.test.tsx` | passando |

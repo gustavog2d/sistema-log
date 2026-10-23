@@ -19,6 +19,7 @@ import {
   TextareaField,
 } from '@/components/ui/inputs';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { unmatchedFieldError } from './list-utils';
 import { TenantStatusBadge } from './tenant-status';
 
 type DialogState =
@@ -36,7 +37,7 @@ const SOURCE: Record<Entitlement['source'], 'info' | 'neutral' | 'warning'> = {
 };
 
 /** Abre o painel do negócio com o acesso de suporte: o token vai só no fragmento (que não chega a nenhum servidor). */
-function openSupport(url: string, token: string) {
+function openSupport(url: string, token: string): boolean {
   const target = new URL(url);
 
   if (!['http:', 'https:'].includes(target.protocol)) {
@@ -45,7 +46,14 @@ function openSupport(url: string, token: string) {
 
   target.pathname = '/suporte';
   target.hash = `token=${encodeURIComponent(token)}`;
-  window.open(target.toString(), '_blank', 'noopener,noreferrer');
+  // Sem `noopener` o navegador devolve a janela (ou `null` se bloqueou o pop-up); o vínculo com esta página é cortado logo em seguida.
+  const opened = window.open(target.toString(), '_blank');
+
+  if (opened) {
+    opened.opener = null;
+  }
+
+  return opened !== null;
 }
 
 /** Detalhe do assinante: situação, dona, cartão, faturas, funcionalidades e as ações da equipe. */
@@ -105,11 +113,16 @@ export function TenantDetailView({
         Object.keys(failure.fieldErrors).length > 0
       ) {
         setFieldErrors(failure.fieldErrors);
+        setError(
+          unmatchedFieldError(failure.fieldErrors, ['reason', 'days', 'limit']),
+        );
       } else {
         setError(
           failure instanceof ApiError
             ? failure.message
-            : t('common.genericError'),
+            : failure instanceof Error && failure.message === 'popup'
+              ? t('admin.detail.popupBlocked')
+              : t('common.genericError'),
         );
       }
     } finally {
@@ -157,7 +170,9 @@ export function TenantDetailView({
             { body: { reason: reason.trim() } },
           );
           // O token só passa por esta variável: vai ao fragmento da nova aba e não fica em estado nem na tela.
-          openSupport(data.url, data.access_token);
+          if (!openSupport(data.url, data.access_token)) {
+            throw new Error('popup');
+          }
         }, t('admin.detail.supportOpened'));
         break;
       case 'entitlement':

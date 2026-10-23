@@ -32,20 +32,25 @@ export function TenantsView({ initial }: { initial: Page<TenantItem> | null }) {
   );
   const [q, setQ] = useState('');
   const [status, setStatus] = useState('');
+  // Filtros já aplicados: o "carregar mais" continua a busca que gerou o cursor, não o que está digitado.
+  const [applied, setApplied] = useState({ q: '', status: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(
     initial ? null : t('admin.loadError'),
   );
 
   async function load(append: boolean) {
+    const filters = append ? applied : { q, status };
+
     setBusy(true);
     setError(null);
 
     try {
       const { data } = await call<Page<TenantItem>>(
         'GET',
-        `platform/tenants${queryString({ q, status, limit: LIMIT, cursor: append ? cursor : null })}`,
+        `platform/tenants${queryString({ ...filters, limit: LIMIT, cursor: append ? cursor : null })}`,
       );
+      setApplied(filters);
       setRows((current) => (append ? [...current, ...data.data] : data.data));
       setCursor(data.next_cursor);
     } catch (failure) {

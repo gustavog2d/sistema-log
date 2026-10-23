@@ -8,6 +8,7 @@ import { getAdminSession } from '@/server/admin-session';
 import { getPanelContext } from '@/server/request-context';
 import { apiGet } from '@/server/session';
 
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: t('admin.detail.pageTitle') };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
