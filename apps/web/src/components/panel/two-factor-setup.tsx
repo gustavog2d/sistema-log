@@ -13,7 +13,14 @@ type Setup = { secret: string; otpauth_uri: string };
  * Ligar a verificação em duas etapas: pede o segredo à API, mostra para o aplicativo, confere o primeiro código e mostra
  * os códigos de recuperação uma única vez. Serve à conta (com sessão) e ao login da dona (com o token de configuração).
  */
-export function TwoFactorSetup({ onDone }: { onDone: () => void }) {
+export function TwoFactorSetup({
+  onDone,
+  base = 'auth/2fa',
+}: {
+  onDone: () => void;
+  /** Caminho da API (`auth/2fa` do assinante, `platform/2fa` da equipe). */
+  base?: string;
+}) {
   const [setup, setSetup] = useState<Setup | null>(null);
   const [recovery, setRecovery] = useState<string[] | null>(null);
   const [code, setCode] = useState('');
@@ -25,7 +32,7 @@ export function TwoFactorSetup({ onDone }: { onDone: () => void }) {
     setError(null);
 
     try {
-      const { data } = await call<Setup>('POST', 'auth/2fa/setup');
+      const { data } = await call<Setup>('POST', `${base}/setup`);
       setSetup(data);
     } catch (failure) {
       setError(
@@ -46,7 +53,7 @@ export function TwoFactorSetup({ onDone }: { onDone: () => void }) {
     try {
       const { data } = await call<{ recovery_codes: string[] }>(
         'POST',
-        'auth/2fa/confirm',
+        `${base}/confirm`,
         { body: { code: code.trim() } },
       );
       setRecovery(data.recovery_codes);

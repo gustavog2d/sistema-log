@@ -1,0 +1,6 @@
+openapi: 3.1.0
+info:
+  title: Web
+  version: 1.0.0
+# PLT-001b só consome rotas existentes da API de plataforma (PLT-001, 002, 009, 011, 012) pela ponte `/bff`.
+paths: {}

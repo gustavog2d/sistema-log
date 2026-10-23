@@ -61,6 +61,7 @@ describe('no hardcoded text', () => {
     ...files(join(ROOT, 'layout')),
     ...files(join(ROOT, 'site')),
     ...files(join(ROOT, 'panel')),
+    ...files(join(ROOT, 'admin')),
   ];
 
   it('finds the components to check', () => {
