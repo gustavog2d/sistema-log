@@ -243,7 +243,7 @@ components:
         expires_at: { type: string, format: date-time }
     Me:
       type: object
-      required: [user, tenant, can_write, two_factor_enabled]
+      required: [user, tenant, can_write, two_factor_enabled, impersonating]
       properties:
         user: { $ref: "#/components/schemas/Person" }
         tenant:
@@ -255,6 +255,7 @@ components:
             slug: { type: string }
         can_write: { type: boolean }
         two_factor_enabled: { type: boolean }
+        impersonating: { type: boolean, description: Verdadeiro no acesso de suporte (PLT-009) }
     TwoFactorSetup:
       type: object
       required: [secret, otpauth_uri]

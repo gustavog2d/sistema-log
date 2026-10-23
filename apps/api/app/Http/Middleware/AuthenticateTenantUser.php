@@ -8,6 +8,7 @@ use App\TenantAuth\AuthenticatedPerson;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use stdClass;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -35,6 +36,15 @@ class AuthenticateTenantUser
 
         if (! $kindOk) {
             return Problem::response(403, 'Forbidden', 'Este token não permite a operação.');
+        }
+
+        if ($person->impersonatedBy !== null) {
+            // Acesso de suporte: só vale enquanto a pessoa da equipe continua ativa, e cada pedido deixa rastro (sem dado pessoal).
+            if (! DB::table('platform_users')->where('id', $person->impersonatedBy)->where('active', true)->exists()) {
+                return $this->unauthorized();
+            }
+
+            Log::info('support_access.request', ['impersonated_by' => $person->impersonatedBy, 'tenant' => $this->context->id(), 'method' => $request->method(), 'path' => $request->path()]);
         }
 
         $request->attributes->set('tenant_person', $person);
@@ -95,6 +105,7 @@ class AuthenticateTenantUser
                 tokenId: $id,
                 tokenKind: $kind,
                 twoFactorEnabled: $user->totp_confirmed_at !== null,
+                impersonatedBy: is_string($token->impersonated_by) ? $token->impersonated_by : null,
             ),
             in_array($kind, $kinds, true),
         ];

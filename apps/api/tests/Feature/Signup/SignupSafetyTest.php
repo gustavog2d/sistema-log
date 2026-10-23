@@ -94,7 +94,7 @@ it('CA-16 lets the api role read business data of those tables, but not password
 it('M1 gives the platform role no access outside the signup and billing tables', function () {
     $platform = DB::connection('pgsql_platform');
 
-    foreach (['platform_users', 'platform_audit_logs', 'personal_access_tokens', 'plans', 'features', 'plan_features', 'migrations'] as $table) {
+    foreach (['platform_users', 'platform_audit_logs', 'personal_access_tokens', 'migrations'] as $table) {
         try {
             $platform->table($table)->count();
             $code = null;
@@ -103,6 +103,15 @@ it('M1 gives the platform role no access outside the signup and billing tables',
         }
 
         expect($code)->toBe('42501', "{$table} deveria ser inacessível ao papel de plataforma");
+    }
+});
+
+it('M1 lets the platform role only read the plan catalog, never write it', function () {
+    $platform = DB::connection('pgsql_platform');
+
+    foreach (['plans', 'features', 'plan_features'] as $table) {
+        expect($platform->table($table)->count())->toBeInt();
+        expect(fn () => $platform->table($table)->delete())->toThrow(QueryException::class);
     }
 });
 

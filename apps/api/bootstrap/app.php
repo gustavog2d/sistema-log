@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateTenantUser;
+use App\Http\Middleware\EnsureNotImpersonating;
 use App\Http\Middleware\EnsureOwner;
 use App\Http\Middleware\EnsurePlatformRole;
 use App\Http\Middleware\EnsurePlatformUserActive;
@@ -56,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.tenant' => AuthenticateTenantUser::class,
             'owner' => EnsureOwner::class,
             'role' => EnsureRole::class,
+            'no.impersonation' => EnsureNotImpersonating::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

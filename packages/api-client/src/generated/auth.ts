@@ -67,6 +67,8 @@ export interface Me {
   tenant: MeTenant;
   can_write: boolean;
   two_factor_enabled: boolean;
+  /** Verdadeiro no acesso de suporte (PLT-009) */
+  impersonating: boolean;
 }
 
 export interface TwoFactorSetup {
