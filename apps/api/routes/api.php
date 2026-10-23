@@ -59,6 +59,13 @@ Route::middleware(['tenant', 'subscription.exempt', 'auth.tenant', 'no.impersona
     Route::get('invoices', [SubscriptionManagementController::class, 'invoices']);
 });
 
+// Troca de plano pela dona (PLT-013). Não é isenta: suspensa ou cancelada fica somente leitura (regularize antes).
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'no.impersonation', 'owner', 'throttle:subscription-manage'])->prefix('subscription')->group(function () {
+    Route::get('plan-change/preview', [SubscriptionManagementController::class, 'previewPlanChange']);
+    Route::put('plan', [SubscriptionManagementController::class, 'changePlan'])->middleware('idempotent:plan-change');
+    Route::delete('plan-change', [SubscriptionManagementController::class, 'cancelPlanChange']);
+});
+
 // Autenticação do assinante (PLT-006). Funciona mesmo com a assinatura suspensa ou cancelada (`subscription.exempt`):
 // quem não pagou precisa conseguir entrar para ler os próprios dados e entender o bloqueio.
 Route::middleware(['tenant', 'subscription.exempt'])->prefix('auth')->group(function () {

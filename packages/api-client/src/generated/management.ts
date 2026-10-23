@@ -15,6 +15,21 @@ export const ManagedSubscriptionStatus = {
   canceled: 'canceled',
 } as const;
 
+export type ManagedSubscriptionPendingPlanChangePlan = {
+  key: string;
+  name: string;
+};
+
+/**
+ * Troca de plano agendada para o fim do período (PLT-013)
+ * @nullable
+ */
+export type ManagedSubscriptionPendingPlanChange = {
+  plan: ManagedSubscriptionPendingPlanChangePlan;
+  price_cents: number;
+  effective_at: string;
+} | null;
+
 /**
  * @nullable
  */
@@ -29,6 +44,11 @@ export type ManagedSubscriptionPaymentMethod = {
 export interface ManagedSubscription {
   status: ManagedSubscriptionStatus;
   cancel_at_period_end: boolean;
+  /**
+     * Troca de plano agendada para o fim do período (PLT-013)
+     * @nullable
+     */
+  pending_plan_change?: ManagedSubscriptionPendingPlanChange;
   can_write: boolean;
   /** @nullable */
   current_period_end?: string | null;

@@ -2,6 +2,7 @@
 
 namespace App\Billing;
 
+use App\Models\Plan;
 use App\Models\Subscription;
 use App\Notifications\Notifier;
 use App\Platform\Auth\PlatformAudit;
@@ -164,6 +165,23 @@ class SubscriptionManager
             'can_write' => SubscriptionAccess::canWrite($subscription->status),
             'current_period_end' => $subscription->current_period_end?->toIso8601String(),
             'payment_method' => $method instanceof stdClass ? ['type' => $method->type, 'brand' => $method->brand, 'last4' => $method->last4] : null,
+            'pending_plan_change' => self::pendingPlanChange($subscription),
+        ];
+    }
+
+    /** @return array<string, mixed>|null a troca de plano agendada para o fim do período, se houver */
+    public static function pendingPlanChange(Subscription $subscription): ?array
+    {
+        $plan = $subscription->pending_plan_id === null ? null : Plan::query()->find($subscription->pending_plan_id);
+
+        if ($plan === null || $subscription->current_period_end === null) {
+            return null;
+        }
+
+        return [
+            'plan' => ['key' => $plan->key, 'name' => $plan->name],
+            'price_cents' => (int) $subscription->pending_price_cents,
+            'effective_at' => $subscription->current_period_end->toIso8601String(),
         ];
     }
 
