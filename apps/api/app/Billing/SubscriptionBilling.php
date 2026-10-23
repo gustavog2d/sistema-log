@@ -2,7 +2,9 @@
 
 namespace App\Billing;
 
+use App\Notifications\Notifier;
 use App\Platform\Auth\PlatformAudit;
+use App\Support\Money;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
@@ -20,6 +22,7 @@ class SubscriptionBilling
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly PlatformAudit $audit,
+        private readonly Notifier $notifier,
     ) {}
 
     public function run(Carbon $asOf): BillingRunSummary
@@ -65,7 +68,7 @@ class SubscriptionBilling
     }
 
     /**
-     * @return list<array{0: string, 1: array<string, scalar>}> eventos de auditoria a gravar depois da transação
+     * @return list<array{0: string, 1: array<string, scalar>, 2?: array<string, string>}> eventos de auditoria a gravar depois da transação; o terceiro item é o conteúdo do aviso por e-mail
      */
     private function process(Connection $db, string $id, Carbon $asOf): array
     {
@@ -84,7 +87,7 @@ class SubscriptionBilling
         if ($row->canceled_at !== null) {
             $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'canceled', 'updated_at' => now()]);
 
-            return [['subscription.canceled', ['subscription' => $sub->id, 'tenant' => $sub->tenantId]]];
+            return [['subscription.canceled', ['subscription' => $sub->id, 'tenant' => $sub->tenantId], ['mark' => 'end']]];
         }
 
         [$start, $end] = $this->period($due, $sub->cycle, $asOf, $sub->billingDay());
@@ -105,13 +108,15 @@ class SubscriptionBilling
                 'status' => 'active', 'current_period_start' => $start, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
 
-            return [['billing.charged', $context]];
+            return [['billing.charged', $context, ['mark' => $start->format('YmdHis'), 'amount' => Money::brl($sub->priceCents), 'period_end' => $end->toIso8601String()]]];
         }
 
         // Pagamento não aprovado: suspensão imediata, sem carência e sem nova tentativa automática.
         $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'suspended', 'suspended_at' => $asOf, 'updated_at' => now()]);
 
-        return [['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $context]];
+        $notice = ['mark' => $due->format('YmdHis'), 'reason' => self::reasonText((string) $result->failureReason)];
+
+        return [['billing.failed', $context + ['reason' => (string) $result->failureReason]], ['subscription.suspended', $context, $notice]];
     }
 
     private function charge(Connection $db, DueSubscription $sub, Carbon $due): ChargeResult
@@ -162,16 +167,29 @@ class SubscriptionBilling
         return [$start, $end($start)];
     }
 
-    /** @param  list<array{0: string, 1: array<string, scalar>}>  $events */
+    /** Motivo da recusa em texto para a dona (nada técnico do gateway). */
+    private static function reasonText(string $reason): string
+    {
+        return match ($reason) {
+            'no_payment_method' => 'não há meio de pagamento cadastrado',
+            default => 'o pagamento foi recusado',
+        };
+    }
+
+    /** @param  list<array{0: string, 1: array<string, scalar>, 2?: array<string, string>}>  $events */
     private function audit(array $events): void
     {
-        foreach ($events as [$event, $metadata]) {
+        foreach ($events as $entry) {
+            [$event, $metadata] = $entry;
             try {
                 $this->audit->record($event, null, $metadata);
             } catch (Throwable $e) {
                 // A cobrança já foi registrada: falha de auditoria nunca a desfaz.
                 report($e);
             }
+
+            // O aviso por e-mail nunca atrapalha a cobrança (o Notifier trata os próprios erros).
+            $this->notifier->forSubscriptionEvent($event, $metadata, $entry[2] ?? []);
         }
     }
 }

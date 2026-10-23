@@ -6,6 +6,9 @@ return [
     // Domínio base: o tenant é o subdomínio, por exemplo {slug}.{base_domain}.
     'base_domain' => env('APP_BASE_DOMAIN', 'localhost'),
 
+    // Esquema dos links que a plataforma monta para os negócios (e-mails): https em produção, http no ambiente local.
+    'scheme' => env('APP_TENANT_SCHEME', 'https'),
+
     // Hosts da plataforma (sem tenant): o domínio base e o painel do super admin.
     'platform_hosts' => array_values(array_filter(array_map(
         'trim',

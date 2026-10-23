@@ -8,6 +8,7 @@ use App\Billing\PaymentMethodRejected;
 use App\Coupons\CouponService;
 use App\Models\Plan;
 use App\Models\User;
+use App\Notifications\Notifier;
 use App\Platform\Auth\PlatformAudit;
 use Illuminate\Database\Connection;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -32,6 +33,7 @@ class SignupService
         private readonly PlatformAudit $audit,
         private readonly SlugAvailability $availability,
         private readonly CouponService $coupons,
+        private readonly Notifier $notifier,
     ) {}
 
     /** @return array<string, mixed> */
@@ -86,6 +88,8 @@ class SignupService
         $this->audit->record('signup.completed', null, [
             'tenant' => $ids->tenant, 'plan' => $plan->key, 'cycle' => $data->cycle, 'niche' => $data->niche,
         ]);
+
+        $this->notifier->toOwner($ids->tenant, 'welcome', 'welcome:'.$ids->subscription, ['trial_days' => (string) $plan->trial_days]);
 
         if ($coupon !== null) {
             try {

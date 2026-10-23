@@ -3,8 +3,10 @@
 namespace App\Billing;
 
 use App\Models\Subscription;
+use App\Notifications\Notifier;
 use App\Platform\Auth\PlatformAudit;
 use Illuminate\Database\Connection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -20,6 +22,7 @@ class SubscriptionManager
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly PlatformAudit $audit,
+        private readonly Notifier $notifier,
     ) {}
 
     /**
@@ -87,7 +90,7 @@ class SubscriptionManager
                 'current_period_start' => $now, 'current_period_end' => $end, 'updated_at' => now(),
             ]);
 
-            return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]], ['subscription.regularized', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor, 'amount_cents' => $price]]];
+            return [['subscription.payment_method_changed', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor]], ['subscription.regularized', ['subscription' => $this->text($sub->id), 'tenant' => $tenantId, 'actor' => $actor, 'amount_cents' => $price], ['mark' => $now->format('YmdHisu')]]];
         });
 
         $this->record($events);
@@ -108,7 +111,7 @@ class SubscriptionManager
             if ($sub->status === 'suspended') {
                 $db->table('subscriptions')->where('id', $sub->id)->update(['status' => 'canceled', 'canceled_at' => now(), 'updated_at' => now()]);
 
-                return [['subscription.canceled', $context]];
+                return [['subscription.canceled', $context, ['mark' => 'now']]];
             }
 
             if ($sub->canceled_at !== null) {
@@ -117,7 +120,9 @@ class SubscriptionManager
 
             $db->table('subscriptions')->where('id', $sub->id)->update(['canceled_at' => now(), 'updated_at' => now()]);
 
-            return [['subscription.cancel_requested', $context]];
+            $until = $sub->status === 'trialing' ? $sub->trial_ends_at : $sub->current_period_end;
+
+            return [['subscription.cancel_requested', $context, ['mark' => now()->format('YmdHisu')] + (is_string($until) ? ['until' => Carbon::parse($until, 'UTC')->toIso8601String()] : [])]];
         });
 
         $this->record($events);
@@ -181,16 +186,19 @@ class SubscriptionManager
         }
     }
 
-    /** @param  list<array{0: string, 1: array<string, scalar>}>  $events */
+    /** @param  list<array{0: string, 1: array<string, scalar>, 2?: array<string, string>}>  $events */
     private function record(array $events): void
     {
-        foreach ($events as [$event, $metadata]) {
+        foreach ($events as $entry) {
+            [$event, $metadata] = $entry;
             try {
                 $this->audit->record($event, null, $metadata);
             } catch (Throwable $e) {
                 // A ação já foi gravada: falha de auditoria nunca a desfaz.
                 report($e);
             }
+
+            $this->notifier->forSubscriptionEvent($event, $metadata, $entry[2] ?? []);
         }
     }
 }
