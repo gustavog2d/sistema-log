@@ -69,7 +69,7 @@ Contrato em `openapi.yaml`.
 
 ## Dados
 
-`memberships.status` (`active`/`inactive`, padrão `active`) e a tabela `invitations` (com RLS: id, tenant_id, email, name, role, token_hash, invited_by, expires_at, accepted_at, created_at). O papel de autenticação (`app_auth`) escreve em vínculos, convites e pessoas; a API só lê as colunas não secretas dos convites.
+`memberships.status` (`active`/`inactive`, padrão `active`) e a tabela `invitations` (com RLS: id, tenant_id, email, name, role, token_hash, invited_by, expires_at, created_at; o aceite apaga o convite). O papel de autenticação (`app_auth`) escreve em vínculos, convites e pessoas; a API só lê as colunas não secretas dos convites.
 
 ## Fora do escopo
 
