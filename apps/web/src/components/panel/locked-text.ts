@@ -9,3 +9,12 @@ export function lockedText(error: unknown): string {
     ? tf('login.lockedFor', { minutes: Math.ceil(seconds / 60) })
     : t('login.locked');
 }
+
+/** Aviso de excesso de pedidos (429), com o tempo de espera quando a API informa. */
+export function rateLimitedText(error: unknown): string {
+  const seconds = error instanceof ApiError ? error.retryAfter : undefined;
+
+  return seconds && seconds > 0
+    ? tf('login.rateLimitedFor', { minutes: Math.ceil(seconds / 60) })
+    : t('login.rateLimited');
+}
