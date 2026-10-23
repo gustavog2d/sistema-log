@@ -26,8 +26,8 @@ beforeEach(() => {
 
 describe('navFor', () => {
   it.each([
-    ['owner', ['Início', 'Assinatura', 'Equipe', 'Minha conta']],
-    ['manager', ['Início', 'Equipe', 'Minha conta']],
+    ['owner', ['Início', 'Assinatura', 'Equipe', 'Histórico', 'Minha conta']],
+    ['manager', ['Início', 'Equipe', 'Histórico', 'Minha conta']],
     ['professional', ['Início', 'Minha conta']],
     ['reception', ['Início', 'Minha conta']],
   ] as const)('CA-04 shows only what a %s can use', (role, labels) => {
@@ -126,7 +126,7 @@ describe('PanelFrame', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Início', 'Equipe', 'Minha conta']);
+    ).toEqual(['Início', 'Equipe', 'Histórico', 'Minha conta']);
     expect(within(nav).getByRole('link', { name: 'Equipe' })).toHaveAttribute(
       'aria-current',
       'page',

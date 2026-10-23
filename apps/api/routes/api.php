@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
 use App\Http\Controllers\HealthController;
@@ -37,6 +38,8 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
     Route::get('/tenant/current', CurrentTenantController::class);
     // Sempre permitido, mesmo com a assinatura suspensa: é como o assinante entende o bloqueio.
     Route::get('/subscription', SubscriptionController::class)->middleware(['auth.tenant', 'throttle:subscription-status']);
+    // Histórico de mudanças (FND-008): dona e gerente, só leitura (funciona também com a assinatura suspensa).
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware(['auth.tenant', 'role:owner,manager', 'throttle:tenant-api']);
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.

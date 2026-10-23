@@ -11,5 +11,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    // A suíte é grande e roda em contêiner: testes com digitação longa estouravam os 5 s sob carga.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });
