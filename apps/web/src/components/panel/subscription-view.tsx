@@ -96,6 +96,11 @@ export function SubscriptionView({
       });
       router.refresh();
     } catch (error) {
+      // Depois de uma recusa, a nova tentativa é outro pedido (a chave antiga devolveria a resposta antiga).
+      if (!(error instanceof ApiError && error.isNetwork)) {
+        attempt.current = null;
+      }
+
       if (error instanceof ApiError && error.status === 402) {
         setDialogError(t('subscription.declined'));
       } else if (

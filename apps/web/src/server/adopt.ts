@@ -1,4 +1,4 @@
-import { classifyHost } from './host';
+import { classifyHost, hostname } from './host';
 import { SESSION_COOKIE, CHALLENGE_COOKIE } from './bff';
 import type { BffDeps } from './bff';
 
@@ -55,6 +55,10 @@ export async function handleAdopt(
     return problem(404);
   }
 
+  if (Number(request.headers.get('content-length') ?? 0) > 1024) {
+    return problem(413);
+  }
+
   let token: unknown;
 
   try {
@@ -74,7 +78,7 @@ export async function handleAdopt(
       method: 'GET',
       headers: {
         accept: 'application/json',
-        host: (host ?? '').replace(/:\d+$/, ''),
+        host: hostname(host),
         authorization: `Bearer ${token}`,
       },
       redirect: 'manual',
@@ -88,7 +92,14 @@ export async function handleAdopt(
     return problem(401);
   }
 
-  const data = (await me.json()) as { impersonating?: boolean };
+  let data: { impersonating?: boolean };
+
+  try {
+    data = (await me.json()) as { impersonating?: boolean };
+  } catch {
+    return problem(502);
+  }
+
   // Acesso de suporte vale 30 minutos; o cookie não precisa durar mais que isso.
   const maxAge = data.impersonating ? 30 * 60 : 12 * 60 * 60;
   const headers = new Headers({

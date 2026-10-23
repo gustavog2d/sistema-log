@@ -80,6 +80,21 @@ describe('TeamView', () => {
     );
   });
 
+  it('CA-10 keeps what was typed when the invitation is refused', async () => {
+    call.mockRejectedValue(new ApiError('x', 409, {}, 'plan_limit_reached'));
+    const user = userEvent.setup();
+    render(view());
+    await openInvite(user);
+
+    await user.type(screen.getByLabelText(/^Nome/), 'Eva Nunes');
+    await user.type(screen.getByLabelText(/^E-mail/), 'eva@exemplo.com');
+    await user.click(screen.getByRole('button', { name: 'Enviar convite' }));
+
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Nome/)).toHaveValue('Eva Nunes');
+    expect(screen.getByLabelText(/^E-mail/)).toHaveValue('eva@exemplo.com');
+  });
+
   it('CA-09 does not offer the owner role in an invitation', async () => {
     const user = userEvent.setup();
     render(view());

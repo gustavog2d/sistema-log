@@ -149,7 +149,9 @@ describe('ResetForm', () => {
   it('CA-12 shows the message when the link is incomplete', () => {
     render(<ResetForm />);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Link incompleto');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Este link é inválido ou já venceu',
+    );
   });
 
   it('CA-16 has no accessibility violations', async () => {
@@ -196,7 +198,9 @@ describe('AcceptInviteForm', () => {
 
     await fill(user);
 
-    await waitFor(() => expect(replace).toHaveBeenCalledWith('/entrar'));
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith('/entrar?etapa=codigo'),
+    );
   });
 
   it('CA-13 takes the token off the address bar and explains that an existing account uses its own password', () => {
@@ -240,7 +244,7 @@ describe('AcceptInviteForm', () => {
     );
     render(<AcceptInviteForm token="tok" email="beto@exemplo.com" />);
     await fill(user);
-    expect(await screen.findByText('A senha não confere.')).toBeInTheDocument();
+    expect(await screen.findByText(/Senha não aceita/)).toBeInTheDocument();
   });
 
   it('CA-13 shows the lock and the wait warnings', async () => {

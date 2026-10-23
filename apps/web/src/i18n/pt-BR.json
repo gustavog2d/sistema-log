@@ -265,6 +265,7 @@
     "invalid": "E-mail ou senha incorretos.",
     "locked": "Muitas tentativas erradas. Por segurança, o acesso ficou bloqueado por alguns minutos. Tente de novo mais tarde.",
     "rateLimited": "Muitas tentativas em pouco tempo. Tente de novo mais tarde.",
+    "lockedFor": "Muitas tentativas erradas. Por segurança, o acesso ficou bloqueado. Tente de novo em {minutes} min.",
     "forgot": "Esqueci minha senha",
     "codeTitle": "Confirmar o código",
     "codeText": "Digite o código de 6 dígitos do seu aplicativo de verificação. Se perdeu o celular, use um código de recuperação.",
@@ -305,7 +306,7 @@
     "inviteAccept": "Aceitar e entrar",
     "inviteAccepting": "Entrando…",
     "inviteInvalid": "Este convite é inválido ou já venceu. Peça um novo convite.",
-    "inviteWrongPassword": "A senha não confere.",
+    "inviteWrongPassword": "Senha não aceita. Se você já tem conta, use a senha dela; se é a primeira vez, siga a regra de senha.",
     "termsRequired": "É preciso aceitar os termos para continuar"
   },
   "panel": {

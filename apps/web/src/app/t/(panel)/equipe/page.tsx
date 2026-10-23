@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { LoadError, NoPermission } from '@/components/panel/notices';
 import { TeamView } from '@/components/panel/team-view';
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: t('team.title') };
 export default async function Page() {
   const session = await getPanelSession();
 
-  if (session.kind !== 'ok') return null;
+  if (session.kind !== 'ok') redirect('/entrar');
   if (!canSee(session.me.user.role, 'team')) return <NoPermission />;
 
   const team = await apiGet<{

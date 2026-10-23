@@ -32,3 +32,11 @@ Telas do negócio no endereço `{negócio}.{domínio}` (local: `http://{slug}.lo
 
 - O cartão é o meio de teste (`tok_ok`, `tok_declined`) até o INT-001 (Asaas).
 - Troca de plano: PLT-013. Painel da equipe da plataforma: PLT-001b.
+
+## Pendências de segurança e melhoria (registradas na revisão)
+
+- **Token do acesso de suporte** (fragmento da URL) é reutilizável nos 30 minutos de validade. Antes de produção: a API emitir um código de troca de uso único e curto, ou o `adopt` aceitar só token de suporte.
+- **Links de e-mail** (recuperar senha e convite) levam o token na query string. Antes de produção: passar para o fragmento (`#token=`) ou garantir que o log de acesso não grave a query.
+- Em produção, exigir `APP_WEB_HOST` definido e `APP_TENANT_SCHEME=https`; cookies com prefixo `__Host-` e CSP sem `unsafe-inline` são melhorias futuras.
+- A spec original dizia "sem rota nova na API"; esta entrega também mudou os links dos e-mails para usar `APP_WEB_HOST`/`APP_TENANT_SCHEME` (sem mudança de contrato).
+- Cancelar e desfazer cancelamento não enviam `Idempotency-Key` (a API não a exige nessas rotas).

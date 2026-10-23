@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
+import { lockedText } from './locked-text';
 import { t } from '@/i18n';
 import { ApiError, call } from '@/lib/api';
 import { Alert } from '@/components/ui/alert';
@@ -173,9 +174,7 @@ export function ResetForm({
         </Alert>
       ) : missing || invalid ? (
         <div className="mt-4 space-y-3">
-          <Alert tone="danger">
-            {missing ? t('recovery.missingData') : t('recovery.invalidLink')}
-          </Alert>
+          <Alert tone="danger">{t('recovery.invalidLink')}</Alert>
           <Link
             href="/esqueci-senha"
             className="font-medium text-brand-700 underline"
@@ -250,7 +249,15 @@ export function AcceptInviteForm({
         'auth/invitations/accept',
         { body: { email, token, password, accept_terms: true } },
       );
-      router.replace(data.authenticated ? '/' : '/entrar');
+      router.replace(
+        data.authenticated
+          ? '/'
+          : data.next === 'verify'
+            ? '/entrar?etapa=codigo'
+            : data.next === 'setup'
+              ? '/entrar?etapa=configurar'
+              : '/entrar',
+      );
       router.refresh();
     } catch (failure) {
       if (
@@ -266,13 +273,13 @@ export function AcceptInviteForm({
       ) {
         setErrors({ password: t('recovery.inviteWrongPassword') });
       } else if (failure instanceof ApiError && failure.status === 423) {
-        setNotice(t('login.locked'));
+        setNotice(lockedText(failure));
       } else if (failure instanceof ApiError && failure.status === 429) {
         setNotice(t('login.rateLimited'));
       } else {
         setNotice(
-          failure instanceof ApiError
-            ? failure.message
+          failure instanceof ApiError && failure.isNetwork
+            ? t('common.networkError')
             : t('common.genericError'),
         );
       }

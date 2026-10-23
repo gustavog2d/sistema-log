@@ -84,7 +84,7 @@ export function TeamView({
     work: () => Promise<unknown>,
     success: string,
     closeOnError = false,
-  ) {
+  ): Promise<boolean> {
     setBusy(true);
     setError(null);
     setFieldErrors({});
@@ -94,6 +94,8 @@ export function TeamView({
       setDialog(null);
       setNotice({ tone: 'success', text: success });
       router.refresh();
+
+      return true;
     } catch (failure) {
       if (
         failure instanceof ApiError &&
@@ -106,6 +108,8 @@ export function TeamView({
       } else {
         setError(explain(failure));
       }
+
+      return false;
     } finally {
       setBusy(false);
     }
@@ -123,7 +127,9 @@ export function TeamView({
           },
         }),
       tf('team.inviteSent', { email: form.email.trim() }),
-    ).then(() => setForm((current) => ({ ...current, name: '', email: '' })));
+    ).then((ok) => {
+      if (ok) setForm((current) => ({ ...current, name: '', email: '' }));
+    });
   }
 
   const roleOptions = (

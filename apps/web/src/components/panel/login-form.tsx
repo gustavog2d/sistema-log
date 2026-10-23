@@ -10,14 +10,21 @@ import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TextField } from '@/components/ui/inputs';
+import { lockedText } from './locked-text';
 import { TwoFactorSetup } from './two-factor-setup';
 
 type Step = 'credentials' | 'code' | 'setup';
 
 /** Entrar no painel: e-mail e senha, depois o código do 2FA (ou a configuração do 2FA, se a dona precisar). O token fica no cookie da ponte. */
-export function LoginForm({ returnTo }: { returnTo?: string }) {
+export function LoginForm({
+  returnTo,
+  startAt = 'credentials',
+}: {
+  returnTo?: string;
+  startAt?: Step;
+}) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('credentials');
+  const [step, setStep] = useState<Step>(startAt);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
@@ -32,7 +39,7 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
 
   function failure(error: unknown, invalidText: string) {
     if (error instanceof ApiError && error.status === 423) {
-      setNotice(t('login.locked'));
+      setNotice(lockedText(error));
     } else if (error instanceof ApiError && error.status === 429) {
       setNotice(t('login.rateLimited'));
     } else if (
@@ -42,7 +49,9 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
       setNotice(invalidText);
     } else {
       setNotice(
-        error instanceof ApiError ? error.message : t('common.genericError'),
+        error instanceof ApiError && error.isNetwork
+          ? t('common.networkError')
+          : t('common.genericError'),
       );
     }
   }
@@ -83,11 +92,7 @@ export function LoginForm({ returnTo }: { returnTo?: string }) {
       await call('POST', 'auth/2fa/verify', { body: { code: code.trim() } });
       enter();
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401 && !error.code) {
-        setNotice(t('login.codeInvalid'));
-      } else {
-        failure(error, t('login.codeInvalid'));
-      }
+      failure(error, t('login.codeInvalid'));
     } finally {
       setBusy(false);
     }

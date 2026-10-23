@@ -220,4 +220,22 @@ describe('LoginForm', () => {
     await screen.findByRole('heading', { name: 'Confirmar o código' });
     expect(await axe(container)).toHaveNoViolations();
   });
+
+  it('CA-01 tells how long the lock lasts and moves the focus to the message', async () => {
+    call.mockRejectedValue(new ApiError('x', 423, {}, undefined, 600));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await fill(user);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('10 min');
+    expect(alert).toHaveFocus();
+  });
+
+  it('CA-13 opens at the code step when the invitation already asked for it', () => {
+    render(<LoginForm startAt="code" />);
+
+    expect(screen.getByLabelText(/^Código/)).toBeInTheDocument();
+  });
 });
