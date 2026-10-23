@@ -1,0 +1,74 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      summary: Histórico de mudanças do negócio (dona e gerente)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: entity_type, in: query, schema: { type: string, maxLength: 40, pattern: "^[a-z_]+$" } }
+        - { name: entity_id, in: query, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Página de registros
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuditLogPage" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    AuditLog:
+      type: object
+      required: [id, entity_type, entity_id, action, actor, before, after, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        entity_type: { type: string }
+        entity_id: { type: string, format: uuid }
+        action: { type: string, enum: [created, updated, deleted] }
+        actor:
+          type: [object, "null"]
+          required: [id, name, support]
+          properties:
+            id: { type: [string, "null"], format: uuid }
+            name: { type: string }
+            support: { type: boolean, description: Verdadeiro quando a equipe da plataforma agiu como a pessoa (acesso de suporte) }
+        before: { type: [object, "null"] }
+        after: { type: [object, "null"] }
+        created_at: { type: string, format: date-time }
+    AuditLogPage:
+      type: object
+      required: [data, next_cursor]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/AuditLog" }
+        next_cursor: { type: [string, "null"] }
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors: { type: object }

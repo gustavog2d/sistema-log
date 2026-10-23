@@ -29,6 +29,8 @@ class PlatformServiceProvider extends ServiceProvider
             Limit::perHour(20)->by((string) $request->ip()),
         ]);
         RateLimiter::for('tenant-reset', fn (Request $request) => Limit::perHour(10)->by((string) $request->ip()));
+        // Rotas do negócio (clientes, agenda, financeiro…): por pessoa quando há login, senão por IP.
+        RateLimiter::for('tenant-api', fn (Request $request) => Limit::perMinute(240)->by(self::throttleKey($request)));
         RateLimiter::for('subscription-status', fn (Request $request) => Limit::perMinute(60)->by((string) $request->ip()));
         RateLimiter::for('subscription-manage', fn (Request $request) => Limit::perMinute(30)->by((string) $request->ip()));
         RateLimiter::for('team-invite', fn (Request $request) => [
@@ -71,5 +73,13 @@ class PlatformServiceProvider extends ServiceProvider
         $email = $request->input('email');
 
         return is_string($email) ? mb_strtolower($email) : '';
+    }
+
+    /** Pessoa autenticada do negócio, ou o IP quando ainda não há login. */
+    private static function throttleKey(Request $request): string
+    {
+        $person = $request->attributes->get('tenant_person');
+
+        return $person instanceof AuthenticatedPerson ? $person->id : (string) $request->ip();
     }
 }

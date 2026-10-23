@@ -81,6 +81,7 @@ export type TeamInvitation = {
 export const AREA_ROLES = {
   subscription: ['owner'],
   team: ['owner', 'manager'],
+  audit: ['owner', 'manager'],
   account: ['owner', 'manager', 'professional', 'reception'],
   home: ['owner', 'manager', 'professional', 'reception'],
 } as const satisfies Record<string, readonly Role[]>;

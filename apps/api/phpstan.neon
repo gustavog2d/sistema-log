@@ -9,7 +9,7 @@ parameters:
         - routes
         - bootstrap
     ignoreErrors:
-        # O trait é usado por modelos de negócio que ainda não existem (e pelos testes).
+        # O trait é usado pelos modelos de negócio das próximas entregas (e pelos testes).
         -
             identifier: trait.unused
-            path: app/Tenancy/Concerns/BelongsToTenant.php
+            path: app/Audit/Audited.php
