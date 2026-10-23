@@ -56,7 +56,11 @@ function hardcodedTexts(path: string): string[] {
 }
 
 describe('no hardcoded text', () => {
-  const targets = [...files(join(ROOT, 'ui')), ...files(join(ROOT, 'layout'))];
+  const targets = [
+    ...files(join(ROOT, 'ui')),
+    ...files(join(ROOT, 'layout')),
+    ...files(join(ROOT, 'site')),
+  ];
 
   it('finds the components to check', () => {
     expect(targets.length).toBeGreaterThan(10);

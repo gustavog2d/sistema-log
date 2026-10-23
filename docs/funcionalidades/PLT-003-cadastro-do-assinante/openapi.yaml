@@ -76,7 +76,7 @@ components:
         reason: { type: string, enum: [invalid, reserved, taken] }
     SignupRequest:
       type: object
-      required: [business_name, slug, niche, owner_name, owner_email, password, plan, cycle, accept_terms]
+      required: [business_name, slug, niche, owner_name, owner_email, password, plan, cycle, accept_terms, captcha_token]
       properties:
         business_name: { type: string, minLength: 2, maxLength: 100 }
         slug: { type: string, maxLength: 64 }
@@ -88,6 +88,7 @@ components:
         cycle: { type: string, enum: [monthly, yearly] }
         payment_method_token: { type: string, maxLength: 200, description: "Obrigatório, exceto quando o cupom deixa o preço em zero (cortesia, PLT-012)" }
         accept_terms: { type: boolean, const: true }
+        captcha_token: { type: string, maxLength: 4000, description: "Token do anti-robô (reCAPTCHA v3, ação `signup`); novo a cada tentativa e fora da comparação da idempotência" }
         coupon_code: { type: string, maxLength: 40, description: "Cupom de desconto (PLT-012); cupom indisponível dá 422 em `coupon_code`" }
     SignupResult:
       type: object

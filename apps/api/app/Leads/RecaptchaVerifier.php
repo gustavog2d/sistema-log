@@ -10,7 +10,7 @@ class RecaptchaVerifier implements CaptchaVerifier
 {
     public function __construct(private readonly string $secret, private readonly float $minScore = 0.5) {}
 
-    public function verify(string $token, ?string $ip): bool
+    public function verify(string $token, ?string $ip, ?string $action = null): bool
     {
         if ($this->secret === '' || $token === '') {
             return false;
@@ -22,6 +22,13 @@ class RecaptchaVerifier implements CaptchaVerifier
             ]));
 
             if (! $response->ok() || $response->json('success') !== true) {
+                return false;
+            }
+
+            // Token pedido para outra ação (ex.: o do formulário de contato usado no cadastro) não vale.
+            $answered = $response->json('action');
+
+            if ($action !== null && is_string($answered) && $answered !== $action) {
                 return false;
             }
 

@@ -7,7 +7,7 @@ class FakeCaptchaVerifier implements CaptchaVerifier
 {
     public const TOKEN = 'captcha_ok';
 
-    public function verify(string $token, ?string $ip): bool
+    public function verify(string $token, ?string $ip, ?string $action = null): bool
     {
         return hash_equals(self::TOKEN, $token);
     }

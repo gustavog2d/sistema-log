@@ -1,0 +1,6 @@
+openapi: 3.1.0
+info:
+  title: Web
+  version: 1.0.0
+# PLT-014 só consome rotas existentes da API (planos, leads, cadastro, cupom) pela ponte `/bff`.
+paths: {}

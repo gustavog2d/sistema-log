@@ -10,6 +10,7 @@ use App\Signup\SignupService;
 use App\Signup\SlugAvailability;
 use App\Tenancy\TenantDatabaseContext;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -176,7 +177,7 @@ it('B2 answers 409 while the same request is still being processed', function ()
     $body = $this->signupPayload();
     DB::connection('pgsql_admin')->table('idempotency_keys')->insert([
         'scope' => idempotencyScope(), 'key' => 'em-andamento', 'created_at' => now(),
-        'request_hash' => hash('sha256', json_encode(normalizedBody($body))),
+        'request_hash' => hash('sha256', json_encode(normalizedBody(Arr::except($body, ['captcha_token'])))),
     ]);
 
     $this->signup(key: 'em-andamento')->assertStatus(409)->assertHeader('Content-Type', 'application/problem+json');

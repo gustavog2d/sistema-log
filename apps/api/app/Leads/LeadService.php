@@ -38,7 +38,7 @@ class LeadService
             return;
         }
 
-        if (! $this->captcha->verify($captchaToken, $ip)) {
+        if (! $this->captcha->verify($captchaToken, $ip, 'lead')) {
             throw ValidationException::withMessages(['captcha_token' => 'Não foi possível confirmar que você é uma pessoa. Tente de novo.']);
         }
 
