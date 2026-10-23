@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- PLT-011: captura de leads da landing (API) com UTM, consentimento LGPD, anti-robô (reCAPTCHA com verificador de teste local), campo isca, deduplicação em 24 horas, limite por hora, tela de gestão da equipe (lista, status, notas) e retenção de 12 meses.
 - PLT-009: gestão de assinantes pela equipe (API): lista e detalhe, exceções de funcionalidade por negócio, suspender e reativar na mão, estender o teste e acesso de suporte (30 minutos, com motivo, auditoria e aviso à dona).
 - PLT-010: e-mails transacionais (boas-vindas, fim do teste chegando, pagamento aprovado, suspensão, regularização, cancelamento, troca de senha e 2FA desligado), um por acontecimento, pela fila, com registro de envio sem o endereço.
 - PLT-012: cupons criados pelo super admin (percentual, validade, limite de usos), aplicados no cadastro com preço congelado e conta de cortesia (100%) sem cartão; consulta pública do preço com o cupom.
