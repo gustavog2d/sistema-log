@@ -24,7 +24,10 @@ export interface LeadRequest {
      * @maxLength 100
      */
   name: string;
-  /** @maxLength 255 */
+  /**
+     * Só caracteres ASCII (endereços com acento são recusados)
+     * @maxLength 255
+     */
   email: string;
   /**
      * Telefone em E.164
@@ -81,7 +84,7 @@ export interface LeadRequest {
      * Campo isca; deve ficar vazio
      * @nullable
      */
-  website?: string | null;
+  company_site?: string | null;
 }
 
 export type LeadStatus = typeof LeadStatus[keyof typeof LeadStatus];
@@ -383,5 +386,58 @@ return customFetch<updateLeadResponse>(getUpdateLeadUrl(id),
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
     body: JSON.stringify(updateLeadBody)
+  }
+);}
+
+
+
+export type deleteLeadResponse204 = {
+  data: void
+  status: 204
+}
+
+export type deleteLeadResponse401 = {
+  data: ProblemResponse
+  status: 401
+}
+
+export type deleteLeadResponse403 = {
+  data: ProblemResponse
+  status: 403
+}
+
+export type deleteLeadResponse404 = {
+  data: ProblemResponse
+  status: 404
+}
+
+export type deleteLeadResponseSuccess = (deleteLeadResponse204) & {
+  headers: Headers;
+};
+export type deleteLeadResponseError = (deleteLeadResponse401 | deleteLeadResponse403 | deleteLeadResponse404) & {
+  headers: Headers;
+};
+
+export type deleteLeadResponse = (deleteLeadResponseSuccess | deleteLeadResponseError)
+
+export const getDeleteLeadUrl = (id: string,) => {
+
+
+
+
+  return `/platform/leads/${id}`
+}
+
+/**
+ * @summary Apaga um lead na hora, a pedido da pessoa (super admin)
+ */
+export const deleteLead = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<deleteLeadResponse> => {
+
+  return customFetch<deleteLeadResponse>(getDeleteLeadUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
   }
 );}

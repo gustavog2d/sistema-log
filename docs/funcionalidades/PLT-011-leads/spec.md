@@ -14,12 +14,14 @@ A landing precisa captar interessados (nome, e-mail, telefone, nicho) e a equipe
 
 - **RN-01** — `POST /leads` (público, só nos hosts da plataforma): `name` (2–100), `email`, `phone` (opcional, E.164), `niche` (opcional, um dos nichos configurados), `message` (opcional, até 500), UTM (`utm_source`, `utm_medium`, `utm_campaign`, `utm_term`, `utm_content`, até 100 cada), `referrer` e `landing_path` (até 255), `accept_privacy` verdadeiro (consentimento LGPD) e `captcha_token`. Responde sempre `202` sem corpo útil, haja ou não lead repetido.
 - **RN-02** — Anti-robô: o `captcha_token` é conferido por um verificador (`CaptchaVerifier`). Em produção é o reCAPTCHA do Google (chave secreta em configuração, nunca no código); em desenvolvimento e testes há um verificador de teste (token `captcha_ok`), recusado fora de `local` e `testing`. Token ausente, inválido ou recusado: 422 em `captcha_token`, nada gravado. Falha do serviço de verificação conta como recusa (fecha por padrão).
-- **RN-03** — Campo isca (`website`): se vier preenchido, responde 202 como sucesso mas não grava nada (robô não descobre que foi barrado).
+- **RN-03** — Campo isca (`company_site`): se vier preenchido, responde 202 como sucesso mas não grava nada (robô não descobre que foi barrado).
 - **RN-04** — Repetição: o mesmo e-mail (sem diferenciar maiúsculas) dentro de 24 horas não cria outro lead; o pedido repetido responde 202 igual e só atualiza a mensagem/telefone se vierem preenchidos. Depois de 24 horas vira um novo lead.
 - **RN-05** — Limites: 5 pedidos por hora por IP e teto global de 300 por hora; acima disso 429.
 - **RN-06** — Dados guardados: o necessário mais a origem; o IP não é guardado, só um hash com sal (para achar abuso), e o consentimento (`privacy_accepted_at` e a versão da política). Lead vem com `status` `new`.
 - **RN-07** — `GET /platform/leads` (equipe): lista por cursor (`limit` 1–50), do mais novo ao mais antigo, com busca `q` (nome ou e-mail), filtro `status` (`new`, `contacted`, `converted`, `discarded`) e `utm_source`. `PATCH /platform/leads/{id}` (equipe) altera `status` e `notes` (até 1000). Suporte e super admin podem os dois.
-- **RN-08** — Retenção: leads `discarded`, ou `new`/`contacted` sem movimento há mais de 12 meses, são apagados por rotina diária; `converted` fica.
+- **RN-08** — Retenção: leads `discarded`, ou `new`/`contacted` criados há mais de 12 meses, são apagados por rotina diária; `converted` fica.
+- **RN-10** — Exclusão a pedido da pessoa (LGPD): `DELETE /platform/leads/{id}` (só super admin) apaga o lead na hora; a auditoria `lead.deleted` guarda só o id.
+- **RN-04b** — Repetição nunca sobrescreve: se o lead já tem telefone ou mensagem, o pedido repetido não os troca; só preenche o que está vazio.
 - **RN-09** — Auditoria: `lead.updated` (quem, status antes/depois; as notas não vão para o log).
 
 ## Critérios de aceite
@@ -38,6 +40,7 @@ A landing precisa captar interessados (nome, e-mail, telefone, nicho) e a equipe
 | CA-10 | RN-08 | Leads antigos | Rotina de retenção | Apagados os que a regra manda; `converted` fica |
 | CA-11 | RN-09 | Alterar um lead | — | Auditoria com status antes/depois e sem as notas |
 | CA-12 | RN-01 | Lead gravado | Listar | A lista não devolve o hash do IP |
+| CA-14 | RN-10 | Super admin; suporte | Apagar um lead | 204 e some, com auditoria só com o id; 403 para o suporte; 404 se não existe |
 | CA-13 | contrato | Respostas reais | Todas as rotas | Batem com o `openapi.yaml` |
 
 ## API

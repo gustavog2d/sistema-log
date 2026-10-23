@@ -3,6 +3,7 @@
 use App\Leads\CaptchaVerifier;
 use App\Leads\FakeCaptchaVerifier;
 use App\Leads\RecaptchaVerifier;
+use App\Providers\LeadsServiceProvider;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
@@ -51,6 +52,13 @@ it('does not allow the fake verifier outside local and testing', function () {
     config(['leads.captcha_driver' => 'fake']);
 
     expect(fn () => app(CaptchaVerifier::class))->toThrow(InvalidArgumentException::class);
+});
+
+it('fails the boot when the fake driver is configured outside local and testing', function () {
+    config(['leads.captcha_driver' => 'fake']);
+    $this->app->detectEnvironment(fn () => 'production');
+
+    expect(fn () => (new LeadsServiceProvider($this->app))->boot())->toThrow(InvalidArgumentException::class);
 });
 
 it('uses the fake verifier by default in testing', function () {

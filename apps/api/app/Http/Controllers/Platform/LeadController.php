@@ -8,17 +8,16 @@ use App\Platform\Auth\AuthenticatedPlatformUser;
 use App\Support\CursorRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
 
 class LeadController extends Controller
 {
-    public const STATUSES = ['new', 'contacted', 'converted', 'discarded'];
-
     public function index(Request $request, LeadService $leads): JsonResponse
     {
         $request->validate([
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'status' => ['sometimes', Rule::in(self::STATUSES)],
+            'status' => ['sometimes', Rule::in(LeadService::STATUSES)],
             'utm_source' => ['sometimes', 'nullable', 'string', 'max:100'],
             'limit' => ['sometimes', 'integer', 'between:1,50'],
             'cursor' => ['sometimes', 'string', 'max:500', CursorRule::for(['id' => 'uuid', 'created_at' => 'date'])],
@@ -32,11 +31,18 @@ class LeadController extends Controller
         ));
     }
 
+    public function destroy(Request $request, string $id, LeadService $leads): Response
+    {
+        $leads->delete(AuthenticatedPlatformUser::from($request), $id);
+
+        return response()->noContent();
+    }
+
     public function update(Request $request, string $id, LeadService $leads): JsonResponse
     {
         /** @var array<string, mixed> $changes */
         $changes = $request->validate([
-            'status' => ['sometimes', Rule::in(self::STATUSES)],
+            'status' => ['sometimes', Rule::in(LeadService::STATUSES)],
             'notes' => ['sometimes', 'nullable', 'string', 'max:1000'],
         ]);
 

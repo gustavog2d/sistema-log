@@ -11,6 +11,14 @@ use InvalidArgumentException;
 
 class LeadsServiceProvider extends ServiceProvider
 {
+    public function boot(): void
+    {
+        // Falha na subida, não só na primeira resolução: o `.env.example` de desenvolvimento nunca vale em outro ambiente.
+        if (Config::string('leads.captcha_driver') === 'fake' && ! $this->app->environment(['local', 'testing'])) {
+            throw new InvalidArgumentException('O verificador de captcha de teste só pode ser usado nos ambientes local e testing.');
+        }
+    }
+
     public function register(): void
     {
         $this->app->singleton(CaptchaVerifier::class, function (): CaptchaVerifier {

@@ -74,3 +74,23 @@ it('CA-11 audits the change with the status before and after and without the not
 it('keeps the leads away from the API role', function () {
     expect(DB::connection('pgsql_admin')->selectOne("select has_table_privilege('app_runtime', 'leads', 'SELECT') as ok")->ok)->toBeFalse();
 });
+
+it('answers 403 to a staff member who has not finished the login (challenge token)', function () {
+    $user = $this->platformUser();
+    $challenge = $this->login($user->email)->assertOk()->json('challenge_token');
+    $lead = makeLead();
+
+    leads($this, $challenge, 'GET', 'leads')->assertForbidden();
+    leads($this, $challenge, 'PATCH', "leads/{$lead->id}", ['status' => 'contacted'])->assertForbidden();
+});
+
+it('CA-14 deletes a lead at once, audited with the id only, for the super admin', function () {
+    $lead = makeLead(['email' => 'apagar@exemplo.com']);
+
+    leads($this, $this->supportToken(), 'DELETE', "leads/{$lead->id}")->assertForbidden();
+    leads($this, $this->adminToken(), 'DELETE', "leads/{$lead->id}")->assertNoContent();
+    leads($this, $this->adminToken(), 'DELETE', "leads/{$lead->id}")->assertNotFound();
+
+    $log = DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'lead.deleted')->first();
+    expect(leadCount())->toBe(0)->and($log->metadata)->toContain($lead->id)->not->toContain('apagar@exemplo.com');
+});

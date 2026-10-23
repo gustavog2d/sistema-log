@@ -4,21 +4,46 @@ namespace App\Leads;
 
 use App\Models\PlatformUser;
 use App\Platform\Auth\PlatformAudit;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use stdClass;
 
 /** Captura e gestão dos leads da landing (PLT-011). Escreve com o papel de plataforma. */
 class LeadService
 {
+    public const STATUSES = ['new', 'contacted', 'converted', 'discarded'];
+
     public const PUBLIC_FIELDS = [
         'name', 'email', 'phone', 'niche', 'message', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'referrer', 'landing_path',
     ];
 
-    public function __construct(private readonly PlatformAudit $audit) {}
+    public function __construct(private readonly PlatformAudit $audit, private readonly CaptchaVerifier $captcha) {}
+
+    /**
+     * Pedido público completo: campo isca, anti-robô e gravação. O campo isca preenchido encerra como sucesso sem gravar
+     * (o robô não descobre que foi barrado); o captcha recusado é erro de validação.
+     *
+     * @param  array<string, mixed>  $data  campos já validados
+     *
+     * @throws ValidationException
+     */
+    public function submit(array $data, string $captchaToken, ?string $decoy, ?string $ip): void
+    {
+        if ($decoy !== null && $decoy !== '') {
+            return;
+        }
+
+        if (! $this->captcha->verify($captchaToken, $ip)) {
+            throw ValidationException::withMessages(['captcha_token' => 'Não foi possível confirmar que você é uma pessoa. Tente de novo.']);
+        }
+
+        $this->capture($data, $ip);
+    }
 
     /**
      * Grava o lead. O mesmo e-mail em 24 horas não cria outro: só completa telefone e mensagem se vierem preenchidos.
@@ -27,12 +52,29 @@ class LeadService
      */
     public function capture(array $data, ?string $ip): void
     {
-        $db = DB::connection('pgsql_platform');
         $email = mb_strtolower(trim(is_string($data['email'] ?? null) ? $data['email'] : ''));
-        $recent = $db->table('leads')->whereRaw('lower(email) = ?', [$email])->where('created_at', '>', now()->subDay())->orderByDesc('created_at')->first();
+
+        // Travado por e-mail: dois pedidos simultâneos com o mesmo endereço não criam dois leads.
+        DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($data, $email, $ip): void {
+            $db->statement('select pg_advisory_xact_lock(hashtext(?))', ['lead:'.$email]);
+            $this->store($db, $data, $email, $ip);
+        });
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function store(Connection $db, array $data, string $email, ?string $ip): void
+    {
+        $recent = $db->table('leads')->where('email', $email)->where('created_at', '>', now()->subDay())->orderByDesc('created_at')->first();
 
         if ($recent instanceof stdClass) {
-            $update = array_filter(['phone' => $data['phone'] ?? null, 'message' => $data['message'] ?? null], fn (mixed $value): bool => is_string($value) && $value !== '');
+            // Só completa o que está vazio: quem repete o e-mail não troca o telefone nem a mensagem de um lead que já existe.
+            $update = [];
+
+            foreach (['phone', 'message'] as $field) {
+                if (($recent->{$field} === null || $recent->{$field} === '') && is_string($data[$field] ?? null) && $data[$field] !== '') {
+                    $update[$field] = $data[$field];
+                }
+            }
 
             if ($update !== []) {
                 $db->table('leads')->where('id', $recent->id)->update($update + ['updated_at' => now()]);
@@ -49,7 +91,7 @@ class LeadService
 
         $db->table('leads')->insert($row + [
             // Só o hash do IP, com sal: serve para achar abuso, não para identificar a pessoa.
-            'ip_hash' => $ip === null ? null : hash_hmac('sha256', $ip, Config::string('app.key')),
+            'ip_hash' => $ip === null ? null : hash_hmac('sha256', $ip, Config::string('leads.ip_hash_key') !== '' ? Config::string('leads.ip_hash_key') : Config::string('app.key')),
             'privacy_accepted_at' => now(), 'privacy_version' => Config::string('leads.privacy_version'),
             'created_at' => now(), 'updated_at' => now(),
         ]);
@@ -89,28 +131,41 @@ class LeadService
      */
     public function update(PlatformUser $actor, string $id, array $changes): array
     {
-        $db = DB::connection('pgsql_platform');
-        $lead = $db->table('leads')->where('id', $id)->first();
-        abort_unless($lead instanceof stdClass, 404);
+        [$lead, $before] = DB::connection('pgsql_platform')->transaction(function (Connection $db) use ($id, $changes): array {
+            $lead = $db->table('leads')->where('id', $id)->lockForUpdate()->first();
+            abort_unless($lead instanceof stdClass, 404);
 
+            if ($changes !== []) {
+                $db->table('leads')->where('id', $id)->update($changes + ['updated_at' => now()]);
+            }
+
+            return [$db->table('leads')->where('id', $id)->first() ?? $lead, $lead->status];
+        });
+
+        // As notas são texto livre da equipe sobre uma pessoa: ficam fora do log.
         if ($changes !== []) {
-            $db->table('leads')->where('id', $id)->update($changes + ['updated_at' => now()]);
-
-            // As notas são texto livre da equipe sobre uma pessoa: ficam fora do log.
-            $this->audit->record('lead.updated', $actor, ['lead' => $id, 'status_before' => $lead->status, 'status_after' => $changes['status'] ?? $lead->status]);
+            $this->audit->record('lead.updated', $actor, ['lead' => $id, 'status_before' => $before, 'status_after' => $changes['status'] ?? $before]);
         }
 
-        return $this->present($db->table('leads')->where('id', $id)->first() ?? $lead);
+        return $this->present($lead);
     }
 
-    /** Apaga os leads descartados e os parados há mais do prazo de retenção; os convertidos ficam. */
+    /** Exclusão imediata a pedido da pessoa (LGPD): o registro some e só o id e quem apagou ficam na auditoria. */
+    public function delete(PlatformUser $actor, string $id): void
+    {
+        $deleted = DB::connection('pgsql_platform')->table('leads')->where('id', $id)->delete();
+        abort_if($deleted === 0, 404);
+
+        $this->audit->record('lead.deleted', $actor, ['lead' => $id]);
+    }
+
+    /** Apaga os leads descartados e os mais velhos que o prazo de retenção que seguem sem conversão; os convertidos ficam. */
     public function prune(): int
     {
         $limit = now()->subMonths(Config::integer('leads.retention_months'));
 
         return DB::connection('pgsql_platform')->table('leads')
-            ->where(fn (Builder $q) => $q->where('status', 'discarded')->orWhere(fn (Builder $old) => $old->whereIn('status', ['new', 'contacted'])->where('updated_at', '<', $limit)))
-            ->where('status', '<>', 'converted')
+            ->where(fn (Builder $q) => $q->where('status', 'discarded')->orWhere(fn (Builder $old) => $old->whereIn('status', ['new', 'contacted'])->where('created_at', '<', $limit)))
             ->delete();
     }
 

@@ -129,6 +129,7 @@ Route::middleware('platform')->prefix('platform')->group(function () {
                 Route::post('tenants/{id}/extend-trial', [TenantAdminController::class, 'extendTrial'])->whereUuid('id');
                 Route::put('tenants/{id}/entitlements/{feature}', [TenantAdminController::class, 'setEntitlement'])->whereUuid('id');
                 Route::delete('tenants/{id}/entitlements/{feature}', [TenantAdminController::class, 'resetEntitlement'])->whereUuid('id');
+                Route::delete('leads/{id}', [LeadController::class, 'destroy'])->whereUuid('id');
                 Route::post('coupons', [CouponController::class, 'store']);
                 Route::patch('coupons/{id}', [CouponController::class, 'update'])->whereUuid('id');
                 Route::post('plans', [PlanController::class, 'store']);

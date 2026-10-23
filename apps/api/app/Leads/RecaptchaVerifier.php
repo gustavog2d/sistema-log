@@ -17,7 +17,7 @@ class RecaptchaVerifier implements CaptchaVerifier
         }
 
         try {
-            $response = Http::asForm()->timeout(5)->post('https://www.google.com/recaptcha/api/siteverify', array_filter([
+            $response = Http::asForm()->connectTimeout(2)->timeout(5)->post('https://www.google.com/recaptcha/api/siteverify', array_filter([
                 'secret' => $this->secret, 'response' => $token, 'remoteip' => $ip,
             ]));
 

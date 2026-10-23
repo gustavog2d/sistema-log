@@ -23,7 +23,7 @@ final class CursorRule
                 $item = is_array($decoded) ? ($decoded[$column] ?? null) : null;
                 $valid = $valid && is_string($item) && match ($type) {
                     'uuid' => preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $item) === 1,
-                    'date' => strtotime($item) !== false,
+                    'date' => preg_match('/^\d{4}-\d{2}-\d{2}[T ][0-9:.]+(Z|[+-]\d{2}:?\d{2})?$/', $item) === 1,
                 };
             }
 
