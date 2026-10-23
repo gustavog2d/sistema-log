@@ -38,8 +38,10 @@ it('CA-03 affects what reads the resolver, like the team limit', function () {
     $admin = $this->adminToken();
     entitlement($this, $admin, $ws, 'usuarios.max', ['enabled' => true, 'limit' => 1]);
 
-    $impersonation = adm($this, $this->supportToken(), 'POST', "tenants/{$ws->id}/impersonate", ['reason' => 'Ajudar a dona a convidar gente'])->assertOk();
-    $token = $impersonation->json('access_token');
+    $id = (string) Str::uuid();
+    $secret = Str::random(40);
+    DB::connection('pgsql_admin')->table('user_access_tokens')->insert(['id' => $id, 'tenant_id' => $ws->id, 'user_id' => $ws->owner_id, 'kind' => 'access', 'token_hash' => hash('sha256', $secret), 'expires_at' => now()->addHour(), 'created_at' => now()]);
+    $token = "{$id}|{$secret}";
 
     asTenant($this, $token, 'POST', 'neg', 'users/invitations', ['name' => 'Nova Pessoa', 'email' => 'nova@exemplo.com', 'role' => 'reception'])->assertStatus(409)->assertJsonPath('code', 'plan_limit_reached');
 
@@ -79,4 +81,24 @@ it('CA-13 audits the exception with before and after', function () {
 
     $logs = DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'tenant.entitlement_set')->get();
     expect($logs)->toHaveCount(2)->and($logs->last()->metadata)->toContain('"before"')->toContain('"after"');
+});
+
+it('keeps the id and the creation date when an exception is edited', function () {
+    $ws = adminTenant($this);
+
+    entitlement($this, $this->adminToken(), $ws, 'usuarios.max', ['enabled' => true, 'limit' => 3])->assertOk();
+    $first = DB::connection('pgsql_admin')->table('tenant_entitlement_overrides')->first();
+    $this->travel(5)->minutes();
+    entitlement($this, $this->adminToken(), $ws, 'usuarios.max', ['enabled' => true, 'limit' => 9])->assertOk();
+    $second = DB::connection('pgsql_admin')->table('tenant_entitlement_overrides')->first();
+
+    expect($second->id)->toBe($first->id)->and($second->created_at)->toBe($first->created_at);
+});
+
+it('does not write an exception for a business without subscription', function () {
+    $ws = adminTenant($this);
+    DB::connection('pgsql_admin')->table('subscriptions')->delete();
+
+    entitlement($this, $this->adminToken(), $ws, 'usuarios.max', ['enabled' => true, 'limit' => 3])->assertStatus(409);
+    expect(DB::connection('pgsql_admin')->table('tenant_entitlement_overrides')->count())->toBe(0);
 });

@@ -73,3 +73,11 @@ it('CA-12 lets support read but answers 404 for an unknown tenant and 401 withou
 it('CA-12 is not reachable on a business host', function () {
     $this->getJson('http://neg.app.test/api/v1/platform/tenants')->assertNotFound();
 });
+
+it('M4 answers 422 for a cursor that is not ours', function (string $cursor) {
+    adm($this, $this->adminToken(), 'GET', 'tenants?cursor='.urlencode($cursor))->assertUnprocessable()->assertJsonValidationErrors('cursor');
+})->with([
+    'not base64' => ['@@@'],
+    'wrong keys' => [base64_encode('{"foo":"bar"}')],
+    'wrong types' => [base64_encode('{"tenants.created_at":"não é data","tenants.id":"não é uuid","_pointsToNextItems":true}')],
+]);

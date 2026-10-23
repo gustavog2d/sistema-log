@@ -40,11 +40,12 @@ Route::middleware(['tenant', 'subscription.access'])->group(function () {
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.
 Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager'])->prefix('users')->group(function () {
     Route::get('/', [TeamController::class, 'index']);
-    Route::post('invitations', [TeamController::class, 'invite'])->middleware('throttle:team-invite');
-    Route::delete('invitations/{id}', [TeamController::class, 'cancelInvitation'])->whereUuid('id');
-    Route::patch('{id}', [TeamController::class, 'changeRole'])->whereUuid('id');
-    Route::post('{id}/deactivate', [TeamController::class, 'deactivate'])->whereUuid('id');
-    Route::post('{id}/reactivate', [TeamController::class, 'reactivate'])->whereUuid('id');
+    // O acesso de suporte só lê a equipe: um convite ou uma mudança de papel sobreviveria ao token de 30 minutos.
+    Route::post('invitations', [TeamController::class, 'invite'])->middleware(['no.impersonation', 'throttle:team-invite']);
+    Route::delete('invitations/{id}', [TeamController::class, 'cancelInvitation'])->whereUuid('id')->middleware('no.impersonation');
+    Route::patch('{id}', [TeamController::class, 'changeRole'])->whereUuid('id')->middleware('no.impersonation');
+    Route::post('{id}/deactivate', [TeamController::class, 'deactivate'])->whereUuid('id')->middleware('no.impersonation');
+    Route::post('{id}/reactivate', [TeamController::class, 'reactivate'])->whereUuid('id')->middleware('no.impersonation');
 });
 
 // Gestão da assinatura pela dona (PLT-007). Funciona também com a assinatura suspensa ou cancelada (`subscription.exempt`):

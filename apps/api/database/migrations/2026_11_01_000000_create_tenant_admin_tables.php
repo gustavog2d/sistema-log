@@ -28,7 +28,8 @@ return new class extends Migration
 
         // Acesso de suporte: o token de assinante guarda quem da equipe o pediu.
         Schema::table('user_access_tokens', function (Blueprint $table) {
-            $table->foreignUuid('impersonated_by')->nullable()->constrained('platform_users')->nullOnDelete();
+            // Apagar a pessoa da equipe não pode transformar o acesso de suporte em um acesso comum: desative em vez de apagar.
+            $table->foreignUuid('impersonated_by')->nullable()->constrained('platform_users')->restrictOnDelete();
         });
 
         DB::statement(<<<'SQL'

@@ -201,6 +201,7 @@ export type SetTenantEntitlementBody = {
   enabled: boolean;
   /**
      * @minimum 0
+     * @maximum 1000000
      * @nullable
      */
   limit?: number | null;
@@ -562,6 +563,11 @@ export type setTenantEntitlementResponse404 = {
   status: 404
 }
 
+export type setTenantEntitlementResponse409 = {
+  data: ProblemResponse
+  status: 409
+}
+
 export type setTenantEntitlementResponse422 = {
   data: ProblemResponse
   status: 422
@@ -570,7 +576,7 @@ export type setTenantEntitlementResponse422 = {
 export type setTenantEntitlementResponseSuccess = (setTenantEntitlementResponse200) & {
   headers: Headers;
 };
-export type setTenantEntitlementResponseError = (setTenantEntitlementResponse401 | setTenantEntitlementResponse403 | setTenantEntitlementResponse404 | setTenantEntitlementResponse422) & {
+export type setTenantEntitlementResponseError = (setTenantEntitlementResponse401 | setTenantEntitlementResponse403 | setTenantEntitlementResponse404 | setTenantEntitlementResponse409 | setTenantEntitlementResponse422) & {
   headers: Headers;
 };
 

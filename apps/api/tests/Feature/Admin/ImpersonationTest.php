@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\PlatformUser;
 use App\Notifications\TransactionalMail;
+use App\Platform\Auth\PlatformAudit;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -116,4 +118,57 @@ it('CA-12 asks for a login and limits the attempts', function () {
     }
 
     expect($last)->toBe(429);
+});
+
+it('A1 does not let the support access invite, change roles, deactivate or cancel invitations', function () {
+    $ws = adminTenant($this);
+    $token = impersonate($this, $this->supportToken(), $ws)->json('access_token');
+    $id = $ws->owner_id;
+
+    foreach ([
+        ['POST', 'users/invitations', ['name' => 'Nova Pessoa', 'email' => 'nova@exemplo.com', 'role' => 'manager']],
+        ['PATCH', "users/{$id}", ['role' => 'manager']],
+        ['POST', "users/{$id}/deactivate", []],
+        ['POST', "users/{$id}/reactivate", []],
+        ['DELETE', 'users/invitations/'.Str::uuid(), []],
+    ] as [$method, $path, $body]) {
+        asTenant($this, $token, $method, 'neg', $path, $body)->assertForbidden()->assertJsonPath('code', 'impersonation_forbidden');
+    }
+    expect(DB::connection('pgsql_admin')->table('invitations')->count())->toBe(0);
+});
+
+it('M2 drops the support access when the staff member is deactivated', function () {
+    $ws = adminTenant($this);
+    $staff = $this->platformUser();
+    $token = impersonate($this, $this->accessTokenFor($staff), $ws)->json('access_token') ?? '';
+    asTenant($this, $token, 'GET', 'neg', 'auth/me')->assertOk();
+
+    DB::connection('pgsql_admin')->table('platform_users')->where('id', $staff->id)->update(['active' => false]);
+
+    asTenant($this, $token, 'GET', 'neg', 'auth/me')->assertUnauthorized();
+});
+
+it('M1 records the token and its expiry in the audit when the access is issued', function () {
+    $ws = adminTenant($this);
+
+    $token = impersonate($this, $this->supportToken(), $ws)->json('access_token');
+    $audit = DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'tenant.impersonated')->first();
+
+    expect($audit->metadata)->toContain(explode('|', $token)[0])->toContain('expires_at');
+});
+
+it('M1 revokes the new token when the audit fails', function () {
+    $ws = adminTenant($this);
+    $support = $this->supportToken();
+    $this->app->bind(PlatformAudit::class, fn () => new class(request()) extends PlatformAudit
+    {
+        public function record(string $event, ?PlatformUser $user = null, array $metadata = []): void
+        {
+            throw new RuntimeException('auditoria fora do ar');
+        }
+    });
+
+    impersonate($this, $support, $ws)->assertStatus(500);
+
+    expect(DB::connection('pgsql_admin')->table('user_access_tokens')->count())->toBe(0);
 });

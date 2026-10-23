@@ -89,14 +89,20 @@ class TenantAdminActions
             throw ValidationException::withMessages(['limit' => 'Esta funcionalidade não tem limite.']);
         }
 
+        // Sem assinatura não há regra de plano para a exceção se sobrepor: confere antes de gravar.
+        abort_unless($this->directory->effective($tenantId) !== [], 409, 'O negócio não tem assinatura.');
+
         $db = DB::connection('pgsql_platform');
-        $before = $db->table('tenant_entitlement_overrides')->where('tenant_id', $tenantId)->where('feature_id', $feature->id)->first(['enabled', 'limit', 'visible']);
+        $where = ['tenant_id' => $tenantId, 'feature_id' => $feature->id];
+        $before = $db->table('tenant_entitlement_overrides')->where($where)->first(['enabled', 'limit', 'visible']);
         $row = ['enabled' => $data['enabled'], 'limit' => $limit, 'visible' => $data['visible'] ?? true, 'created_by' => $actor->id, 'updated_at' => now()];
 
-        $db->table('tenant_entitlement_overrides')->updateOrInsert(
-            ['tenant_id' => $tenantId, 'feature_id' => $feature->id],
-            $row + ['id' => (string) Str::uuid(), 'created_at' => now()],
-        );
+        // O id e a data de criação só entram na criação; trocar a exceção não muda a identidade da linha.
+        if ($before instanceof stdClass) {
+            $db->table('tenant_entitlement_overrides')->where($where)->update($row);
+        } else {
+            $db->table('tenant_entitlement_overrides')->insert($row + $where + ['id' => (string) Str::uuid(), 'created_at' => now()]);
+        }
 
         $this->audit->record('tenant.entitlement_set', $actor, [
             'tenant' => $tenantId, 'feature' => $feature->key,
@@ -145,7 +151,20 @@ class TenantAdminActions
             throw new SubscriptionConflict('O negócio não tem dona ativa.', 'no_active_owner');
         }
 
-        $this->audit->record('tenant.impersonated', $actor, ['tenant' => $tenantId, 'reason' => $reason]);
+        $tokenId = explode('|', $issued['token'])[0];
+
+        try {
+            $this->audit->record('tenant.impersonated', $actor, ['tenant' => $tenantId, 'reason' => $reason, 'token' => $tokenId, 'expires_at' => $issued['expires_at']->toIso8601String()]);
+        } catch (\Throwable $e) {
+            // Sem rastro não há acesso: o token recém-emitido é apagado antes de falhar.
+            DB::connection('pgsql_auth')->transaction(function (Connection $tx) use ($tenantId, $tokenId): void {
+                $tx->statement("select set_config('app.tenant_id', ?, true)", [$tenantId]);
+                $tx->table('user_access_tokens')->where('id', $tokenId)->delete();
+            });
+
+            throw $e;
+        }
+
         $this->notifier->toOwner($tenantId, 'support_access', 'support_access:'.$tenantId.':'.Str::uuid());
 
         return [

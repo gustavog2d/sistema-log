@@ -123,7 +123,7 @@ paths:
               required: [enabled]
               properties:
                 enabled: { type: boolean }
-                limit: { type: [integer, "null"], minimum: 0 }
+                limit: { type: [integer, "null"], minimum: 0, maximum: 1000000 }
                 visible: { type: boolean }
       responses:
         "200":
@@ -134,6 +134,7 @@ paths:
         "401": { $ref: "#/components/responses/Problem" }
         "403": { $ref: "#/components/responses/Problem" }
         "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
         "422": { $ref: "#/components/responses/Problem" }
     delete:
       operationId: resetTenantEntitlement

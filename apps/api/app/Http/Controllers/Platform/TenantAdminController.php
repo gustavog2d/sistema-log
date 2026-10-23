@@ -6,9 +6,11 @@ use App\Admin\TenantAdminActions;
 use App\Admin\TenantDirectory;
 use App\Http\Controllers\Controller;
 use App\Platform\Auth\AuthenticatedPlatformUser;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /** Gestão de assinantes pela equipe da plataforma (PLT-009). Só traduz o pedido; as regras estão em `App\Admin`. */
 class TenantAdminController extends Controller
@@ -21,14 +23,19 @@ class TenantAdminController extends Controller
             'q' => ['sometimes', 'nullable', 'string', 'max:100'],
             'status' => ['sometimes', Rule::in(['trialing', 'active', 'suspended', 'canceled'])],
             'limit' => ['sometimes', 'integer', 'between:1,50'],
-            'cursor' => ['sometimes', 'string', 'max:500'],
+            'cursor' => ['sometimes', 'string', 'max:500', self::cursorRule()],
         ]);
 
-        return response()->json($this->directory->list(
-            $request->filled('q') ? $request->string('q')->toString() : null,
-            $request->filled('status') ? $request->string('status')->toString() : null,
-            $request->integer('limit', 20),
-        ));
+        try {
+            return response()->json($this->directory->list(
+                $request->filled('q') ? $request->string('q')->toString() : null,
+                $request->filled('status') ? $request->string('status')->toString() : null,
+                $request->integer('limit', 20),
+            ));
+        } catch (\UnexpectedValueException|\InvalidArgumentException|QueryException) {
+            // Cursor que não é de uma página nossa (adulterado ou de outra lista).
+            throw ValidationException::withMessages(['cursor' => 'O cursor é inválido.']);
+        }
     }
 
     public function show(string $id): JsonResponse
@@ -92,5 +99,22 @@ class TenantAdminController extends Controller
     private function item(string $id): JsonResponse
     {
         return response()->json($this->directory->find($id) ?? abort(404));
+    }
+
+    /** O cursor é nosso (a página devolve `next_cursor`): aceita só o formato que ela gera. */
+    private static function cursorRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            $decoded = is_string($value) ? json_decode((string) base64_decode(strtr($value, '-_', '+/'), true), true) : null;
+
+            $valid = is_array($decoded)
+                && is_string($decoded['tenants.id'] ?? null) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $decoded['tenants.id']) === 1
+                && is_string($decoded['tenants.created_at'] ?? null) && strtotime($decoded['tenants.created_at']) !== false
+                && is_bool($decoded['_pointsToNextItems'] ?? null);
+
+            if (! $valid) {
+                $fail('O cursor é inválido.');
+            }
+        };
     }
 }

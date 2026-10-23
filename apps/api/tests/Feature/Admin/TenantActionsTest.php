@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 it('CA-05 suspends by hand with a reason and blocks writes at once', function () {
     $ws = adminTenant($this, 'neg', 'active');
@@ -87,4 +88,26 @@ it('CA-05 makes the write block visible to the business at once', function () {
 
     asTenant($this, $token, 'GET', 'neg', 'subscription')->assertOk()->assertJsonPath('can_write', false);
     asTenant($this, $token, 'POST', 'neg', 'users/invitations', ['name' => 'Nova Pessoa', 'email' => 'nova@exemplo.com', 'role' => 'reception'])->assertForbidden()->assertJsonPath('code', 'subscription_suspended');
+});
+
+it('does not let the owner undo a staff suspension by paying (409 suspended_by_support)', function () {
+    $ws = adminTenant($this, 'neg', 'active');
+    adm($this, $this->adminToken(), 'POST', "tenants/{$ws->id}/suspend", ['reason' => 'Motivo qualquer'])->assertOk();
+    $id = (string) Str::uuid();
+    $secret = Str::random(40);
+    DB::connection('pgsql_admin')->table('user_access_tokens')->insert(['id' => $id, 'tenant_id' => $ws->id, 'user_id' => $ws->owner_id, 'kind' => 'access', 'token_hash' => hash('sha256', $secret), 'expires_at' => now()->addHour(), 'created_at' => now()]);
+
+    $this->withToken("{$id}|{$secret}")->withHeaders(['Idempotency-Key' => 'k1'])->putJson('http://neg.app.test/api/v1/subscription/payment-method', ['payment_method_token' => 'tok_ok'])
+        ->assertStatus(409)->assertJsonPath('code', 'suspended_by_support');
+
+    expect(DB::connection('pgsql_admin')->table('subscriptions')->value('status'))->toBe('suspended');
+});
+
+it('audits the staff actions with before, after and reason', function () {
+    $ws = adminTenant($this, 'neg', 'active');
+    adm($this, $this->adminToken(), 'POST', "tenants/{$ws->id}/suspend", ['reason' => 'Motivo qualquer'])->assertOk();
+
+    $log = DB::connection('pgsql_admin')->table('platform_audit_logs')->where('event', 'tenant.suspended')->first();
+
+    expect($log->metadata)->toContain('"before"')->toContain('"after"')->toContain('Motivo qualquer');
 });
