@@ -5,6 +5,7 @@ namespace App\Expenses;
 use App\Support\ResourceInUse;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Query\JoinClause;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -50,7 +51,16 @@ class ExpenseLedger
             throw new ResourceInUse('category_in_use', 'Esta categoria tem despesas. Mova ou apague as despesas antes.', ['count' => $count]);
         }
 
-        $category->delete();
+        try {
+            $category->delete();
+        } catch (QueryException $e) { // @phpstan-ignore catch.neverThrown (o trait Audited não declara o que o banco lança)
+            // 23503 = chave estrangeira: uma despesa entrou na categoria entre a contagem e a exclusão.
+            if ($e->getCode() === '23503') {
+                throw new ResourceInUse('category_in_use', 'Esta categoria tem despesas. Mova ou apague as despesas antes.', ['count' => $category->expenses()->count()]);
+            }
+
+            throw $e;
+        }
     }
 
     /** @return array{created: int, skipped: int} */

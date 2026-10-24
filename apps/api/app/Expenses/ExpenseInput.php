@@ -2,7 +2,6 @@
 
 namespace App\Expenses;
 
-use App\Clients\ClientInput;
 use Closure;
 
 /** Normaliza e valida os campos de categorias e despesas (FIN-002). */
@@ -27,7 +26,7 @@ final class ExpenseInput
     /** @return array<string, list<mixed>> */
     public static function categoryRules(?string $ignoreId = null): array
     {
-        return ['name' => ['required', 'string', 'min:2', 'max:60', ClientInput::plainText(), self::uniqueName($ignoreId)]];
+        return ['name' => ['required', 'string', 'min:2', 'max:60', self::singleLine('O nome não pode ter caracteres de controle.'), self::uniqueName($ignoreId)]];
     }
 
     /** @return array<string, list<mixed>> */
@@ -37,10 +36,20 @@ final class ExpenseInput
 
         return [
             'category_id' => [$required, 'bail', 'uuid', self::categoryExists()],
-            'description' => [$required, 'string', 'min:2', 'max:255', ClientInput::noControl()],
+            'description' => [$required, 'string', 'min:2', 'max:255', self::singleLine('A descrição não pode ter caracteres de controle.')],
             'amount_cents' => [$required, 'integer', 'between:1,100000000'],
             'spent_on' => [$required, 'date_format:Y-m-d', 'after_or_equal:2000-01-01', 'before:2100-01-01'],
         ];
+    }
+
+    /** Texto de uma linha sem caracteres de controle nem de direção do texto (o resto, como "@" e endereços, vale). */
+    private static function singleLine(string $message): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail) use ($message): void {
+            if (is_string($value) && (preg_match('/[\x00-\x1F\x7F]/', $value) === 1 || preg_match('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]/u', $value) === 1)) {
+                $fail($message);
+            }
+        };
     }
 
     /** Nome único no negócio sem diferenciar maiúsculas e acentos (o banco decide em uma corrida). */

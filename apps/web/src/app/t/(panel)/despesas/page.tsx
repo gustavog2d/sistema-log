@@ -38,7 +38,9 @@ export default async function Page() {
     <ExpensesView
       me={session.me}
       initial={expenses.status === 200 ? expenses.data : null}
-      categories={categories.data?.data ?? []}
+      categories={
+        categories.status === 200 ? (categories.data?.data ?? []) : null
+      }
       month={month}
     />
   );

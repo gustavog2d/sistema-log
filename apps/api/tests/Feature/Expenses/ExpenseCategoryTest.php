@@ -90,3 +90,12 @@ it('CA-10 keeps categories of each business apart and allows the same name in tw
     expApi($this, $tokenA, 'DELETE', "expense-categories/{$b->id}", [], 'negocioa')->assertNotFound();
     expect($wsA->tenant_id)->not->toBe($wsB->tenant_id)->and($tokenB)->not->toBeEmpty();
 });
+
+it('CA-01 accepts category names and descriptions with characters that are not control characters', function () {
+    [$ws, $token] = ownerOf($this, 'neg');
+
+    $category = expApi($this, $token, 'POST', 'expense-categories', ['name' => 'Taxas @ banco (www)'])->assertCreated();
+    expApi($this, $token, 'POST', 'expenses', expenseBody((object) ['id' => $category->json('id')], ['description' => 'Pagamento em https://exemplo.com.br']))->assertCreated();
+    expApi($this, $token, 'POST', 'expense-categories', ['name' => "Com\x01controle"])->assertStatus(422)->assertJsonValidationErrors('name');
+    expect($ws->tenant_id)->not->toBeNull();
+});

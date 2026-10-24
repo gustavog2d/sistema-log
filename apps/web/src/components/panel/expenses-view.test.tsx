@@ -283,3 +283,19 @@ describe('ExpensesView', () => {
     expect(await axe(screen.getByRole('dialog'))).toHaveNoViolations();
   });
 });
+
+describe('ExpensesView extra states', () => {
+  it('CA-11 warns when the list is shorter than the month and when the categories did not load', () => {
+    const long = { ...list(), count: 600 };
+    const { unmount } = render(view({ initial: long }));
+    expect(
+      screen.getByText(/Mostrando as 1 despesas mais recentes de 600/),
+    ).toBeInTheDocument();
+    unmount();
+
+    render(view({ categories: null }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar as categorias agora.',
+    );
+  });
+});

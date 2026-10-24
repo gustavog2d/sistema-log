@@ -162,7 +162,10 @@ export function ExpenseCategoriesDialog({
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={() => setEditing(null)}
+                      onClick={() => {
+                        setEditing(null);
+                        setFieldError(null);
+                      }}
                       disabled={busy}
                     >
                       {t('common.cancel')}

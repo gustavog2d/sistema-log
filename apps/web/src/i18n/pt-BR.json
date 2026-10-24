@@ -1230,6 +1230,8 @@
     "categoryEditing": "Novo nome para {name}",
     "categorySave": "Salvar nome",
     "categoryCount": "({count})",
-    "close": "Fechar"
+    "close": "Fechar",
+    "truncated": "Mostrando as {shown} despesas mais recentes de {count}. Os totais cobrem todas.",
+    "categoriesLoadError": "Não foi possível carregar as categorias agora."
   }
 }

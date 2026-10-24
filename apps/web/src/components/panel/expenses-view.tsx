@@ -45,13 +45,14 @@ export function ExpensesView({
 }: {
   me: Me;
   initial: ExpenseList | null;
-  categories: ExpenseCategory[];
+  /** Nulo quando as categorias não puderam ser carregadas (a tela avisa em vez de dizer que não há categorias). */
+  categories: ExpenseCategory[] | null;
   /** Mês inicial (`aaaa-mm`), calculado no servidor. */
   month: string;
 }) {
   const [month, setMonth] = useState(initialMonth);
   const [list, setList] = useState<ExpenseList | null>(initial);
-  const [categories, setCategories] = useState(initialCategories);
+  const [categories, setCategories] = useState(initialCategories ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
     initial ? null : t('expenses.loadError'),
@@ -234,8 +235,18 @@ export function ExpensesView({
       ) : !me.can_write ? (
         <Alert tone="warning">{t('expenses.readOnly')}</Alert>
       ) : null}
-      {categories.length === 0 ? (
+      {initialCategories === null && categories.length === 0 ? (
+        <Alert tone="danger">{t('expenses.categoriesLoadError')}</Alert>
+      ) : categories.length === 0 ? (
         <Alert tone="info">{t('expenses.noCategories')}</Alert>
+      ) : null}
+      {list && list.count > list.data.length ? (
+        <Alert tone="warning">
+          {tf('expenses.truncated', {
+            shown: list.data.length,
+            count: list.count,
+          })}
+        </Alert>
       ) : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
