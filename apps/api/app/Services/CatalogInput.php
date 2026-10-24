@@ -35,7 +35,7 @@ final class CatalogInput
 
         return [
             'name' => [$required, 'string', 'min:2', 'max:100', ClientInput::plainText(), self::uniqueName(Service::class, $ignoreId)],
-            'description' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:500', ClientInput::noControl()],
             'category_id' => ['sometimes', 'nullable', 'bail', 'uuid', self::categoryExists()],
             'duration_minutes' => [$required, 'integer', 'between:5,720', 'multiple_of:5'],
             'price_cents' => ['sometimes', 'nullable', 'integer', 'between:0,100000000'],

@@ -199,6 +199,20 @@ export function ServicesView({
       : t('common.genericError');
   }
 
+  /** Recarrega as categorias (a contagem de serviços de cada uma muda quando o catálogo muda). */
+  async function refreshCategories() {
+    try {
+      const { data } = await call<{ data: ServiceCategory[] }>(
+        'GET',
+        'service-categories',
+      );
+
+      if (Array.isArray(data?.data)) setCategories(data.data);
+    } catch {
+      // A lista de categorias volta no próximo carregamento; o aviso principal já foi dado.
+    }
+  }
+
   /** Aplica a mudança na lista: o serviço arquivado some da lista padrão (a menos que "mostrar arquivados"). */
   function place(saved: Service, created: boolean) {
     setRows((current) => {
@@ -248,6 +262,7 @@ export function ServicesView({
         : await call<Service>('POST', 'services', { body });
 
       place(data, !service);
+      void refreshCategories();
       setDialog(null);
       setNotice({
         tone: 'success',
@@ -277,6 +292,7 @@ export function ServicesView({
         body: { status: next },
       });
       place(data, false);
+      void refreshCategories();
       setNotice({
         tone: 'success',
         text: t(
@@ -303,6 +319,7 @@ export function ServicesView({
     try {
       await call('DELETE', `services/${target.id}`);
       setRows((current) => current.filter((row) => row.id !== target.id));
+      void refreshCategories();
       setDialog(null);
       setNotice({ tone: 'success', text: t('services.deleted') });
     } catch (failure) {

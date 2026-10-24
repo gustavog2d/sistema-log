@@ -866,7 +866,6 @@
     "allCategories": "Todas",
     "noCategory": "Sem categoria",
     "showArchived": "Mostrar também os arquivados",
-    "onlyArchived": "Só arquivados",
     "empty": "Nenhum serviço encontrado.",
     "emptyFirst": "Você ainda não tem serviços. Cadastre o primeiro ou comece pelos serviços sugeridos para o seu tipo de negócio.",
     "caption": "Serviços",
@@ -926,7 +925,6 @@
     "categoryAdded": "Categoria criada.",
     "categoryRenamed": "Categoria renomeada.",
     "categoryDeleted": "Categoria excluída.",
-    "categoryInUse": "Esta categoria tem {count} serviço(s). Mova ou apague os serviços antes.",
     "categoryEditing": "Nome novo para {name}",
     "categorySave": "Salvar nome",
     "close": "Fechar"

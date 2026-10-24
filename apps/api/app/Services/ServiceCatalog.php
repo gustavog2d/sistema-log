@@ -100,7 +100,8 @@ class ServiceCatalog
     public function applyPreset(): array
     {
         $niche = $this->context->current()?->niche;
-        $preset = is_string($niche) ? config("niche_presets.{$niche}") : null;
+        $presets = config('niche_presets');
+        $preset = is_string($niche) && is_array($presets) ? ($presets[$niche] ?? null) : null;
 
         if (! is_string($niche) || ! is_array($preset)) {
             throw ValidationException::withMessages(['niche' => 'O negócio não tem um nicho com serviços iniciais.']);
@@ -109,30 +110,43 @@ class ServiceCatalog
         $created = ['categories' => 0, 'services' => 0];
         $skipped = ['categories' => 0, 'services' => 0];
 
-        DB::transaction(function () use ($preset, &$created, &$skipped): void {
-            /** @var array<string, array<string, int>> $preset */
-            foreach ($preset as $categoryName => $services) {
-                $category = ServiceCategory::query()->whereRaw('name_key = lower(f_unaccent(?))', [$categoryName])->first();
+        $attempt = function () use ($preset, &$created, &$skipped): void {
+            $created = ['categories' => 0, 'services' => 0];
+            $skipped = ['categories' => 0, 'services' => 0];
 
-                if ($category === null) {
-                    $category = ServiceCategory::create(['name' => $categoryName]);
-                    $created['categories']++;
-                } else {
-                    $skipped['categories']++;
-                }
+            DB::transaction(function () use ($preset, &$created, &$skipped): void {
+                /** @var array<string, array<string, int>> $preset */
+                foreach ($preset as $categoryName => $services) {
+                    $category = ServiceCategory::query()->whereRaw('name_key = lower(f_unaccent(?))', [$categoryName])->first();
 
-                foreach ($services as $name => $minutes) {
-                    if (Service::query()->whereRaw('name_key = lower(f_unaccent(?))', [$name])->exists()) {
-                        $skipped['services']++;
-
-                        continue;
+                    if ($category === null) {
+                        $category = ServiceCategory::create(['name' => $categoryName]);
+                        $created['categories']++;
+                    } else {
+                        $skipped['categories']++;
                     }
 
-                    Service::create(['name' => $name, 'duration_minutes' => $minutes, 'category_id' => $category->id]);
-                    $created['services']++;
+                    foreach ($services as $name => $minutes) {
+                        if (Service::query()->whereRaw('name_key = lower(f_unaccent(?))', [$name])->exists()) {
+                            $skipped['services']++;
+
+                            continue;
+                        }
+
+                        Service::create(['name' => $name, 'duration_minutes' => $minutes, 'category_id' => $category->id]);
+                        $created['services']++;
+                    }
                 }
-            }
-        });
+            });
+        };
+
+        try {
+            $attempt();
+        } catch (UniqueConstraintViolationException) {
+            // Duas chamadas ao mesmo tempo: o índice único recusou a segunda gravação e a transação toda foi desfeita.
+            // Na repetição, o que a outra criou passa a contar como já existente.
+            $attempt();
+        }
 
         return ['niche' => $niche, 'created' => $created, 'skipped' => $skipped];
     }

@@ -448,6 +448,28 @@ describe('ServicesView', () => {
     ).toBeInTheDocument();
   });
 
+  it('CA-06 refreshes the count of services of the categories after the catalog changes', async () => {
+    call.mockImplementation(async (_method: string, path: string) => {
+      if (path === 'service-categories')
+        return {
+          status: 200,
+          data: { data: [category({ services_count: 3 })] },
+        };
+
+      return { status: 200, data: service({ status: 'archived' }) };
+    });
+    const user = userEvent.setup();
+    render(view());
+
+    await user.click(screen.getByRole('button', { name: 'Arquivar: Corte' }));
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith('GET', 'service-categories'),
+    );
+    await user.click(screen.getByRole('button', { name: 'Categorias' }));
+
+    expect(await screen.findByText('3 serviço(s)')).toBeInTheDocument();
+  });
+
   it('CA-10 shows the load error', () => {
     render(view({ initial: null }));
 
