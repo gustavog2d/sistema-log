@@ -2,6 +2,7 @@
 
 namespace App\Appointments;
 
+use App\Payments\PaymentRuleViolation;
 use App\Professionals\Professional;
 use App\Services\Service;
 use App\Support\BusinessTime;
@@ -39,7 +40,7 @@ class AppointmentBook
     /** @return Collection<int, Appointment> */
     public function list(Visibility $who, Carbon $from, Carbon $to, ?string $professionalId, ?string $clientId, ?string $status, int $limit): Collection
     {
-        return Appointment::query()->with(['client', 'professional', 'service'])
+        return Appointment::query()->with(['client', 'professional', 'service'])->withSum(['payments as received_cents' => fn (Builder $q) => $q->where('status', 'received')], 'amount_cents')
             ->where('starts_at', '<', $to)->where('ends_at', '>', $from)
             ->when($who->isRestricted(), fn (Builder $query) => $query->where('professional_id', $who->professionalId ?? '00000000-0000-0000-0000-000000000000'))
             ->when($professionalId !== null, fn (Builder $query) => $query->where('professional_id', $professionalId))
@@ -51,7 +52,7 @@ class AppointmentBook
 
     public function find(Visibility $who, string $id): Appointment
     {
-        return Appointment::query()->with(['client', 'professional', 'service'])
+        return Appointment::query()->with(['client', 'professional', 'service'])->withSum(['payments as received_cents' => fn (Builder $q) => $q->where('status', 'received')], 'amount_cents')
             ->when($who->isRestricted(), fn (Builder $query) => $query->where('professional_id', $who->professionalId ?? '00000000-0000-0000-0000-000000000000'))
             ->findOrFail($id);
     }
@@ -97,6 +98,7 @@ class AppointmentBook
             'status' => $data['status'] ?? 'scheduled', 'type' => $data['type'] ?? 'appointment', 'origin' => 'panel',
             'session_number' => $data['session_number'] ?? null, 'sessions_total' => $data['sessions_total'] ?? null,
             'value_total_cents' => $value, 'notes' => $data['notes'] ?? null, 'client_review' => $data['client_review'] ?? null,
+            'commission_percent' => Professional::query()->findOrFail($professionalId)->commission_percent,
         ];
 
         // Cancelado e faltoso não ocupam horário (RN-03): não há o que conferir.
@@ -136,6 +138,7 @@ class AppointmentBook
 
         $status = $this->nextStatus($appointment, $data['status'] ?? null);
         $data['status'] = $status;
+        $this->assertFinance($appointment, $data, $status);
 
         if (array_key_exists('client_review', $data) && $data['client_review'] !== null && $status !== 'completed') {
             throw ValidationException::withMessages(['client_review' => 'A avaliação só vale em atendimento finalizado.']);
@@ -173,6 +176,11 @@ class AppointmentBook
         }
 
         $changes = array_diff_key($data, ['starts_at' => 1, 'ends_at' => 1, 'allow_outside_hours' => 1]);
+        if ($professionalId !== $appointment->professional_id) {
+            // A comissão acompanha o profissional que atende; o que já foi marcado não muda se a comissão dele mudar depois.
+            $changes['commission_percent'] = Professional::query()->findOrFail($professionalId)->commission_percent;
+        }
+
         $changes += ['starts_at' => $starts, 'ends_at' => $ends, 'buffer_before_minutes' => $before, 'buffer_after_minutes' => $after, 'blocked_from' => $blockedFrom, 'blocked_until' => $blockedUntil];
 
         return $this->persist(function () use ($appointment, $changes): Appointment {
@@ -189,7 +197,40 @@ class AppointmentBook
             throw new ResourceInUse('appointment_completed', 'O atendimento finalizado não pode ser excluído. Use as situações para corrigir.');
         }
 
+        if ($appointment->payments()->exists()) {
+            throw new ResourceInUse('appointment_has_payments', 'O agendamento tem pagamentos registrados e não pode ser excluído. Cancele-o (estornando os pagamentos antes).');
+        }
+
         $appointment->delete();
+    }
+
+    /**
+     * Dinheiro recebido trava o valor e a situação (FIN-001): o valor não cai abaixo do recebido e cancelado nunca carrega receita.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws PaymentRuleViolation
+     */
+    private function assertFinance(Appointment $appointment, array $data, string $status): void
+    {
+        $changesStatus = in_array($status, ['canceled', 'no_show'], true) && $status !== $appointment->status;
+        $changesValue = array_key_exists('value_total_cents', $data);
+
+        if (! $changesStatus && ! $changesValue) {
+            return;
+        }
+
+        $received = (int) $appointment->payments()->where('status', 'received')->sum('amount_cents');
+
+        if ($changesStatus && $received > 0) {
+            throw new PaymentRuleViolation(409, 'appointment_has_payments', 'O agendamento tem pagamentos recebidos. Estorne os pagamentos antes de cancelar ou marcar falta.');
+        }
+
+        $value = $data['value_total_cents'] ?? null;
+
+        if ($changesValue && (is_numeric($value) ? (int) $value : 0) < $received) {
+            throw new PaymentRuleViolation(422, 'value_below_received', 'O valor não pode ficar abaixo do que já foi recebido.', [], 'value_total_cents');
+        }
     }
 
     private static function text(mixed $value): string
@@ -310,6 +351,11 @@ class AppointmentBook
             // 23P01 = restrição de exclusão do PostgreSQL (`appointments_no_overlap`).
             if ($e->getCode() === '23P01') {
                 throw new AppointmentConflict($this->findConflict($professionalId, $from, $until, $ignoreId));
+            }
+
+            // 23514 = o gatilho financeiro: um pagamento foi confirmado no meio da edição (valor ou situação).
+            if ($e->getCode() === '23514') {
+                throw new PaymentRuleViolation(409, 'appointment_has_payments', 'O agendamento recebeu pagamentos enquanto era alterado. Confira os pagamentos e tente de novo.');
             }
 
             throw $e;

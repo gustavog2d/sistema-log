@@ -35,6 +35,13 @@ final readonly class Visibility
         return $this->role !== 'reception';
     }
 
+    /** Comissão: dona, gerente e o profissional dono do agendamento. */
+    public function seesCommission(Appointment $appointment): bool
+    {
+        return in_array($this->role, ['owner', 'manager'], true)
+            || ($this->role === 'professional' && $this->professionalId === $appointment->professional_id);
+    }
+
     /** Profissional enxerga e mexe só no próprio perfil. */
     public function isRestricted(): bool
     {

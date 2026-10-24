@@ -52,6 +52,20 @@ export const AppointmentOrigin = {
   app: 'app',
 } as const;
 
+/**
+ * Nulo para a recepção
+ * @nullable
+ */
+export type AppointmentPaymentStatus = typeof AppointmentPaymentStatus[keyof typeof AppointmentPaymentStatus] | null;
+
+
+export const AppointmentPaymentStatus = {
+  no_value: 'no_value',
+  unpaid: 'unpaid',
+  partial: 'partial',
+  paid: 'paid',
+} as const;
+
 export interface Appointment {
   id: string;
   client: AppointmentClient;
@@ -82,6 +96,26 @@ export interface Appointment {
      * @nullable
      */
   client_review: number | null;
+  /**
+     * Total dos pagamentos recebidos (FIN-001); nulo para a recepção
+     * @nullable
+     */
+  received_cents: number | null;
+  /**
+     * Nulo para a recepção
+     * @nullable
+     */
+  payment_status: AppointmentPaymentStatus;
+  /**
+     * Só dona, gerente e o profissional dono
+     * @nullable
+     */
+  commission_percent: number | null;
+  /**
+     * Só dona, gerente e o profissional dono
+     * @nullable
+     */
+  commission_cents: number | null;
   created_at: string;
   updated_at: string;
 }

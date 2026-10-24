@@ -5,12 +5,15 @@ namespace App\Appointments;
 use App\Audit\Audited;
 use App\Audit\AuditedEntity;
 use App\Clients\Client;
+use App\Payments\AppointmentFinance;
+use App\Payments\Payment;
 use App\Professionals\Professional;
 use App\Services\Service;
 use App\Tenancy\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -35,6 +38,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $value_total_cents
  * @property string|null $notes
  * @property int|null $client_review
+ * @property int $commission_percent
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
@@ -52,6 +56,7 @@ class Appointment extends Model implements AuditedEntity
     protected $fillable = [
         'client_id', 'professional_id', 'service_id', 'description', 'starts_at', 'ends_at', 'buffer_before_minutes', 'buffer_after_minutes',
         'blocked_from', 'blocked_until', 'status', 'type', 'origin', 'session_number', 'sessions_total', 'value_total_cents', 'notes', 'client_review',
+        'commission_percent',
     ];
 
     protected function casts(): array
@@ -59,7 +64,7 @@ class Appointment extends Model implements AuditedEntity
         return [
             'starts_at' => 'datetime', 'ends_at' => 'datetime', 'blocked_from' => 'datetime', 'blocked_until' => 'datetime',
             'buffer_before_minutes' => 'integer', 'buffer_after_minutes' => 'integer', 'session_number' => 'integer', 'sessions_total' => 'integer',
-            'value_total_cents' => 'integer', 'client_review' => 'integer',
+            'value_total_cents' => 'integer', 'client_review' => 'integer', 'commission_percent' => 'integer',
         ];
     }
 
@@ -96,9 +101,19 @@ class Appointment extends Model implements AuditedEntity
         return $this->belongsTo(Service::class);
     }
 
-    /** @return array<string, mixed> */
-    public function toApi(bool $seesValues): array
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
     {
+        return $this->hasMany(Payment::class);
+    }
+
+    /** @return array<string, mixed> */
+    public function toApi(bool $seesValues, bool $seesCommission = false): array
+    {
+        // `withSum` traz NULL quando não há pagamento: vale 0 (sem consulta extra por agendamento na listagem).
+        $received = array_key_exists('received_cents', $this->attributes)
+            ? (is_numeric($this->attributes['received_cents']) ? (int) $this->attributes['received_cents'] : 0)
+            : (int) $this->payments()->where('status', 'received')->sum('amount_cents');
         $client = $this->client;
         $professional = $this->professional;
         $service = $this->service;
@@ -119,6 +134,10 @@ class Appointment extends Model implements AuditedEntity
             'value_total_cents' => $seesValues ? $this->value_total_cents : null,
             'notes' => $this->notes,
             'client_review' => $this->client_review,
+            'received_cents' => $seesValues ? $received : null,
+            'payment_status' => $seesValues ? AppointmentFinance::status($this->value_total_cents, $received) : null,
+            'commission_percent' => $seesCommission ? $this->commission_percent : null,
+            'commission_cents' => $seesCommission ? AppointmentFinance::commissionCents($this->value_total_cents, $this->commission_percent) : null,
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
         ];

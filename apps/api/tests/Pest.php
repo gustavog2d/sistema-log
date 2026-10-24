@@ -9,9 +9,9 @@ use Tests\Support\TenantAuthTestHelpers;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)->in('Feature');
-pest()->use(ResetsTenancyDatabase::class)->in('Feature/Tenancy', 'Feature/Platform', 'Feature/Plans', 'Feature/Signup', 'Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients', 'Feature/Services', 'Feature/Professionals', 'Feature/Appointments');
-pest()->use(TenantAuthTestHelpers::class)->in('Feature/TenantAuth', 'Feature/Billing', 'Feature/Team', 'Feature/Notifications', 'Feature/Audit', 'Feature/Clients', 'Feature/Services', 'Feature/Professionals', 'Feature/Appointments');
-pest()->use(BillingTestHelpers::class, OpenApiAssertions::class)->in('Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients', 'Feature/Services', 'Feature/Professionals', 'Feature/Appointments');
+pest()->use(ResetsTenancyDatabase::class)->in('Feature/Tenancy', 'Feature/Platform', 'Feature/Plans', 'Feature/Signup', 'Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients', 'Feature/Services', 'Feature/Professionals', 'Feature/Appointments', 'Feature/Payments');
+pest()->use(TenantAuthTestHelpers::class)->in('Feature/TenantAuth', 'Feature/Billing', 'Feature/Team', 'Feature/Notifications', 'Feature/Audit', 'Feature/Clients', 'Feature/Services', 'Feature/Professionals', 'Feature/Appointments', 'Feature/Payments');
+pest()->use(BillingTestHelpers::class, OpenApiAssertions::class)->in('Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients', 'Feature/Services', 'Feature/Professionals', 'Feature/Appointments', 'Feature/Payments');
 pest()->use(SignupTestHelpers::class)->in('Feature/Signup', 'Feature/Coupons', 'Feature/Notifications');
 pest()->use(PlatformTestHelpers::class)->in('Feature/Platform', 'Feature/Plans', 'Feature/Coupons', 'Feature/Admin', 'Feature/Leads');
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LeadCaptureController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\Platform\AuthController;
 use App\Http\Controllers\Platform\CouponController;
 use App\Http\Controllers\Platform\FeatureController;
@@ -111,6 +112,16 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:ten
     Route::post('/', [AppointmentController::class, 'store'])->middleware('no.impersonation');
     Route::patch('{id}', [AppointmentController::class, 'update'])->whereUuid('id')->middleware('no.impersonation');
     Route::delete('{id}', [AppointmentController::class, 'destroy'])->whereUuid('id')->middleware(['no.impersonation', 'role:owner,manager']);
+});
+
+// Pagamentos do atendimento (FIN-001): só dona e gerente (leitura e escrita); o acesso de suporte só lê.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager', 'throttle:tenant-api'])->group(function () {
+    Route::get('appointments/{id}/payments', [PaymentController::class, 'index'])->whereUuid('id');
+    Route::middleware('no.impersonation')->group(function () {
+        Route::post('appointments/{id}/payments', [PaymentController::class, 'store'])->whereUuid('id')->middleware('idempotent:payment');
+        Route::patch('payments/{id}', [PaymentController::class, 'update'])->whereUuid('id');
+        Route::post('payments/{id}/void', [PaymentController::class, 'void'])->whereUuid('id');
+    });
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.

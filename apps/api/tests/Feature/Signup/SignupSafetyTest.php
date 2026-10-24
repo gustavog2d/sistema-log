@@ -177,7 +177,7 @@ it('B2 answers 409 while the same request is still being processed', function ()
     $body = $this->signupPayload();
     DB::connection('pgsql_admin')->table('idempotency_keys')->insert([
         'scope' => idempotencyScope(), 'key' => 'em-andamento', 'created_at' => now(),
-        'request_hash' => hash('sha256', json_encode(normalizedBody(Arr::except($body, ['captcha_token'])))),
+        'request_hash' => hash('sha256', 'POST api/v1/signup '.json_encode(normalizedBody(Arr::except($body, ['captcha_token'])))),
     ]);
 
     $this->signup(key: 'em-andamento')->assertStatus(409)->assertHeader('Content-Type', 'application/problem+json');
