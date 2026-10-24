@@ -6,6 +6,7 @@ Formato: [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/). Datas em I
 
 ### Adicionado
 
+- AGD-002: profissionais (cor, comissão, vínculo com a equipe, ativar e desativar), expediente semanal com várias faixas por dia (sem sobreposição, garantido no banco) e folgas de uma pessoa ou do negócio todo (API e tela).
 - AGD-001: catálogo de serviços e categorias (API e tela): duração, preço ou "sob orçamento", intervalos e sinal, arquivar, categoria só apagada sem serviços, nomes únicos sem acento e serviços sugeridos por nicho.
 - CLI-001: clientes (API e tela): cadastro com telefone E.164 único por negócio, e-mail e Instagram únicos, busca sem acento, criação rápida que devolve o cliente existente, exclusão (dona e gerente), histórico do cliente e papéis por ação.
 - FND-008: auditoria do assinante: registro de criação, edição e exclusão com antes e depois (`Audited`), somente de acréscimo e isolado por negócio, `GET /audit-logs` (dona e gerente) e tela de histórico.

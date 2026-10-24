@@ -21,6 +21,8 @@ const ALLOWED = [
   /^clients(\/.*)?$/,
   /^services(\/.*)?$/,
   /^service-categories(\/.*)?$/,
+  /^professionals(\/.*)?$/,
+  /^time-offs(\/.*)?$/,
   /^platform\/.+$/,
 ];
 
@@ -138,6 +140,8 @@ const TENANT_ONLY = [
   /^clients(\/|$)/,
   /^services(\/|$)/,
   /^service-categories(\/|$)/,
+  /^professionals(\/|$)/,
+  /^time-offs(\/|$)/,
   /^subscription(\/|$)/,
   /^tenant\/current$/,
 ];

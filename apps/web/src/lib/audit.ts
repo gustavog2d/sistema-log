@@ -62,6 +62,10 @@ export function formatAuditValue(field: string, value: unknown): string {
     return formatDateTime(value);
   }
 
+  if (Array.isArray(value)) {
+    return value.length === 0 ? t('audit.empty_value') : value.join(', ');
+  }
+
   return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 

@@ -7,6 +7,7 @@ describe('safeReturnPath', () => {
     '/assinatura',
     '/clientes',
     '/servicos',
+    '/profissionais',
     '/equipe',
     '/historico',
     '/conta',

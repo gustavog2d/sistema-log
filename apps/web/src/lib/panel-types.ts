@@ -84,6 +84,7 @@ export const AREA_ROLES = {
   audit: ['owner', 'manager'],
   clients: ['owner', 'manager', 'professional', 'reception'],
   services: ['owner', 'manager', 'professional', 'reception'],
+  professionals: ['owner', 'manager', 'professional', 'reception'],
   account: ['owner', 'manager', 'professional', 'reception'],
   home: ['owner', 'manager', 'professional', 'reception'],
 } as const satisfies Record<string, readonly Role[]>;
