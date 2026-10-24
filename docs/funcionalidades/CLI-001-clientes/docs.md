@@ -29,6 +29,6 @@
 
 ## Limites conhecidos
 
-- A exclusão ainda não é barrada por agendamentos (passa a valer com a agenda, AGD-003).
+- A exclusão é barrada quando o cliente tem agendamentos (409 `client_in_use`); o cliente mostra `appointments_count` e `average_review`.
 - Sem média de avaliação e contagem de atendimentos (entram com a agenda e os pagamentos), importação, tags nem foto.
 - O número "nacional" só tem máscara para o Brasil; os demais países aceitam dígitos agrupados.

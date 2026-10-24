@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CouponCheckController;
@@ -85,6 +86,7 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:ten
         Route::get('/', [ProfessionalController::class, 'index']);
         Route::get('{id}', [ProfessionalController::class, 'show'])->whereUuid('id');
         Route::get('{id}/working-hours', [ProfessionalController::class, 'hours'])->whereUuid('id');
+        Route::get('{id}/availability', [AppointmentController::class, 'availability'])->whereUuid('id');
         Route::middleware(['no.impersonation', 'role:owner,manager'])->group(function () {
             Route::post('/', [ProfessionalController::class, 'store']);
             Route::patch('{id}', [ProfessionalController::class, 'update'])->whereUuid('id');
@@ -100,6 +102,15 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:ten
             Route::delete('{id}', [TimeOffController::class, 'destroy'])->whereUuid('id');
         });
     });
+});
+
+// Agenda (AGD-003): os quatro papéis leem e agendam (o profissional só no próprio perfil, regra em `AppointmentBook`); só dona e gerente excluem.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:tenant-api'])->prefix('appointments')->group(function () {
+    Route::get('/', [AppointmentController::class, 'index']);
+    Route::get('{id}', [AppointmentController::class, 'show'])->whereUuid('id');
+    Route::post('/', [AppointmentController::class, 'store'])->middleware('no.impersonation');
+    Route::patch('{id}', [AppointmentController::class, 'update'])->whereUuid('id')->middleware('no.impersonation');
+    Route::delete('{id}', [AppointmentController::class, 'destroy'])->whereUuid('id')->middleware(['no.impersonation', 'role:owner,manager']);
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.
