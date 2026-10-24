@@ -227,3 +227,53 @@ describe('PaymentsDialog', () => {
     expect(await axe(screen.getByRole('dialog'))).toHaveNoViolations();
   });
 });
+
+describe('PaymentsDialog extra states', () => {
+  it('CA-14 explains an appointment without value instead of hiding the form silently', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: {
+        data: [],
+        summary: {
+          total_cents: 0,
+          received_cents: 0,
+          remaining_cents: 0,
+          payment_status: 'no_value',
+          commission_percent: 0,
+          commission_cents: 0,
+        },
+      },
+    });
+    open();
+
+    expect(
+      await screen.findByText(
+        'Defina o valor do agendamento antes de registrar pagamentos.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Registrar pagamento' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('CA-14 shows a field error from the API next to the date field', async () => {
+    const user = userEvent.setup();
+    open();
+    const dialog = screen.getByRole('dialog');
+    await within(dialog).findByText('R$ 150,00');
+    await user.type(within(dialog).getByLabelText(/^Valor \(R\$\)/), '10');
+
+    failure = new ApiError('x', 422, {
+      paid_at: 'A data do pagamento não pode estar no futuro.',
+    });
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Registrar pagamento' }),
+    );
+
+    expect(
+      await within(dialog).findByText(
+        'A data do pagamento não pode estar no futuro.',
+      ),
+    ).toBeInTheDocument();
+  });
+});

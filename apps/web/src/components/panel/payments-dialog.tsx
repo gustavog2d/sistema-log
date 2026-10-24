@@ -135,6 +135,11 @@ export function PaymentsDialog({
       ) {
         setFieldErrors({ amount_cents: explain(failure) });
         load();
+      } else if (
+        failure instanceof ApiError &&
+        Object.keys(failure.fieldErrors).length > 0
+      ) {
+        setFieldErrors(failure.fieldErrors);
       } else {
         setNotice({ tone: 'danger', text: explain(failure) });
       }
@@ -284,6 +289,9 @@ export function PaymentsDialog({
           </Table>
         ) : null}
 
+        {canWrite && summary && summary.total_cents <= 0 ? (
+          <Alert tone="info">{t('payments.noValue')}</Alert>
+        ) : null}
         {canWrite && summary && summary.total_cents > 0 ? (
           <form className="space-y-3" onSubmit={(event) => void add(event)}>
             <h3 className="text-base font-semibold text-ink">

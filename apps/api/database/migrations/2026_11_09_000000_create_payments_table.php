@@ -60,11 +60,30 @@ return new class extends Migration
             END $$
         SQL);
         DB::statement('CREATE TRIGGER payments_total_guard BEFORE INSERT OR UPDATE OF amount_cents, status, appointment_id ON payments FOR EACH ROW EXECUTE FUNCTION payments_total_guard()');
+
+        // O outro lado da mesma regra: editar o agendamento (valor ou situação) concorrendo com um pagamento. As duas
+        // gravações passam pela linha do agendamento, uma de cada vez, e a segunda enxerga o que a primeira confirmou.
+        DB::statement(<<<'SQL'
+            CREATE OR REPLACE FUNCTION appointments_finance_guard() RETURNS trigger LANGUAGE plpgsql AS $$
+            DECLARE
+                received bigint;
+            BEGIN
+                SELECT COALESCE(SUM(amount_cents), 0) INTO received FROM payments
+                    WHERE appointment_id = NEW.id AND tenant_id = NEW.tenant_id AND status = 'received';
+                IF received > 0 AND (NEW.status IN ('canceled', 'no_show') OR COALESCE(NEW.value_total_cents, 0) < received) THEN
+                    RAISE EXCEPTION 'O agendamento tem pagamentos recebidos' USING ERRCODE = '23514';
+                END IF;
+                RETURN NEW;
+            END $$
+        SQL);
+        DB::statement('CREATE TRIGGER appointments_finance_guard BEFORE UPDATE OF value_total_cents, status ON appointments FOR EACH ROW EXECUTE FUNCTION appointments_finance_guard()');
     }
 
     public function down(): void
     {
         Schema::dropIfExists('payments');
+        DB::statement('DROP TRIGGER IF EXISTS appointments_finance_guard ON appointments');
+        DB::statement('DROP FUNCTION IF EXISTS appointments_finance_guard()');
         DB::statement('DROP FUNCTION IF EXISTS payments_total_guard()');
         DB::statement('DROP INDEX IF EXISTS appointments_tenant_id_unique');
         DB::statement('ALTER TABLE appointments DROP CONSTRAINT IF EXISTS appointments_commission_valid');

@@ -86,19 +86,26 @@ class PaymentLedger
      */
     public function update(Payment $payment, array $data): Payment
     {
-        $this->assertReceived($payment);
-        $payment->fill($data)->save();
+        return DB::transaction(function () use ($payment, $data): Payment {
+            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $this->assertReceived($locked);
+            $locked->fill($data)->save();
 
-        return $payment;
+            return $locked;
+        });
     }
 
     /** @throws PaymentRuleViolation */
     public function void(Payment $payment): Payment
     {
-        $this->assertReceived($payment);
-        $payment->fill(['status' => 'voided', 'voided_at' => Carbon::now()->utc()->format('Y-m-d H:i:s')])->save();
+        return DB::transaction(function () use ($payment): Payment {
+            // Dois estornos ao mesmo tempo: o segundo espera, vê `voided` e recebe 409.
+            $locked = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $this->assertReceived($locked);
+            $locked->fill(['status' => 'voided', 'voided_at' => Carbon::now()->utc()->format('Y-m-d H:i:s')])->save();
 
-        return $payment;
+            return $locked;
+        });
     }
 
     public function received(string $appointmentId): int

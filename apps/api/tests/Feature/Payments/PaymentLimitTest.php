@@ -63,3 +63,25 @@ it('CA-03 refuses at the database invalid types, methods, amounts and statuses',
 })->with([
     [['type' => 'x']], [['method' => 'x']], [['amount_cents' => 0]], [['status' => 'x']],
 ]);
+
+it('CA-03 keeps at the database the guard that blocks lowering the value or canceling an appointment with received money', function () {
+    $w = apptWorld($this);
+    $a = payAppointment($w);
+    seedPayment($w, $a, ['amount_cents' => 10000]);
+    $db = DB::connection('pgsql_admin');
+
+    expect(fn () => $db->table('appointments')->where('id', $a->id)->update(['value_total_cents' => 9999]))->toThrow(QueryException::class)
+        ->and(fn () => $db->table('appointments')->where('id', $a->id)->update(['status' => 'canceled']))->toThrow(QueryException::class)
+        ->and(fn () => $db->table('appointments')->where('id', $a->id)->update(['value_total_cents' => null]))->toThrow(QueryException::class);
+    $db->table('appointments')->where('id', $a->id)->update(['value_total_cents' => 10000, 'notes' => 'ok']);
+});
+
+it('CA-10 does not reuse the answer of another appointment when the same key and body are sent to it', function () {
+    $w = apptWorld($this);
+    $one = payAppointment($w);
+    $two = payAppointment($w, ['starts_at' => '2026-11-04 13:00:00', 'ends_at' => '2026-11-04 14:00:00']);
+
+    payApi($this, $w->token, 'POST', "appointments/{$one->id}/payments", payBody(), 'mesma-chave')->assertCreated();
+    payApi($this, $w->token, 'POST', "appointments/{$two->id}/payments", payBody(), 'mesma-chave')->assertStatus(422)->assertJsonValidationErrors('Idempotency-Key');
+    expect(DB::connection('pgsql_admin')->table('payments')->where('appointment_id', $two->id)->count())->toBe(0);
+});

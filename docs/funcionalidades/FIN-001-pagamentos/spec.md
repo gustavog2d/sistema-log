@@ -56,7 +56,7 @@ Registrar o dinheiro que entra em cada atendimento (sinal, parcelas e valor fina
 
 ## Dados
 
-`payments` com chave estrangeira composta `(tenant_id, appointment_id)` (`ON DELETE RESTRICT`), checagens de valor, tipo, forma e situação; `appointments.commission_percent` (`numeric(5,2)`).
+`payments` com chave estrangeira composta `(tenant_id, appointment_id)` (`ON DELETE RESTRICT`), checagens de valor, tipo, forma e situação; `appointments.commission_percent` (inteiro de 0 a 100, como a comissão do profissional) e gatilhos que travam o limite no banco dos dois lados (pagamento e edição do agendamento).
 
 ## Fora do escopo
 

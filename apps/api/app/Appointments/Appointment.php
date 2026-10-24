@@ -110,8 +110,10 @@ class Appointment extends Model implements AuditedEntity
     /** @return array<string, mixed> */
     public function toApi(bool $seesValues, bool $seesCommission = false): array
     {
-        $received = $this->getAttribute('received_cents');
-        $received = is_numeric($received) ? (int) $received : (int) $this->payments()->where('status', 'received')->sum('amount_cents');
+        // `withSum` traz NULL quando não há pagamento: vale 0 (sem consulta extra por agendamento na listagem).
+        $received = array_key_exists('received_cents', $this->attributes)
+            ? (is_numeric($this->attributes['received_cents']) ? (int) $this->attributes['received_cents'] : 0)
+            : (int) $this->payments()->where('status', 'received')->sum('amount_cents');
         $client = $this->client;
         $professional = $this->professional;
         $service = $this->service;

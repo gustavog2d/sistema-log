@@ -98,7 +98,7 @@ class AppointmentBook
             'status' => $data['status'] ?? 'scheduled', 'type' => $data['type'] ?? 'appointment', 'origin' => 'panel',
             'session_number' => $data['session_number'] ?? null, 'sessions_total' => $data['sessions_total'] ?? null,
             'value_total_cents' => $value, 'notes' => $data['notes'] ?? null, 'client_review' => $data['client_review'] ?? null,
-            'commission_percent' => Professional::query()->find($professionalId)->commission_percent ?? 0,
+            'commission_percent' => Professional::query()->findOrFail($professionalId)->commission_percent,
         ];
 
         // Cancelado e faltoso não ocupam horário (RN-03): não há o que conferir.
@@ -178,7 +178,7 @@ class AppointmentBook
         $changes = array_diff_key($data, ['starts_at' => 1, 'ends_at' => 1, 'allow_outside_hours' => 1]);
         if ($professionalId !== $appointment->professional_id) {
             // A comissão acompanha o profissional que atende; o que já foi marcado não muda se a comissão dele mudar depois.
-            $changes['commission_percent'] = Professional::query()->find($professionalId)->commission_percent ?? 0;
+            $changes['commission_percent'] = Professional::query()->findOrFail($professionalId)->commission_percent;
         }
 
         $changes += ['starts_at' => $starts, 'ends_at' => $ends, 'buffer_before_minutes' => $before, 'buffer_after_minutes' => $after, 'blocked_from' => $blockedFrom, 'blocked_until' => $blockedUntil];
@@ -228,7 +228,7 @@ class AppointmentBook
 
         $value = $data['value_total_cents'] ?? null;
 
-        if ($changesValue && (is_int($value) ? $value : 0) < $received) {
+        if ($changesValue && (is_numeric($value) ? (int) $value : 0) < $received) {
             throw new PaymentRuleViolation(422, 'value_below_received', 'O valor não pode ficar abaixo do que já foi recebido.', [], 'value_total_cents');
         }
     }
@@ -351,6 +351,11 @@ class AppointmentBook
             // 23P01 = restrição de exclusão do PostgreSQL (`appointments_no_overlap`).
             if ($e->getCode() === '23P01') {
                 throw new AppointmentConflict($this->findConflict($professionalId, $from, $until, $ignoreId));
+            }
+
+            // 23514 = o gatilho financeiro: um pagamento foi confirmado no meio da edição (valor ou situação).
+            if ($e->getCode() === '23514') {
+                throw new PaymentRuleViolation(409, 'appointment_has_payments', 'O agendamento recebeu pagamentos enquanto era alterado. Confira os pagamentos e tente de novo.');
             }
 
             throw $e;
