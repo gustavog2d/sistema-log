@@ -34,6 +34,10 @@ const appointment = (over: Partial<Appointment> = {}): Appointment => ({
   value_total_cents: 15000,
   notes: null,
   client_review: null,
+  received_cents: 0,
+  payment_status: 'unpaid',
+  commission_percent: 0,
+  commission_cents: 0,
   created_at: '2026-11-01T12:00:00Z',
   updated_at: '2026-11-01T12:00:00Z',
   ...over,
@@ -485,6 +489,57 @@ describe('AgendaView reactivation and edit', () => {
     expect(within(dialog).getByLabelText('Profissional')).toHaveValue('p9');
     expect(
       within(dialog).queryByRole('option', { name: 'Ana Tattoo' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+describe('AgendaView payments', () => {
+  it('CA-14 shows the payment status of the appointment and hides it when canceled', () => {
+    const { unmount } = render(
+      view({ initial: list(appointment({ payment_status: 'partial' })) }),
+    );
+    expect(screen.getByText('Parcial')).toBeInTheDocument();
+    unmount();
+
+    render(
+      view({
+        initial: list(
+          appointment({ status: 'canceled', payment_status: 'unpaid' }),
+        ),
+      }),
+    );
+    expect(screen.queryByText('Em aberto')).not.toBeInTheDocument();
+  });
+
+  it('CA-09 opens the payments only for owner and manager', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: {
+        data: [],
+        summary: {
+          total_cents: 15000,
+          received_cents: 0,
+          remaining_cents: 15000,
+          payment_status: 'unpaid',
+          commission_percent: 0,
+          commission_cents: 0,
+        },
+      },
+    });
+    const user = userEvent.setup();
+    const { unmount } = render(view());
+
+    await user.click(
+      screen.getByRole('button', { name: 'Pagamentos: Bia Lima' }),
+    );
+    expect(
+      await screen.findByRole('dialog', { name: 'Pagamentos de Bia Lima' }),
+    ).toBeInTheDocument();
+    unmount();
+
+    render(view({ me: me('reception') }));
+    expect(
+      screen.queryByRole('button', { name: 'Pagamentos: Bia Lima' }),
     ).not.toBeInTheDocument();
   });
 });

@@ -15,6 +15,7 @@ import {
   type Appointment,
   type AppointmentList,
   type AppointmentStatus,
+  type PaymentStatus,
   type Slot,
 } from '@/lib/appointment-types';
 import type { Client, ClientPage } from '@/lib/client-types';
@@ -31,6 +32,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { SelectField, TextareaField, TextField } from '@/components/ui/inputs';
+import { PaymentsDialog } from './payments-dialog';
 
 const STATUS_TONE: Record<AppointmentStatus, Tone> = {
   pending: 'warning',
@@ -38,6 +40,13 @@ const STATUS_TONE: Record<AppointmentStatus, Tone> = {
   completed: 'success',
   canceled: 'neutral',
   no_show: 'danger',
+};
+
+const PAY_TONE: Record<PaymentStatus, Tone> = {
+  no_value: 'neutral',
+  unpaid: 'danger',
+  partial: 'warning',
+  paid: 'success',
 };
 
 type Form = {
@@ -109,6 +118,7 @@ export function AgendaView({
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [paying, setPaying] = useState<Appointment | null>(null);
 
   const [clientQuery, setClientQuery] = useState('');
   const [clientOptions, setClientOptions] = useState<Client[] | null>(null);
@@ -560,6 +570,15 @@ export function AgendaView({
                             {formatBRL(appointment.value_total_cents)}
                           </span>
                         ) : null}
+                        {appointment.payment_status &&
+                        appointment.status !== 'canceled' &&
+                        appointment.status !== 'no_show' ? (
+                          <Badge tone={PAY_TONE[appointment.payment_status]}>
+                            {t(
+                              `agenda.pay_${appointment.payment_status}` as MessageKey,
+                            )}
+                          </Badge>
+                        ) : null}
                         <Badge tone={STATUS_TONE[appointment.status]}>
                           {t(
                             `agenda.status_${appointment.status}` as MessageKey,
@@ -598,6 +617,17 @@ export function AgendaView({
                         >
                           {t('agenda.edit')}
                         </Button>
+                        {manager &&
+                        appointment.status !== 'canceled' &&
+                        appointment.status !== 'no_show' ? (
+                          <Button
+                            variant="secondary"
+                            onClick={() => setPaying(appointment)}
+                            aria-label={`${t('agenda.payments')}: ${appointment.client.name}`}
+                          >
+                            {t('agenda.payments')}
+                          </Button>
+                        ) : null}
                         {manager && appointment.status !== 'completed' ? (
                           <Button
                             variant="secondary"
@@ -920,6 +950,15 @@ export function AgendaView({
           />
         </form>
       </Dialog>
+
+      {paying ? (
+        <PaymentsDialog
+          appointment={paying}
+          canWrite={canWrite}
+          onClose={() => setPaying(null)}
+          onChanged={() => load(monday, professionalFilter)}
+        />
+      ) : null}
 
       <Dialog
         open={deleting !== null}
