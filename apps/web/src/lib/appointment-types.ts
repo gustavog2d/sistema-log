@@ -20,9 +20,41 @@ export type Appointment = {
   value_total_cents: number | null;
   notes: string | null;
   client_review: number | null;
+  /** Dado financeiro: nulo para a recepção. */
+  received_cents: number | null;
+  payment_status: PaymentStatus | null;
+  /** Só dona, gerente e o profissional dono. */
+  commission_percent: number | null;
+  commission_cents: number | null;
   created_at: string;
   updated_at: string;
 };
+
+export type PaymentStatus = 'no_value' | 'unpaid' | 'partial' | 'paid';
+
+export type Payment = {
+  id: string;
+  appointment_id: string;
+  type: 'deposit' | 'installment' | 'final';
+  method: 'cash' | 'pix' | 'credit_card' | 'debit_card' | 'other';
+  amount_cents: number;
+  paid_at: string;
+  status: 'received' | 'voided';
+  voided_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PaymentSummary = {
+  total_cents: number;
+  received_cents: number;
+  remaining_cents: number;
+  payment_status: PaymentStatus;
+  commission_percent: number;
+  commission_cents: number;
+};
+
+export type PaymentList = { data: Payment[]; summary: PaymentSummary };
 
 export type AppointmentList = { data: Appointment[] };
 

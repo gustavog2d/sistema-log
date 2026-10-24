@@ -39,7 +39,8 @@ class IdempotentRequest
         }
 
         // O token do anti-robô é novo a cada tentativa: fora da comparação, para repetir o mesmo pedido continuar valendo.
-        $hash = hash('sha256', (string) json_encode($this->normalized(Arr::except($request->json()->all(), ['captcha_token']))));
+        // A rota faz parte do pedido: a mesma chave e o mesmo corpo em outro recurso (outro agendamento) não reaproveita a resposta.
+        $hash = hash('sha256', $request->method().' '.$request->path().' '.(string) json_encode($this->normalized(Arr::except($request->json()->all(), ['captcha_token']))));
         $db = DB::connection('pgsql_platform');
         // A chave vale só para quem a criou (mesmo IP): adivinhar a chave de outra pessoa não devolve a resposta dela.
         $where = ['scope' => $scope.':'.substr(hash('sha256', $request->ip().$this->owner($request)), 0, 16), 'key' => $key];

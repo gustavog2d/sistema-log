@@ -140,7 +140,7 @@ components:
   schemas:
     Appointment:
       type: object
-      required: [id, client, professional, service, starts_at, ends_at, description, status, type, origin, session_number, sessions_total, value_total_cents, notes, client_review, created_at, updated_at]
+      required: [id, client, professional, service, starts_at, ends_at, description, status, type, origin, session_number, sessions_total, value_total_cents, notes, client_review, received_cents, payment_status, commission_percent, commission_cents, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         client:
@@ -173,6 +173,10 @@ components:
         value_total_cents: { type: [integer, "null"], description: Nulo para a recepção (sem financeiro) }
         notes: { type: [string, "null"] }
         client_review: { type: [integer, "null"], minimum: 1, maximum: 5 }
+        received_cents: { type: [integer, "null"], description: "Total dos pagamentos recebidos (FIN-001); nulo para a recepção" }
+        payment_status: { type: [string, "null"], enum: [no_value, unpaid, partial, paid, null], description: Nulo para a recepção }
+        commission_percent: { type: [number, "null"], description: "Só dona, gerente e o profissional dono" }
+        commission_cents: { type: [integer, "null"], description: "Só dona, gerente e o profissional dono" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     AppointmentInput:

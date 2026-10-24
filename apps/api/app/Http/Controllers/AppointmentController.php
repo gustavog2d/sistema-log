@@ -47,14 +47,16 @@ class AppointmentController extends Controller
             (int) ($data['limit'] ?? 200),
         );
 
-        return response()->json(['data' => $list->map(fn (Appointment $a): array => $a->toApi($who->seesValues()))->values()->all()]);
+        return response()->json(['data' => $list->map(fn (Appointment $a): array => $a->toApi($who->seesValues(), $who->seesCommission($a)))->values()->all()]);
     }
 
     public function show(Request $request, string $id): JsonResponse
     {
         $who = Visibility::of($request);
 
-        return response()->json($this->book->find($who, $id)->toApi($who->seesValues()));
+        $appointment = $this->book->find($who, $id);
+
+        return response()->json($appointment->toApi($who->seesValues(), $who->seesCommission($appointment)));
     }
 
     public function store(Request $request): JsonResponse
@@ -62,7 +64,9 @@ class AppointmentController extends Controller
         $who = Visibility::of($request);
         $this->assertOwnProfessional($request, $who);
 
-        return response()->json($this->book->create($this->validated($request, false), $who)->toApi($who->seesValues()), 201);
+        $created = $this->book->create($this->validated($request, false), $who);
+
+        return response()->json($created->toApi($who->seesValues(), $who->seesCommission($created)), 201);
     }
 
     public function update(Request $request, string $id): JsonResponse
@@ -71,7 +75,9 @@ class AppointmentController extends Controller
         $appointment = $this->book->find($who, $id);
         $this->assertOwnProfessional($request, $who);
 
-        return response()->json($this->book->update($appointment, $this->validated($request, true, $appointment), $who)->toApi($who->seesValues()));
+        $updated = $this->book->update($appointment, $this->validated($request, true, $appointment), $who);
+
+        return response()->json($updated->toApi($who->seesValues(), $who->seesCommission($updated)));
     }
 
     public function destroy(string $id): Response
