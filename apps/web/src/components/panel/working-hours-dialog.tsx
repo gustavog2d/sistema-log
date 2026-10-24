@@ -42,8 +42,8 @@ export function validateRanges(draft: Draft): MessageKey | null {
 
     for (const [index, range] of ranges.entries()) {
       if (
-        !/^\d{2}:\d{2}$/.test(range.start) ||
-        !/^\d{2}:\d{2}$/.test(range.end) ||
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(range.start) ||
+        !/^(([01]\d|2[0-3]):[0-5]\d|24:00)$/.test(range.end) ||
         minutes(range.end) <= minutes(range.start)
       ) {
         return 'professionals.hoursOrder';
@@ -214,10 +214,12 @@ export function WorkingHoursDialog({
                     <label className="flex items-center gap-1 text-sm">
                       <span>{t('professionals.from')}</span>
                       <input
-                        type="time"
-                        step={300}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="09:00"
+                        maxLength={5}
                         aria-label={`${t('professionals.start')} ${index + 1}: ${day}`}
-                        className="min-h-11 rounded-md border border-control-border px-2"
+                        className="min-h-11 w-24 rounded-md border border-control-border px-2"
                         value={range.start}
                         disabled={!canWrite}
                         onChange={(event) =>
@@ -228,10 +230,12 @@ export function WorkingHoursDialog({
                     <label className="flex items-center gap-1 text-sm">
                       <span>{t('professionals.to')}</span>
                       <input
-                        type="time"
-                        step={300}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="18:00"
+                        maxLength={5}
                         aria-label={`${t('professionals.end')} ${index + 1}: ${day}`}
-                        className="min-h-11 rounded-md border border-control-border px-2"
+                        className="min-h-11 w-24 rounded-md border border-control-border px-2"
                         value={range.end}
                         disabled={!canWrite}
                         onChange={(event) =>
@@ -256,7 +260,7 @@ export function WorkingHoursDialog({
         </ul>
         <div className="flex flex-wrap justify-end gap-2">
           <Button variant="secondary" onClick={onClose} disabled={busy}>
-            {t('services.close')}
+            {t('common.close')}
           </Button>
           {canWrite ? (
             <Button loading={busy} onClick={() => void save()}>

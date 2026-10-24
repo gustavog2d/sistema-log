@@ -115,25 +115,54 @@ class ProfessionalDirectory
             ->cursorPaginate($limit);
     }
 
+    /**
+     * Exclui o profissional com as folgas e o expediente dele, cada um com o seu registro no histórico.
+     */
+    public function delete(Professional $professional): void
+    {
+        DB::transaction(function () use ($professional): void {
+            foreach (TimeOff::query()->where('professional_id', $professional->id)->get() as $off) {
+                $off->delete();
+            }
+
+            $before = $this->describe($this->hours($professional));
+
+            if ($before !== []) {
+                $this->auditor->record('working_hours', $professional->id, 'deleted', ['ranges' => $before], null);
+            }
+
+            $professional->delete();
+        });
+    }
+
     /** @param  array<string, mixed>  $data */
     public function createTimeOff(array $data): TimeOff
     {
-        return TimeOff::create($data + ['professional_id' => null])->refresh();
+        $off = (new TimeOff)->fill($data + ['professional_id' => null]);
+        $this->assertPeriod($off);
+
+        $off->save();
+
+        return $off->refresh();
     }
 
     /** @param  array<string, mixed>  $data */
     public function updateTimeOff(TimeOff $off, array $data): TimeOff
     {
         $off->fill($data);
-
-        // Datas e fim depois do início valem para o conjunto final (a validação sozinha só vê o que veio no pedido).
-        if ($off->ends_at->lessThanOrEqualTo($off->starts_at) || $off->starts_at->diffInDays($off->ends_at, true) > 366) {
-            throw ValidationException::withMessages(['ends_at' => 'O fim precisa ser depois do início, em até 366 dias.']);
-        }
+        $this->assertPeriod($off);
 
         $off->save();
 
         return $off;
+    }
+
+    /** Fim depois do início, em até 366 dias: vale para o conjunto final (a validação sozinha só vê o que veio no pedido). */
+    private function assertPeriod(TimeOff $off): void
+    {
+        if ($off->ends_at->lessThanOrEqualTo($off->starts_at) || $off->starts_at->diffInDays($off->ends_at, true) > 366) {
+            throw ValidationException::withMessages(['ends_at' => 'O fim precisa ser depois do início, em até 366 dias.']);
+        }
     }
 
     /**

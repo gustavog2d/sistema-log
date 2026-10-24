@@ -9,7 +9,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\ValidationException;
 
 /** Folgas (AGD-002). */
 class TimeOffController extends Controller
@@ -20,16 +19,16 @@ class TimeOffController extends Controller
     {
         $request->validate([
             'professional_id' => ['sometimes', 'uuid'],
-            'from' => ['sometimes', 'date'],
-            'to' => ['sometimes', 'date'],
+            'from' => ['sometimes', 'date', 'after:2000-01-01', 'before:2100-01-01'],
+            'to' => ['sometimes', 'date', 'after:2000-01-01', 'before:2100-01-01'],
             'limit' => ['sometimes', 'integer', 'between:1,50'],
             'cursor' => ['sometimes', 'string', 'max:500'],
         ]);
 
         $page = $this->directory->timeOffs(
             $request->filled('professional_id') ? $request->string('professional_id')->toString() : null,
-            $request->filled('from') ? Carbon::parse($request->string('from')->toString()) : null,
-            $request->filled('to') ? Carbon::parse($request->string('to')->toString()) : null,
+            $request->filled('from') ? Carbon::parse($request->string('from')->toString())->utc() : null,
+            $request->filled('to') ? Carbon::parse($request->string('to')->toString())->utc() : null,
             $request->integer('limit', 20),
         );
 
@@ -68,11 +67,6 @@ class TimeOffController extends Controller
 
         /** @var array<string, mixed> $data */
         $data = validator(ProfessionalInput::normalize($raw), $rules)->validate();
-
-        // Duração máxima (o banco também confere).
-        if (is_string($data['starts_at'] ?? null) && is_string($data['ends_at'] ?? null) && Carbon::parse($data['starts_at'])->diffInDays(Carbon::parse($data['ends_at']), true) > 366) {
-            throw ValidationException::withMessages(['ends_at' => 'A folga pode ter no máximo 366 dias.']);
-        }
 
         return $data;
     }

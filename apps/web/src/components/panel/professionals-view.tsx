@@ -16,14 +16,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
-import { CheckboxField, TextField } from '@/components/ui/inputs';
+import { CheckboxField, SelectField, TextField } from '@/components/ui/inputs';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
 import { TimeOffsSection } from './time-offs-section';
 import { WorkingHoursDialog } from './working-hours-dialog';
 
-type Form = { name: string; color: string; commission: string };
+type Form = {
+  name: string;
+  color: string;
+  commission: string;
+  user: string;
+};
 
-const EMPTY: Form = { name: '', color: '#2563EB', commission: '0' };
+const EMPTY: Form = { name: '', color: '#2563EB', commission: '0', user: '' };
 
 type Dialogs =
   | { kind: 'form'; professional: Professional | null }
@@ -41,12 +46,20 @@ export function ProfessionalsView({
   me,
   initial,
   timeOffs,
+  team,
 }: {
   me: Me;
   initial: ProfessionalPage | null;
   timeOffs: TimeOffPage | null;
+  /** Pessoas ativas da equipe que podem ser ligadas a um profissional (só dona e gerente recebem a lista). */
+  team: Array<{ id: string; name: string }>;
 }) {
   const [rows, setRows] = useState<Professional[]>(initial?.data ?? []);
+  const [cursor, setCursor] = useState<string | null>(
+    initial?.next_cursor ?? null,
+  );
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const error = initial ? null : t('professionals.loadError');
   const [notice, setNotice] = useState<{
@@ -95,7 +108,8 @@ export function ProfessionalsView({
           ? {
               name: professional.name,
               color: professional.color,
-              commission: String(professional.commission_percent),
+              commission: String(professional.commission_percent ?? 0),
+              user: professional.user_id ?? '',
             }
           : EMPTY,
       );
@@ -114,6 +128,7 @@ export function ProfessionalsView({
       name: form.name.trim(),
       color: form.color,
       commission_percent: Number(form.commission),
+      user_id: form.user === '' ? null : form.user,
     };
 
     setSaving(true);
@@ -195,12 +210,32 @@ export function ProfessionalsView({
     try {
       await call('DELETE', `professionals/${target.id}`);
       setRows((current) => current.filter((row) => row.id !== target.id));
+      setRemovedIds((current) => [...current, target.id]);
       setDialog(null);
       setNotice({ tone: 'success', text: t('professionals.deleted') });
     } catch (failure) {
       setDialogError(explain(failure));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function loadMore() {
+    if (!cursor) return;
+
+    setLoadingMore(true);
+
+    try {
+      const { data } = await call<ProfessionalPage>(
+        'GET',
+        `professionals?limit=50&status=all&cursor=${encodeURIComponent(cursor)}`,
+      );
+      setRows((current) => sortByName([...current, ...data.data]));
+      setCursor(data.next_cursor);
+    } catch (failure) {
+      setNotice({ tone: 'danger', text: explain(failure) });
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -287,7 +322,11 @@ export function ProfessionalsView({
                       {professional.name}
                     </span>
                   </Td>
-                  <Td>{professional.commission_percent}%</Td>
+                  <Td>
+                    {professional.commission_percent === null
+                      ? '—'
+                      : `${professional.commission_percent}%`}
+                  </Td>
                   <Td>
                     {t(
                       professional.user_id
@@ -363,11 +402,21 @@ export function ProfessionalsView({
             </tbody>
           </Table>
         )}
+        {cursor ? (
+          <Button
+            variant="secondary"
+            loading={loadingMore}
+            onClick={() => void loadMore()}
+          >
+            {t('professionals.loadMore')}
+          </Button>
+        ) : null}
       </div>
 
       <TimeOffsSection
         initial={timeOffs}
         professionals={rows}
+        removedIds={removedIds}
         canWrite={canWrite}
         manager={manager}
         onNotice={setNotice}
@@ -420,6 +469,20 @@ export function ProfessionalsView({
             }
             error={fieldErrors.commission_percent}
           />
+          <SelectField
+            label={t('professionals.access')}
+            hint={t('professionals.accessHint')}
+            value={form.user}
+            onChange={(event) => setForm({ ...form, user: event.target.value })}
+            error={fieldErrors.user_id}
+          >
+            <option value="">{t('professionals.accessNone')}</option>
+            {team.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name}
+              </option>
+            ))}
+          </SelectField>
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant="secondary"

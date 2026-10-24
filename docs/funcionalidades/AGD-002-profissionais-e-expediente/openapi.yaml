@@ -211,7 +211,7 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         color: { type: string, pattern: "^#[0-9A-F]{6}$" }
-        commission_percent: { type: integer, minimum: 0, maximum: 100 }
+        commission_percent: { type: [integer, "null"], minimum: 0, maximum: 100, description: "Dado financeiro: só dona, gerente e o próprio profissional veem; nos demais papéis vem nulo" }
         user_id: { type: [string, "null"], format: uuid }
         status: { type: string, enum: [active, inactive] }
         created_at: { type: string, format: date-time }

@@ -20,6 +20,11 @@
 - **Para a agenda (AGD-003):** o horário livre = expediente − folgas − agendamentos − intervalos; `working_hours` e `time_offs` já têm os índices para isso.
 - **Testes:** `vendor/bin/pest tests/Feature/Professionals` e `pnpm --filter web exec vitest run src/components/panel/professionals-view.test.tsx`.
 
+## Pendências registradas nas revisões
+
+- O vínculo `user_id` não é desfeito quando a pessoa sai da equipe: quem usar `user_id` para dar acesso (AGD-003) precisa conferir `memberships.status` na hora; reenviar o mesmo vínculo continua aceito.
+- A comissão só aparece para dona, gerente e o próprio profissional.
+
 ## Limites conhecidos
 
 - A exclusão do profissional ainda não é barrada por agendamentos (passa a valer com AGD-003); prefira desativar.

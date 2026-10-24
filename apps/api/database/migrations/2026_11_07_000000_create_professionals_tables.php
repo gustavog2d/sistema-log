@@ -63,6 +63,7 @@ return new class extends Migration
         DB::statement('ALTER TABLE time_offs ADD CONSTRAINT time_offs_professional_fk FOREIGN KEY (tenant_id, professional_id) REFERENCES professionals (tenant_id, id) ON DELETE CASCADE');
         DB::statement("ALTER TABLE time_offs ADD CONSTRAINT time_offs_range_valid CHECK (ends_at > starts_at AND ends_at - starts_at <= interval '366 days')");
         DB::statement('CREATE INDEX time_offs_tenant_start ON time_offs (tenant_id, starts_at, id)');
+        DB::statement('CREATE INDEX time_offs_tenant_professional ON time_offs (tenant_id, professional_id)');
     }
 
     public function down(): void

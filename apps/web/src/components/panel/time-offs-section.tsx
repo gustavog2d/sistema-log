@@ -4,13 +4,13 @@ import { useState, type FormEvent } from 'react';
 import { t } from '@/i18n';
 import { ApiError, call } from '@/lib/api';
 import {
+  formatBusinessDate,
   fromLocalInput,
   toLocalInput,
   type Professional,
   type TimeOff,
   type TimeOffPage,
 } from '@/lib/professional-types';
-import { formatDate } from '@/lib/format';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
@@ -36,19 +36,22 @@ function range(off: TimeOff): string {
   const start = toLocalInput(off.starts_at);
   const end = toLocalInput(off.ends_at);
 
-  return `${formatDate(off.starts_at)} ${start.slice(11)} – ${formatDate(off.ends_at)} ${end.slice(11)}`;
+  return `${formatBusinessDate(off.starts_at)} ${start.slice(11)} – ${formatBusinessDate(off.ends_at)} ${end.slice(11)}`;
 }
 
 /** Folgas do negócio: lista das próximas, filtro por pessoa, cadastro, edição e exclusão. */
 export function TimeOffsSection({
   initial,
   professionals,
+  removedIds,
   canWrite,
   manager,
   onNotice,
 }: {
   initial: TimeOffPage | null;
   professionals: Professional[];
+  /** Profissionais excluídos nesta tela: as folgas deles saíram junto. */
+  removedIds: string[];
   canWrite: boolean;
   manager: boolean;
   onNotice: (notice: { tone: 'success' | 'danger'; text: string }) => void;
@@ -75,6 +78,9 @@ export function TimeOffsSection({
   const [dialogError, setDialogError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const shown = rows.filter(
+    (row) => !row.professional_id || !removedIds.includes(row.professional_id),
+  );
   const who = (id: string | null) =>
     id === null
       ? t('professionals.timeOffAll')
@@ -257,7 +263,7 @@ export function TimeOffsSection({
       </SelectField>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
-      {rows.length === 0 && !error ? (
+      {shown.length === 0 && !error ? (
         <EmptyState title={t('professionals.timeOffEmpty')} />
       ) : (
         <Table caption={t('professionals.timeOffsCaption')}>
@@ -270,7 +276,7 @@ export function TimeOffsSection({
             </Tr>
           </thead>
           <tbody>
-            {rows.map((off) => (
+            {shown.map((off) => (
               <Tr key={off.id}>
                 <Td>{who(off.professional_id)}</Td>
                 <Td>{range(off)}</Td>
@@ -282,7 +288,7 @@ export function TimeOffsSection({
                         variant="secondary"
                         disabled={!canWrite}
                         onClick={() => open({ kind: 'form', off })}
-                        aria-label={`${t('professionals.edit')}: ${who(off.professional_id)} ${formatDate(off.starts_at)}`}
+                        aria-label={`${t('professionals.edit')}: ${who(off.professional_id)} ${formatBusinessDate(off.starts_at)}`}
                       >
                         {t('professionals.edit')}
                       </Button>
@@ -290,7 +296,7 @@ export function TimeOffsSection({
                         variant="secondary"
                         disabled={!canWrite}
                         onClick={() => open({ kind: 'delete', off })}
-                        aria-label={`${t('professionals.delete')}: ${who(off.professional_id)} ${formatDate(off.starts_at)}`}
+                        aria-label={`${t('professionals.delete')}: ${who(off.professional_id)} ${formatBusinessDate(off.starts_at)}`}
                       >
                         {t('professionals.delete')}
                       </Button>

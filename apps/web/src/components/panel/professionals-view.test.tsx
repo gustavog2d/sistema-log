@@ -75,7 +75,16 @@ const offs: TimeOffPage = {
 const view = (
   props: Partial<React.ComponentProps<typeof ProfessionalsView>> = {},
 ) => (
-  <ProfessionalsView me={me()} initial={people} timeOffs={offs} {...props} />
+  <ProfessionalsView
+    me={me()}
+    initial={people}
+    timeOffs={offs}
+    team={[
+      { id: 'u1', name: 'Ana Souza' },
+      { id: 'u2', name: 'Caio Reis' },
+    ]}
+    {...props}
+  />
 );
 
 describe('validateRanges', () => {
@@ -192,7 +201,12 @@ describe('ProfessionalsView', () => {
 
     await waitFor(() =>
       expect(call).toHaveBeenCalledWith('POST', 'professionals', {
-        body: { name: 'Alice', color: '#2563EB', commission_percent: 30 },
+        body: {
+          name: 'Alice',
+          color: '#2563EB',
+          commission_percent: 30,
+          user_id: null,
+        },
       }),
     );
     expect(
@@ -321,6 +335,112 @@ describe('ProfessionalsView', () => {
       ),
     );
     expect(await screen.findByText('Expediente salvo.')).toBeInTheDocument();
+  });
+
+  it('CA-05 shows and saves a range that goes until midnight (24:00)', async () => {
+    call.mockImplementation(async (method: string) =>
+      method === 'GET'
+        ? {
+            status: 200,
+            data: { data: [{ weekday: 6, start: '20:00', end: '24:00' }] },
+          }
+        : { status: 200, data: { data: [] } },
+    );
+    const user = userEvent.setup();
+    render(view());
+
+    await user.click(
+      screen.getByRole('button', { name: 'Expediente: Ana Tattoo' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('Fim 1: Sábado')).toHaveValue('24:00');
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Salvar expediente' }),
+    );
+
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith(
+        'PUT',
+        'professionals/p1/working-hours',
+        { body: { ranges: [{ weekday: 6, start: '20:00', end: '24:00' }] } },
+      ),
+    );
+  });
+
+  it('CA-01 sends the person linked to the professional and shows the commission as hidden when the API hides it', async () => {
+    call.mockResolvedValue({
+      status: 201,
+      data: professional({ id: 'new', name: 'Zeca', user_id: 'u2' }),
+    });
+    const user = userEvent.setup();
+    render(
+      view({
+        initial: {
+          data: [professional({ commission_percent: null })],
+          next_cursor: null,
+        },
+      }),
+    );
+
+    expect(
+      screen.getByRole('table', { name: 'Profissionais' }),
+    ).toHaveTextContent('—');
+    await user.click(screen.getByRole('button', { name: 'Novo profissional' }));
+    await user.type(screen.getByLabelText(/^Nome/), 'Zeca');
+    await user.selectOptions(screen.getByLabelText('Acesso'), 'u2');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith('POST', 'professionals', {
+        body: expect.objectContaining({ name: 'Zeca', user_id: 'u2' }),
+      }),
+    );
+  });
+
+  it('CA-04 loads more professionals by cursor', async () => {
+    call.mockResolvedValue({
+      status: 200,
+      data: {
+        data: [professional({ id: 'p9', name: 'Zélia' })],
+        next_cursor: null,
+      },
+    });
+    const user = userEvent.setup();
+    render(view({ initial: { data: people.data, next_cursor: 'c2' } }));
+
+    await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
+
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith(
+        'GET',
+        'professionals?limit=50&status=all&cursor=c2',
+      ),
+    );
+    expect(
+      await within(
+        screen.getByRole('table', { name: 'Profissionais' }),
+      ).findByText('Zélia'),
+    ).toBeInTheDocument();
+  });
+
+  it('CA-04 removes the time offs of a professional that was deleted', async () => {
+    call.mockResolvedValue({ status: 204, data: null });
+    const user = userEvent.setup();
+    render(view());
+    expect(
+      screen.getByRole('table', { name: 'Lista de folgas' }),
+    ).toHaveTextContent('Ana Tattoo');
+
+    await user.click(
+      screen.getByRole('button', { name: 'Excluir: Ana Tattoo' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Excluir de vez' }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('table', { name: 'Lista de folgas' }),
+      ).not.toHaveTextContent('Ana Tattoo'),
+    );
   });
 
   it('CA-06 refuses overlapping ranges on the screen before sending', async () => {

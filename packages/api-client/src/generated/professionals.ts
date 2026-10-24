@@ -19,10 +19,12 @@ export interface Professional {
   /** @pattern ^#[0-9A-F]{6}$ */
   color: string;
   /**
+     * Dado financeiro: só dona, gerente e o próprio profissional veem; nos demais papéis vem nulo
      * @minimum 0
      * @maximum 100
+     * @nullable
      */
-  commission_percent: number;
+  commission_percent: number | null;
   /** @nullable */
   user_id: string | null;
   status: ProfessionalStatus;

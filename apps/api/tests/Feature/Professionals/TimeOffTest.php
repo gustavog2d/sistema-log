@@ -104,3 +104,34 @@ it('CA-08 records creation, edition and deletion of time offs in the history', f
         ->and($rows[1]->before)->toBe(['reason' => 'Recesso'])->and($rows[1]->after)->toBe(['reason' => 'Feriado'])
         ->and($rows[0]->after['starts_at'])->toBe('2026-12-24T03:00:00+00:00');
 });
+
+it('CA-07 refuses absurd years instead of failing, in the body and in the filters', function () {
+    [, $token] = ownerOf($this, 'neg');
+
+    profApi($this, $token, 'POST', 'neg', 'time-offs', timeOffPayload(['starts_at' => '1900-01-01T00:00:00Z', 'ends_at' => '1900-01-02T00:00:00Z']))->assertStatus(422)->assertJsonValidationErrors('starts_at');
+    profApi($this, $token, 'POST', 'neg', 'time-offs', timeOffPayload(['starts_at' => '2099-12-31T00:00:00Z', 'ends_at' => '2100-06-01T00:00:00Z']))->assertStatus(422)->assertJsonValidationErrors('ends_at');
+    profApi($this, $token, 'GET', 'neg', 'time-offs?from=1000-01-01')->assertStatus(422)->assertJsonValidationErrors('from');
+    profApi($this, $token, 'GET', 'neg', 'time-offs?to=%2B275760-01-01')->assertStatus(422);
+});
+
+it('CA-07 edits only the end and refuses a professional of another business on edit', function () {
+    [$a, $tokenA] = ownerOf($this, 'negocioa');
+    [$b] = ownerOf($this, 'negociob');
+    $off = seedTimeOff($a, ['starts_at' => '2026-12-24 00:00:00', 'ends_at' => '2026-12-26 00:00:00']);
+    $theirs = seedProfessional($b);
+
+    profApi($this, $tokenA, 'PATCH', 'negocioa', "time-offs/{$off->id}", ['ends_at' => '2026-12-30T00:00:00+03:00'])->assertOk()->assertJsonPath('ends_at', '2026-12-29T21:00:00+00:00');
+    profApi($this, $tokenA, 'PATCH', 'negocioa', "time-offs/{$off->id}", ['professional_id' => $theirs->id])->assertStatus(422)->assertJsonValidationErrors('professional_id');
+    profApi($this, $tokenA, 'PATCH', 'negocioa', "time-offs/{$off->id}", ['starts_at' => '2027-02-01T00:00:00Z'])->assertStatus(422)->assertJsonValidationErrors('ends_at');
+});
+
+it('CA-07 understands filters with an offset in the query', function () {
+    [$ws, $token] = ownerOf($this, 'neg');
+    seedTimeOff($ws, ['starts_at' => '2026-12-10 00:00:00', 'ends_at' => '2026-12-12 00:00:00', 'reason' => 'dentro']);
+
+    $reasons = fn (string $query) => collect(profApi($this, $token, 'GET', 'neg', 'time-offs?'.$query)->assertOk()->json('data'))->pluck('reason')->all();
+
+    expect($reasons('from='.urlencode('2026-12-11T20:00:00-03:00')))->toBe(['dentro'])
+        ->and($reasons('from='.urlencode('2026-12-12T01:00:00+03:00')))->toBe(['dentro'])
+        ->and($reasons('from='.urlencode('2026-12-12T00:30:00+00:00')))->toBe([]);
+});

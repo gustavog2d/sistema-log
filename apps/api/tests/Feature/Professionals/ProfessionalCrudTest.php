@@ -136,3 +136,44 @@ it('CA-08 records creation, edition and deletion in the history', function () {
     expect(collect($rows)->map(fn ($r) => $r->entity_type.':'.$r->action)->all())->toBe(['professional:created', 'professional:updated', 'professional:deleted'])
         ->and($rows[1]->before)->toBe(['commission_percent' => 10])->and($rows[1]->after)->toBe(['commission_percent' => 25]);
 });
+
+it('CA-03 shows the commission only to owner, manager and the professional themselves', function () {
+    [$ownerToken, $ws] = teamOf($this, 'neg', ['recep@exemplo.com' => 'reception', 'pro@exemplo.com' => 'professional']);
+    $db = DB::connection('pgsql_admin');
+    $proUser = $db->table('users')->where('email', 'pro@exemplo.com')->value('id');
+    seedProfessional($ws, ['name' => 'Ana', 'commission_percent' => 40, 'user_id' => $proUser]);
+    seedProfessional($ws, ['name' => 'Bia', 'commission_percent' => 25]);
+
+    $commissions = fn (string $token) => collect(profApi($this, $token, 'GET', 'neg')->assertOk()->json('data'))->pluck('commission_percent', 'name')->all();
+
+    expect($commissions($ownerToken))->toBe(['Ana' => 40, 'Bia' => 25])
+        ->and($commissions(tokenOf($this, 'neg', 'pro@exemplo.com')))->toBe(['Ana' => 40, 'Bia' => null])
+        ->and($commissions(tokenOf($this, 'neg', 'recep@exemplo.com')))->toBe(['Ana' => null, 'Bia' => null]);
+});
+
+it('CA-01 lets the same link be sent again after the person left the team, but not a new one', function () {
+    [$ws, $token] = ownerOf($this, 'neg');
+    $user = addMember($ws, 'saiu@exemplo.com');
+    $other = addMember($ws, 'outra@exemplo.com', 'inactive');
+    $professional = seedProfessional($ws, ['user_id' => $user]);
+    DB::connection('pgsql_admin')->table('memberships')->where('user_id', $user)->update(['status' => 'inactive']);
+
+    profApi($this, $token, 'PATCH', 'neg', "professionals/{$professional->id}", ['user_id' => $user, 'commission_percent' => 5])->assertOk();
+    profApi($this, $token, 'PATCH', 'neg', "professionals/{$professional->id}", ['user_id' => $other])->assertStatus(422)->assertJsonValidationErrors('user_id');
+});
+
+it('CA-04 records the removal of the time offs and of the schedule when a professional is deleted', function () {
+    [$ws, $token] = ownerOf($this, 'neg');
+    $professional = seedProfessional($ws);
+    seedHours($ws, $professional, [[1, 540, 720]]);
+    $off = seedTimeOff($ws, ['professional_id' => $professional->id]);
+    seedTimeOff($ws);
+
+    profApi($this, $token, 'DELETE', 'neg', "professionals/{$professional->id}")->assertNoContent();
+
+    $rows = collect(auditRows());
+    expect(DB::connection('pgsql_admin')->table('time_offs')->count())->toBe(1)
+        ->and($rows->where('entity_type', 'time_off')->where('action', 'deleted')->pluck('entity_id')->all())->toBe([$off->id])
+        ->and($rows->where('entity_type', 'working_hours')->where('action', 'deleted')->first()->before)->toBe(['ranges' => ['1 09:00-12:00']])
+        ->and($rows->where('entity_type', 'professional')->where('action', 'deleted')->count())->toBe(1);
+});

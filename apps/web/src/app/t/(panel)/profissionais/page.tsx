@@ -16,12 +16,19 @@ export default async function Page() {
   if (session.kind !== 'ok') redirect('/entrar');
 
   const context = await getPanelContext();
-  const [professionals, timeOffs] = await Promise.all([
+  const manager = ['owner', 'manager'].includes(session.me.user.role);
+  const [professionals, timeOffs, team] = await Promise.all([
     apiGet<ProfessionalPage>('professionals?limit=50&status=all', context),
     apiGet<TimeOffPage>(
       `time-offs?limit=20&from=${encodeURIComponent(new Date().toISOString())}`,
       context,
     ),
+    // A lista da equipe só vai a quem a API entrega (dona e gerente); para os outros papéis o seletor nem aparece.
+    manager
+      ? apiGet<{
+          members: Array<{ id: string; name: string; status: string }>;
+        }>('users', context)
+      : Promise.resolve({ status: 0, data: null }),
   ]);
 
   return (
@@ -29,6 +36,13 @@ export default async function Page() {
       me={session.me}
       initial={professionals.status === 200 ? professionals.data : null}
       timeOffs={timeOffs.status === 200 ? timeOffs.data : null}
+      team={
+        team.status === 200 && team.data
+          ? team.data.members
+              .filter((member) => member.status === 'active')
+              .map((member) => ({ id: member.id, name: member.name }))
+          : []
+      }
     />
   );
 }

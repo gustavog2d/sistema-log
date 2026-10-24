@@ -30,7 +30,8 @@ it('CA-03 lets every role read and only owner and manager write', function (stri
 
     foreach (professionalWrites($professional, $timeOff) as [$method, $path]) {
         $response = profApi($this, $token, $method, 'neg2', $path, profPayload(['ranges' => []]) + timeOffPayload());
-        $canWrite ? expect($response->status())->not->toBe(403) : $response->assertForbidden();
+        // Dona e gerente passam da autorização (o pedido pode falhar na validação); os demais papéis são barrados com o código da regra.
+        $canWrite ? expect($response->status())->toBeIn([200, 201, 204, 404, 422]) : $response->assertForbidden()->assertJsonPath('title', 'Forbidden');
     }
 })->with([['owner', true], ['manager', true], ['professional', false], ['reception', false]]);
 
