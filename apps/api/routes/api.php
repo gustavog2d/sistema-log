@@ -7,6 +7,7 @@ use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LeadCaptureController;
 use App\Http\Controllers\PaymentController;
@@ -140,6 +141,15 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,m
         Route::patch('expenses/{id}', [ExpenseController::class, 'update'])->whereUuid('id');
         Route::delete('expenses/{id}', [ExpenseController::class, 'destroy'])->whereUuid('id');
     });
+});
+
+// Financeiro (FIN-003): só dona e gerente; a meta só se altera sem acesso de suporte.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager', 'throttle:tenant-api'])->prefix('finance')->group(function () {
+    Route::get('summary', [FinanceController::class, 'summary']);
+    Route::get('monthly', [FinanceController::class, 'monthly']);
+    Route::get('calendar', [FinanceController::class, 'calendar']);
+    Route::get('goal', [FinanceController::class, 'goal']);
+    Route::put('goal', [FinanceController::class, 'setGoal'])->middleware('no.impersonation');
 });
 
 // Equipe (PLT-008): dona e gerente. A listagem passa mesmo suspenso; as mudanças respeitam `subscription.access`.

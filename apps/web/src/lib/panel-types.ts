@@ -84,6 +84,7 @@ export const AREA_ROLES = {
   audit: ['owner', 'manager'],
   agenda: ['owner', 'manager', 'professional', 'reception'],
   expenses: ['owner', 'manager'],
+  finance: ['owner', 'manager'],
   clients: ['owner', 'manager', 'professional', 'reception'],
   services: ['owner', 'manager', 'professional', 'reception'],
   professionals: ['owner', 'manager', 'professional', 'reception'],

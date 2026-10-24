@@ -33,3 +33,28 @@ function expenseBody(object $category, array $override = []): array
 {
     return $override + ['category_id' => $category->id, 'description' => 'Aluguel de novembro', 'amount_cents' => 250000, 'spent_on' => '2026-11-05'];
 }
+
+/**
+ * Negócio de teste do financeiro: profissional com 40% de comissão. Devolve o mundo de `apptWorld`.
+ *
+ * @return object{ws: object, token: string, client: object, pro: object, service: object, slug: string}
+ */
+function finWorld($test, string $slug = 'neg'): object
+{
+    $w = apptWorld($test, $slug);
+    DB::connection('pgsql_admin')->table('professionals')->where('id', $w->pro->id)->update(['commission_percent' => 40]);
+
+    return $w;
+}
+
+/** Agendamento com valor, comissão congelada e pagamentos recebidos `[valor, instante UTC, forma]`. */
+function finAppointment(object $w, string $startsAt, ?int $value, string $status = 'scheduled', int $commission = 40, array $payments = []): object
+{
+    $a = seedAppointment($w, ['starts_at' => $startsAt, 'ends_at' => Carbon\Carbon::parse($startsAt, 'UTC')->addHour(), 'value_total_cents' => $value, 'status' => $status, 'commission_percent' => $commission]);
+
+    foreach ($payments as [$amount, $at, $method]) {
+        seedPayment($w, $a, ['amount_cents' => $amount, 'paid_at' => $at, 'method' => $method ?? 'pix']);
+    }
+
+    return $a;
+}
