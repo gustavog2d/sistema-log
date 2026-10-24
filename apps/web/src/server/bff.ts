@@ -24,6 +24,8 @@ const ALLOWED = [
   /^professionals(\/.*)?$/,
   /^appointments(\/.*)?$/,
   /^payments(\/.*)?$/,
+  /^expenses(\/.*)?$/,
+  /^expense-categories(\/.*)?$/,
   /^time-offs(\/.*)?$/,
   /^platform\/.+$/,
 ];
@@ -145,6 +147,8 @@ const TENANT_ONLY = [
   /^professionals(\/|$)/,
   /^appointments(\/|$)/,
   /^payments(\/|$)/,
+  /^expenses(\/|$)/,
+  /^expense-categories(\/|$)/,
   /^time-offs(\/|$)/,
   /^subscription(\/|$)/,
   /^tenant\/current$/,
