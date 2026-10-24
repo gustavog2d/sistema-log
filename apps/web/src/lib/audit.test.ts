@@ -29,7 +29,8 @@ describe('audit helpers', () => {
     );
     expect(formatAuditValue('notes', null)).toBe('vazio');
     expect(formatAuditValue('notes', '')).toBe('vazio');
-    expect(formatAuditValue('tags', ['a'])).toBe('["a"]');
+    expect(formatAuditValue('tags', ['a', 'b'])).toBe('a, b');
+    expect(formatAuditValue('ranges', [])).toBe('vazio');
   });
 
   it('FND-008 describes an update field by field and a creation or deletion with one side', () => {

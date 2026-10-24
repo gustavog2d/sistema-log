@@ -15,6 +15,7 @@ use App\Http\Controllers\Platform\PlanController;
 use App\Http\Controllers\Platform\PlanFeatureController;
 use App\Http\Controllers\Platform\TenantAdminController;
 use App\Http\Controllers\Platform\TwoFactorController;
+use App\Http\Controllers\ProfessionalController;
 use App\Http\Controllers\PublicPlanController;
 use App\Http\Controllers\ServiceCategoryController;
 use App\Http\Controllers\ServiceController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\TenantAuth\LoginController;
 use App\Http\Controllers\TenantAuth\PasswordController;
 use App\Http\Controllers\TenantAuth\SessionController;
 use App\Http\Controllers\TenantAuth\TwoFactorController as TenantTwoFactorController;
+use App\Http\Controllers\TimeOffController;
 use App\Platform\Auth\AccessTokens;
 use Illuminate\Support\Facades\Route;
 
@@ -73,6 +75,29 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:ten
             Route::post('/', [ServiceCategoryController::class, 'store']);
             Route::patch('{id}', [ServiceCategoryController::class, 'update'])->whereUuid('id');
             Route::delete('{id}', [ServiceCategoryController::class, 'destroy'])->whereUuid('id');
+        });
+    });
+});
+
+// Profissionais, expediente e folgas (AGD-002): todos os papéis leem; só dona e gerente escrevem. O acesso de suporte só lê.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'throttle:tenant-api'])->group(function () {
+    Route::prefix('professionals')->group(function () {
+        Route::get('/', [ProfessionalController::class, 'index']);
+        Route::get('{id}', [ProfessionalController::class, 'show'])->whereUuid('id');
+        Route::get('{id}/working-hours', [ProfessionalController::class, 'hours'])->whereUuid('id');
+        Route::middleware(['no.impersonation', 'role:owner,manager'])->group(function () {
+            Route::post('/', [ProfessionalController::class, 'store']);
+            Route::patch('{id}', [ProfessionalController::class, 'update'])->whereUuid('id');
+            Route::delete('{id}', [ProfessionalController::class, 'destroy'])->whereUuid('id');
+            Route::put('{id}/working-hours', [ProfessionalController::class, 'setHours'])->whereUuid('id');
+        });
+    });
+    Route::prefix('time-offs')->group(function () {
+        Route::get('/', [TimeOffController::class, 'index']);
+        Route::middleware(['no.impersonation', 'role:owner,manager'])->group(function () {
+            Route::post('/', [TimeOffController::class, 'store']);
+            Route::patch('{id}', [TimeOffController::class, 'update'])->whereUuid('id');
+            Route::delete('{id}', [TimeOffController::class, 'destroy'])->whereUuid('id');
         });
     });
 });

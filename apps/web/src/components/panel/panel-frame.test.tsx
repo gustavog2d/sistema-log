@@ -33,6 +33,7 @@ describe('navFor', () => {
         'Assinatura',
         'Clientes',
         'Serviços',
+        'Profissionais',
         'Equipe',
         'Histórico',
         'Minha conta',
@@ -40,10 +41,24 @@ describe('navFor', () => {
     ],
     [
       'manager',
-      ['Início', 'Clientes', 'Serviços', 'Equipe', 'Histórico', 'Minha conta'],
+      [
+        'Início',
+        'Clientes',
+        'Serviços',
+        'Profissionais',
+        'Equipe',
+        'Histórico',
+        'Minha conta',
+      ],
     ],
-    ['professional', ['Início', 'Clientes', 'Serviços', 'Minha conta']],
-    ['reception', ['Início', 'Clientes', 'Serviços', 'Minha conta']],
+    [
+      'professional',
+      ['Início', 'Clientes', 'Serviços', 'Profissionais', 'Minha conta'],
+    ],
+    [
+      'reception',
+      ['Início', 'Clientes', 'Serviços', 'Profissionais', 'Minha conta'],
+    ],
   ] as const)('CA-04 shows only what a %s can use', (role, labels) => {
     expect(navFor(me(role)).map((item) => item.label)).toEqual(labels);
   });
@@ -144,6 +159,7 @@ describe('PanelFrame', () => {
       'Início',
       'Clientes',
       'Serviços',
+      'Profissionais',
       'Equipe',
       'Histórico',
       'Minha conta',
