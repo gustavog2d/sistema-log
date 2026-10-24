@@ -5,6 +5,8 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CouponCheckController;
 use App\Http\Controllers\CurrentTenantController;
+use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LeadCaptureController;
 use App\Http\Controllers\PaymentController;
@@ -121,6 +123,22 @@ Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,m
         Route::post('appointments/{id}/payments', [PaymentController::class, 'store'])->whereUuid('id')->middleware('idempotent:payment');
         Route::patch('payments/{id}', [PaymentController::class, 'update'])->whereUuid('id');
         Route::post('payments/{id}/void', [PaymentController::class, 'void'])->whereUuid('id');
+    });
+});
+
+// Despesas e categorias (FIN-002): só dona e gerente (leitura e escrita); o acesso de suporte só lê.
+Route::middleware(['tenant', 'auth.tenant', 'subscription.access', 'role:owner,manager', 'throttle:tenant-api'])->group(function () {
+    Route::get('expense-categories', [ExpenseCategoryController::class, 'index']);
+    Route::get('expenses', [ExpenseController::class, 'index']);
+    Route::get('expenses/{id}', [ExpenseController::class, 'show'])->whereUuid('id');
+    Route::middleware('no.impersonation')->group(function () {
+        Route::post('expense-categories', [ExpenseCategoryController::class, 'store']);
+        Route::post('expense-categories/defaults', [ExpenseCategoryController::class, 'defaults']);
+        Route::patch('expense-categories/{id}', [ExpenseCategoryController::class, 'update'])->whereUuid('id');
+        Route::delete('expense-categories/{id}', [ExpenseCategoryController::class, 'destroy'])->whereUuid('id');
+        Route::post('expenses', [ExpenseController::class, 'store']);
+        Route::patch('expenses/{id}', [ExpenseController::class, 'update'])->whereUuid('id');
+        Route::delete('expenses/{id}', [ExpenseController::class, 'destroy'])->whereUuid('id');
     });
 });
 
