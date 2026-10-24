@@ -9,6 +9,7 @@ use BackedEnum;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -60,6 +61,38 @@ class Auditor
     public function deleted(Model $model): void
     {
         $this->write($model, 'deleted', $this->values($model, fn (string $field) => $model->getOriginal($field)), null);
+    }
+
+    /**
+     * Registro manual para mudanças que não são um modelo só (ex.: o expediente inteiro de um profissional, trocado de uma vez).
+     * Mesma conexão e transação do chamador; quem chama garante que os valores não têm dado sensível.
+     *
+     * @param  array<string, mixed>|null  $before
+     * @param  array<string, mixed>|null  $after
+     */
+    public function record(string $entityType, string $entityId, string $action, ?array $before, ?array $after): void
+    {
+        $tenantId = $this->context->id();
+
+        if ($tenantId === null) {
+            throw TenantContextMissing::forModel('registro manual do histórico');
+        }
+
+        $person = request()->attributes->get('tenant_person');
+
+        DB::table('audit_logs')->insert([
+            'id' => (string) Str::uuid7(),
+            'tenant_id' => $tenantId,
+            'user_id' => $person instanceof AuthenticatedPerson ? $person->id : null,
+            'actor_name' => $person instanceof AuthenticatedPerson ? mb_substr($person->name, 0, 100) : null,
+            'impersonated_by' => $person instanceof AuthenticatedPerson ? $person->impersonatedBy : null,
+            'entity_type' => $entityType,
+            'entity_id' => $entityId,
+            'action' => $action,
+            'before' => $before === null ? null : json_encode($before, JSON_UNESCAPED_UNICODE),
+            'after' => $after === null ? null : json_encode($after, JSON_UNESCAPED_UNICODE),
+            'created_at' => now(),
+        ]);
     }
 
     /** @return list<string> */

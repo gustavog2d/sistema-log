@@ -29,4 +29,8 @@ export default defineConfig({
   audit: contract('audit', 'FND-008-auditoria-do-assinante'),
   clients: contract('clients', 'CLI-001-clientes'),
   services: contract('services', 'AGD-001-servicos'),
+  professionals: contract(
+    'professionals',
+    'AGD-002-profissionais-e-expediente',
+  ),
 });
