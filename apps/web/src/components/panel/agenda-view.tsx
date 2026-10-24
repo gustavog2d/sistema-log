@@ -50,6 +50,9 @@ type Form = {
   description: string;
   notes: string;
   review: string;
+  type: 'appointment' | 'retouch';
+  session: string;
+  sessionsTotal: string;
 };
 
 const EMPTY: Form = {
@@ -62,6 +65,9 @@ const EMPTY: Form = {
   description: '',
   notes: '',
   review: '',
+  type: 'appointment',
+  session: '',
+  sessionsTotal: '',
 };
 
 type Dialogs =
@@ -116,6 +122,11 @@ export function AgendaView({
   const manager = role === 'owner' || role === 'manager';
   const seesValues = role !== 'reception';
   const canWrite = me.can_write && !me.impersonating;
+  // O profissional agenda só no próprio perfil (a API também decide): a tela só oferece o dele.
+  const usable =
+    role === 'professional'
+      ? professionals.filter((p) => p.user_id === me.user.id)
+      : professionals;
   const range = weekRange(monday);
 
   function explain(failure: unknown): string {
@@ -191,11 +202,13 @@ export function AgendaView({
                 appointment.client_review === null
                   ? ''
                   : String(appointment.client_review),
+              type: appointment.type,
+              session: appointment.session_number?.toString() ?? '',
+              sessionsTotal: appointment.sessions_total?.toString() ?? '',
             }
           : {
               ...EMPTY,
-              professionalId:
-                professionalFilter || (professionals[0]?.id ?? ''),
+              professionalId: professionalFilter || (usable[0]?.id ?? ''),
               startsAt: `${todayInBusiness()}T09:00`,
             },
       );
@@ -224,9 +237,9 @@ export function AgendaView({
 
   const editing = dialog?.kind === 'form' ? dialog.appointment : null;
   const rescheduling = dialog?.kind === 'form' && dialog.reschedule === true;
+  // Em cancelado, faltoso e finalizado a API só aceita notas (e valor/avaliação no finalizado); reativar só troca a situação.
   const frozen =
     editing !== null &&
-    !rescheduling &&
     ['completed', 'canceled', 'no_show'].includes(editing.status);
   const selectedService = services.find((s) => s.id === form.serviceId);
 
@@ -281,33 +294,46 @@ export function AgendaView({
       return;
     }
 
-    const body: Record<string, unknown> = frozen
+    const body: Record<string, unknown> = rescheduling
       ? {
+          status: 'scheduled',
           notes: form.notes.trim() === '' ? null : form.notes,
-          ...(seesValues && target?.status === 'completed'
-            ? { value_total_cents: cents }
-            : {}),
-          ...(target?.status === 'completed'
-            ? { client_review: form.review === '' ? null : Number(form.review) }
-            : {}),
-        }
-      : {
-          client_id: form.clientId,
-          professional_id: form.professionalId,
-          service_id: form.serviceId === '' ? null : form.serviceId,
-          starts_at: fromLocalInput(form.startsAt),
-          ends_at:
-            form.serviceId === '' && form.endsAt
-              ? fromLocalInput(form.endsAt)
-              : undefined,
-          description: form.description.trim() === '' ? null : form.description,
-          notes: form.notes.trim() === '' ? null : form.notes,
-          ...(seesValues && cents !== null ? { value_total_cents: cents } : {}),
-          ...(rescheduling ? { status: 'scheduled' } : {}),
           ...(allowOutside ? { allow_outside_hours: true } : {}),
-        };
+        }
+      : frozen
+        ? {
+            notes: form.notes.trim() === '' ? null : form.notes,
+            ...(seesValues && target?.status === 'completed'
+              ? { value_total_cents: cents }
+              : {}),
+            ...(target?.status === 'completed'
+              ? {
+                  client_review:
+                    form.review === '' ? null : Number(form.review),
+                }
+              : {}),
+          }
+        : {
+            client_id: form.clientId,
+            professional_id: form.professionalId,
+            service_id: form.serviceId === '' ? null : form.serviceId,
+            starts_at: fromLocalInput(form.startsAt),
+            ends_at:
+              form.serviceId === '' && form.endsAt
+                ? fromLocalInput(form.endsAt)
+                : undefined,
+            description:
+              form.description.trim() === '' ? null : form.description,
+            notes: form.notes.trim() === '' ? null : form.notes,
+            ...(seesValues ? { value_total_cents: cents } : {}),
+            type: form.type,
+            session_number: form.session === '' ? null : Number(form.session),
+            sessions_total:
+              form.sessionsTotal === '' ? null : Number(form.sessionsTotal),
+            ...(allowOutside ? { allow_outside_hours: true } : {}),
+          };
 
-    if (target && !frozen) {
+    if (target && !frozen && !rescheduling) {
       // No agendamento existente o cliente não muda e o fim acompanha o serviço quando ele existe.
       delete body.client_id;
     }
@@ -598,13 +624,15 @@ export function AgendaView({
         onClose={() => setDialog(null)}
         title={title}
         description={
-          frozen
-            ? t(
-                editing?.status === 'completed'
-                  ? 'agenda.completedHint'
-                  : 'agenda.closedHint',
-              )
-            : undefined
+          rescheduling
+            ? t('agenda.reactivateHint')
+            : frozen
+              ? t(
+                  editing?.status === 'completed'
+                    ? 'agenda.completedHint'
+                    : 'agenda.closedHint',
+                )
+              : undefined
         }
         footer={
           <>
@@ -700,7 +728,13 @@ export function AgendaView({
                   setForm({ ...form, professionalId: event.target.value })
                 }
               >
-                {professionals.map((professional) => (
+                {editing &&
+                !usable.some((p) => p.id === editing.professional.id) ? (
+                  <option value={editing.professional.id}>
+                    {editing.professional.name}
+                  </option>
+                ) : null}
+                {usable.map((professional) => (
                   <option key={professional.id} value={professional.id}>
                     {professional.name}
                   </option>
@@ -715,6 +749,12 @@ export function AgendaView({
                 }
               >
                 <option value="">{t('agenda.noService')}</option>
+                {editing?.service &&
+                !services.some((s) => s.id === editing.service?.id) ? (
+                  <option value={editing.service.id}>
+                    {editing.service.name}
+                  </option>
+                ) : null}
                 {services.map((service) => (
                   <option key={service.id} value={service.id}>
                     {service.name}
@@ -797,6 +837,46 @@ export function AgendaView({
                   setForm({ ...form, description: event.target.value })
                 }
               />
+              <SelectField
+                label={t('agenda.type')}
+                value={form.type}
+                error={fieldErrors.type}
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    type: event.target.value as Form['type'],
+                  })
+                }
+              >
+                <option value="appointment">
+                  {t('agenda.typeAppointment')}
+                </option>
+                <option value="retouch">{t('agenda.typeRetouch')}</option>
+              </SelectField>
+              <div className="grid grid-cols-2 gap-3">
+                <TextField
+                  label={t('agenda.session')}
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={form.session}
+                  error={fieldErrors.session_number}
+                  onChange={(event) =>
+                    setForm({ ...form, session: event.target.value })
+                  }
+                />
+                <TextField
+                  label={t('agenda.sessionsTotal')}
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={form.sessionsTotal}
+                  error={fieldErrors.sessions_total}
+                  onChange={(event) =>
+                    setForm({ ...form, sessionsTotal: event.target.value })
+                  }
+                />
+              </div>
             </>
           ) : null}
 

@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 beforeEach(function () {
     $this->seedBillingCatalog();
@@ -137,4 +138,13 @@ it('CA-13 asks for a login and does not let the token of one business reach anot
     $this->getJson('http://negocioa.app.test/api/v1/appointments?from=2026-11-01T00:00:00Z&to=2026-11-10T00:00:00Z')->assertUnauthorized();
     apptApi($this, $a->token, 'GET', 'negociob', 'appointments?from=2026-11-01T00:00:00Z&to=2026-11-10T00:00:00Z')->assertUnauthorized();
     expect($b->ws->tenant_id)->not->toBe($a->ws->tenant_id);
+});
+
+it('CA-07 answers 403 to a professional using another professional id, whether it exists or not', function () {
+    $w = apptTeam($this);
+    $other = Str::uuid()->toString();
+
+    foreach ([$w->bia->id, $other] as $id) {
+        apptApi($this, $w->tokens['ana'], 'POST', 'neg', 'appointments', apptPayload($w, ['professional_id' => $id]))->assertForbidden();
+    }
 });

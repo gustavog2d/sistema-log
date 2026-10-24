@@ -1113,6 +1113,12 @@
     "deleteText": "O agendamento de {client} em {when} será apagado. Esta ação não pode ser desfeita.",
     "deleteConfirm": "Sim, excluir",
     "completedHint": "Atendimento finalizado: só notas, valor e avaliação podem mudar.",
-    "closedHint": "Neste estado só as notas podem mudar. Para mudar o horário, reagende."
+    "closedHint": "Neste estado só as notas podem mudar. Use Reagendar para reativar o agendamento.",
+    "reactivateHint": "O agendamento volta para Agendado no mesmo horário, se ele estiver livre. Depois, edite o horário se precisar.",
+    "type": "Tipo",
+    "typeAppointment": "Atendimento",
+    "typeRetouch": "Retoque",
+    "session": "Sessão nº",
+    "sessionsTotal": "Total de sessões"
   }
 }

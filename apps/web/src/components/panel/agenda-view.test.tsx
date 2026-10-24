@@ -426,3 +426,65 @@ describe('AgendaView', () => {
     expect(await axe(screen.getByRole('dialog'))).toHaveNoViolations();
   });
 });
+
+describe('AgendaView reactivation and edit', () => {
+  it('CA-05 reactivates a canceled appointment sending only the status and notes', async () => {
+    call.mockImplementation((method: string) =>
+      Promise.resolve({
+        status: 200,
+        data: method === 'GET' ? list() : appointment(),
+      }),
+    );
+    const user = userEvent.setup();
+    render(view({ initial: list(appointment({ status: 'canceled' })) }));
+
+    await user.click(
+      screen.getByRole('button', { name: 'Reagendar: Bia Lima' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Reagendar' });
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() =>
+      expect(call).toHaveBeenCalledWith('PATCH', 'appointments/a1', {
+        body: { status: 'scheduled', notes: null },
+      }),
+    );
+  });
+
+  it('CA-05 keeps the archived service and the inactive professional as options when editing', async () => {
+    const user = userEvent.setup();
+    render(
+      view({
+        services: [],
+        professionals: [],
+        initial: list(appointment()),
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Editar: Bia Lima' }));
+    const dialog = screen.getByRole('dialog', { name: 'Editar agendamento' });
+
+    expect(within(dialog).getByLabelText('Serviço')).toHaveValue('s1');
+    expect(within(dialog).getByLabelText('Profissional')).toHaveValue('p1');
+  });
+
+  it('CA-07 offers a professional only the own profile', async () => {
+    const user = userEvent.setup();
+    const mine = { ...professional, id: 'p9', name: 'Eu', user_id: 'u-1' };
+    render(
+      view({
+        me: me('professional'),
+        professionals: [professional, mine],
+        initial: list(),
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Novo agendamento' }));
+    const dialog = screen.getByRole('dialog', { name: 'Novo agendamento' });
+
+    expect(within(dialog).getByLabelText('Profissional')).toHaveValue('p9');
+    expect(
+      within(dialog).queryByRole('option', { name: 'Ana Tattoo' }),
+    ).not.toBeInTheDocument();
+  });
+});

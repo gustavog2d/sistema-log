@@ -99,7 +99,10 @@ class AppointmentBook
             'value_total_cents' => $value, 'notes' => $data['notes'] ?? null, 'client_review' => $data['client_review'] ?? null,
         ];
 
-        $this->assertFree($professionalId, $starts, $ends, $attributes['blocked_from'], $attributes['blocked_until'], null, (bool) ($data['allow_outside_hours'] ?? false), self::text($attributes['status']));
+        // Cancelado e faltoso não ocupam horário (RN-03): não há o que conferir.
+        if (in_array($attributes['status'], Appointment::ACTIVE, true)) {
+            $this->assertFree($professionalId, $starts, $ends, $attributes['blocked_from'], $attributes['blocked_until'], null, (bool) ($data['allow_outside_hours'] ?? false), self::text($attributes['status']));
+        }
 
         return $this->persist(fn (): Appointment => Appointment::create($attributes), $professionalId, $attributes['blocked_from'], $attributes['blocked_until'], null)->load(['client', 'professional', 'service']);
     }

@@ -75,7 +75,7 @@ class Appointment extends Model implements AuditedEntity
      */
     public function maskedAuditFields(): array
     {
-        return ['notes'];
+        return ['notes', 'description'];
     }
 
     /** @return BelongsTo<Client, $this> */

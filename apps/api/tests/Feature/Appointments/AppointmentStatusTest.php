@@ -123,3 +123,29 @@ it('CA-10 deletes an active appointment but not a completed one', function () {
     apptApi($this, $w->token, 'DELETE', 'neg', "appointments/{$done->id}")->assertStatus(409)->assertJsonPath('code', 'appointment_completed');
     expect(apptCount())->toBe(1);
 });
+
+it('CA-06 edits notes of an active appointment whose service was archived and whose professional was deactivated', function () {
+    $w = apptWorld($this);
+    $appointment = seedAppointment($w, ['service_id' => $w->service->id]);
+    DB::connection('pgsql_admin')->table('services')->where('id', $w->service->id)->update(['status' => 'archived']);
+    DB::connection('pgsql_admin')->table('professionals')->where('id', $w->pro->id)->update(['status' => 'inactive']);
+
+    apptApi($this, $w->token, 'PATCH', 'neg', "appointments/{$appointment->id}", [
+        'service_id' => $w->service->id, 'professional_id' => $w->pro->id, 'notes' => 'ajuste',
+    ])->assertOk()->assertJsonPath('notes', 'ajuste');
+});
+
+it('CA-03 does not check the time of an appointment created as canceled', function () {
+    $w = apptWorld($this);
+    seedAppointment($w, ['starts_at' => '2026-11-03 13:00:00', 'ends_at' => '2026-11-03 14:00:00']);
+
+    apptApi($this, $w->token, 'POST', 'neg', 'appointments', apptPayload($w, ['status' => 'canceled']))->assertCreated();
+});
+
+it('CA-14 never stores the description in the history, only that it changed', function () {
+    $w = apptWorld($this);
+    apptApi($this, $w->token, 'POST', 'neg', 'appointments', apptPayload($w, ['description' => 'alergia a látex']))->assertCreated();
+
+    $log = DB::connection('pgsql_admin')->table('audit_logs')->where('entity_type', 'appointment')->first();
+    expect(json_encode($log))->not->toContain('látex');
+});

@@ -35,14 +35,14 @@ final class AppointmentInput
     }
 
     /** @return array<string, list<mixed>> */
-    public static function rules(bool $partial): array
+    public static function rules(bool $partial, ?Appointment $current = null): array
     {
         $required = $partial ? 'sometimes' : 'required';
 
         return [
             'client_id' => [$required, 'bail', 'uuid', self::exists(Client::class, 'O cliente não existe.')],
-            'professional_id' => [$required, 'bail', 'uuid', self::activeProfessional()],
-            'service_id' => ['sometimes', 'nullable', 'bail', 'uuid', self::activeService()],
+            'professional_id' => [$required, 'bail', 'uuid', self::activeProfessional($current?->professional_id)],
+            'service_id' => ['sometimes', 'nullable', 'bail', 'uuid', self::activeService($current?->service_id)],
             'starts_at' => [$required, 'date', 'after:2000-01-01', 'before:2100-01-01', self::fiveMinutes()],
             'ends_at' => ['sometimes', 'nullable', 'date', 'before:2100-01-01', self::fiveMinutes()],
             'description' => ['sometimes', 'nullable', 'string', 'max:255', ClientInput::noControl()],
@@ -67,10 +67,10 @@ final class AppointmentInput
         };
     }
 
-    private static function activeProfessional(): Closure
+    private static function activeProfessional(?string $unchanged): Closure
     {
-        return function (string $attribute, mixed $value, Closure $fail): void {
-            if (! is_string($value)) {
+        return function (string $attribute, mixed $value, Closure $fail) use ($unchanged): void {
+            if (! is_string($value) || $value === $unchanged) {
                 return;
             }
 
@@ -84,10 +84,10 @@ final class AppointmentInput
         };
     }
 
-    private static function activeService(): Closure
+    private static function activeService(?string $unchanged): Closure
     {
-        return function (string $attribute, mixed $value, Closure $fail): void {
-            if (! is_string($value)) {
+        return function (string $attribute, mixed $value, Closure $fail) use ($unchanged): void {
+            if (! is_string($value) || $value === $unchanged) {
                 return;
             }
 

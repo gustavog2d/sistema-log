@@ -37,3 +37,7 @@
 - O fuso do negócio ainda é fixo (Brasília).
 - O cliente de um agendamento não pode ser trocado pela tela (cancele e crie outro).
 - Valor e pagamentos do atendimento (sinal, parcelas, comissão) vêm com o FIN-001; por ora `value_total_cents` é só o valor combinado.
+- Ao remarcar, a sugestão de horários livres ainda conta o próprio agendamento como ocupado (a gravação o ignora); um parâmetro de exclusão fica para depois.
+- O formulário lista até 50 serviços e 50 profissionais ativos; a semana mostra até 500 agendamentos.
+- Reativar um cancelado ou faltoso só devolve a situação *Agendado* no mesmo horário; para mudar o horário, edite depois.
+- A descrição do agendamento, como as notas, não é copiada para o histórico (só se registra que mudou).

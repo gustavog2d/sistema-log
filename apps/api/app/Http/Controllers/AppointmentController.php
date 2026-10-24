@@ -60,6 +60,7 @@ class AppointmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $who = Visibility::of($request);
+        $this->assertOwnProfessional($request, $who);
 
         return response()->json($this->book->create($this->validated($request, false), $who)->toApi($who->seesValues()), 201);
     }
@@ -68,8 +69,9 @@ class AppointmentController extends Controller
     {
         $who = Visibility::of($request);
         $appointment = $this->book->find($who, $id);
+        $this->assertOwnProfessional($request, $who);
 
-        return response()->json($this->book->update($appointment, $this->validated($request, true), $who)->toApi($who->seesValues()));
+        return response()->json($this->book->update($appointment, $this->validated($request, true, $appointment), $who)->toApi($who->seesValues()));
     }
 
     public function destroy(string $id): Response
@@ -109,10 +111,20 @@ class AppointmentController extends Controller
         return response()->json(['data' => $this->availability->slots($professional, (string) $data['date'], $duration, $before, $after)]);
     }
 
-    /** @return array<string, mixed> */
-    private function validated(Request $request, bool $partial): array
+    /** Quem só usa o próprio perfil recebe 403 antes de qualquer checagem de existência (não deixa descobrir ids). */
+    private function assertOwnProfessional(Request $request, Visibility $who): void
     {
-        $rules = AppointmentInput::rules($partial);
+        $id = $request->input('professional_id');
+
+        if (is_string($id) && ! $who->canUseProfessional($id)) {
+            abort(403);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function validated(Request $request, bool $partial, ?Appointment $current = null): array
+    {
+        $rules = AppointmentInput::rules($partial, $current);
 
         /** @var array<string, mixed> $raw */
         $raw = $request->only(array_keys($rules));
