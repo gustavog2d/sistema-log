@@ -16,6 +16,13 @@ export interface Client {
   instagram: string | null;
   /** @nullable */
   notes: string | null;
+  /** Agendamentos do cliente, sem os cancelados (AGD-003) */
+  appointments_count: number;
+  /**
+     * Média das avaliações de 1 a 5, com 2 casas; nulo se não há avaliação (AGD-003)
+     * @nullable
+     */
+  average_review: number | null;
   created_at: string;
   updated_at: string;
 }

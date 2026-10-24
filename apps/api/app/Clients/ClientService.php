@@ -2,6 +2,7 @@
 
 namespace App\Clients;
 
+use App\Support\ResourceInUse;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -13,7 +14,7 @@ class ClientService
     /** @return CursorPaginator<int, Client> */
     public function list(?string $search, int $limit): CursorPaginator
     {
-        return Client::query()
+        return Client::query()->withStats()
             ->when($search !== null && $search !== '', fn (Builder $query) => $this->search($query, (string) $search))
             // Ordem alfabética sem acento nem maiúsculas (coluna gerada pelo banco); o id desempata.
             ->orderBy('search_name')->orderBy('id')
@@ -42,8 +43,13 @@ class ClientService
         return $client;
     }
 
+    /** @throws ResourceInUse */
     public function delete(Client $client): void
     {
+        if ($client->appointments()->exists()) {
+            throw new ResourceInUse('client_in_use', 'O cliente tem agendamentos e não pode ser excluído. Exclua ou remaneje os agendamentos primeiro.');
+        }
+
         $client->delete();
     }
 

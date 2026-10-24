@@ -2,7 +2,9 @@
 
 namespace App\Professionals;
 
+use App\Appointments\Appointment;
 use App\Audit\Auditor;
+use App\Support\ResourceInUse;
 use App\Tenancy\TenantContext;
 use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -120,6 +122,10 @@ class ProfessionalDirectory
      */
     public function delete(Professional $professional): void
     {
+        if (Appointment::query()->where('professional_id', $professional->id)->exists()) {
+            throw new ResourceInUse('professional_in_use', 'O profissional tem agendamentos. Desative-o em vez de excluir.');
+        }
+
         DB::transaction(function () use ($professional): void {
             foreach (TimeOff::query()->where('professional_id', $professional->id)->get() as $off) {
                 $off->delete();
