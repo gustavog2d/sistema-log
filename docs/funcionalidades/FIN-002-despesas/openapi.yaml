@@ -1,0 +1,264 @@
+openapi: 3.1.0
+info:
+  title: API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /expense-categories:
+    get:
+      operationId: listExpenseCategories
+      summary: Categorias de despesa por nome
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Categorias
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ExpenseCategory" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createExpenseCategory
+      summary: Cria uma categoria
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExpenseCategoryInput" }
+      responses:
+        "201":
+          description: Categoria criada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExpenseCategory" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /expense-categories/defaults:
+    post:
+      operationId: createDefaultExpenseCategories
+      summary: Cria as categorias sugeridas que faltam
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Quantas foram criadas e quantas já existiam
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [created, skipped]
+                properties:
+                  created: { type: integer }
+                  skipped: { type: integer }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+  /expense-categories/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: renameExpenseCategory
+      summary: Renomeia a categoria
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExpenseCategoryInput" }
+      responses:
+        "200":
+          description: Categoria renomeada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExpenseCategory" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteExpenseCategory
+      summary: Exclui a categoria sem despesas
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Excluída }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /expenses:
+    get:
+      operationId: listExpenses
+      summary: Despesas do período, com os totais
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: category_id, in: query, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 200 } }
+      responses:
+        "200":
+          description: Despesas por data decrescente
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ExpenseList" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createExpense
+      summary: Registra uma despesa
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExpenseInput" }
+      responses:
+        "201":
+          description: Despesa registrada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Expense" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+  /expenses/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getExpense
+      summary: Detalhe da despesa
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Despesa
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Expense" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+    patch:
+      operationId: updateExpense
+      summary: Edita a despesa
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ExpensePatch" }
+      responses:
+        "200":
+          description: Despesa atualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Expense" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "422": { $ref: "#/components/responses/Problem" }
+    delete:
+      operationId: deleteExpense
+      summary: Exclui a despesa
+      security: [{ bearerAuth: [] }]
+      responses:
+        "204": { description: Excluída }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  responses:
+    Problem:
+      description: Problem Details (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    ExpenseCategory:
+      type: object
+      required: [id, name, expenses_count, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        expenses_count: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ExpenseCategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 60 }
+    Expense:
+      type: object
+      required: [id, category, description, amount_cents, spent_on, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        category:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        description: { type: string }
+        amount_cents: { type: integer, minimum: 1, maximum: 100000000 }
+        spent_on: { type: string, format: date }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ExpenseInput:
+      type: object
+      required: [category_id, description, amount_cents, spent_on]
+      properties:
+        category_id: { type: string, format: uuid }
+        description: { type: string, minLength: 2, maxLength: 255 }
+        amount_cents: { type: integer, minimum: 1, maximum: 100000000 }
+        spent_on: { type: string, format: date }
+    ExpensePatch:
+      type: object
+      properties:
+        category_id: { type: string, format: uuid }
+        description: { type: string, minLength: 2, maxLength: 255 }
+        amount_cents: { type: integer, minimum: 1, maximum: 100000000 }
+        spent_on: { type: string, format: date }
+    ExpenseList:
+      type: object
+      required: [data, total_cents, count, by_category]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Expense" }
+        total_cents: { type: integer, description: Soma do filtro inteiro }
+        count: { type: integer, description: Quantidade do filtro inteiro }
+        by_category:
+          type: array
+          items:
+            type: object
+            required: [category_id, name, total_cents]
+            properties:
+              category_id: { type: string, format: uuid }
+              name: { type: string }
+              total_cents: { type: integer }
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string }
+        count: { type: integer }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }

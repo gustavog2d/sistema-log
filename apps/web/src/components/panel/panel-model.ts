@@ -24,6 +24,7 @@ const ALL_NAV: NavItem[] = [
     label: 'panel.nav.professionals',
     area: 'professionals',
   },
+  { href: '/despesas', label: 'panel.nav.expenses', area: 'expenses' },
   { href: '/equipe', label: 'panel.nav.team', area: 'team' },
   { href: '/historico', label: 'panel.nav.audit', area: 'audit' },
   { href: '/conta', label: 'panel.nav.account', area: 'account' },
