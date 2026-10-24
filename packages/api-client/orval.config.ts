@@ -36,4 +36,5 @@ export default defineConfig({
   appointments: contract('appointments', 'AGD-003-agenda'),
   payments: contract('payments', 'FIN-001-pagamentos'),
   expenses: contract('expenses', 'FIN-002-despesas'),
+  finance: contract('finance', 'FIN-003-dashboard-financeiro'),
 });
