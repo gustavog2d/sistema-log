@@ -9,9 +9,9 @@ use Tests\Support\TenantAuthTestHelpers;
 use Tests\TestCase;
 
 pest()->extend(TestCase::class)->in('Feature');
-pest()->use(ResetsTenancyDatabase::class)->in('Feature/Tenancy', 'Feature/Platform', 'Feature/Plans', 'Feature/Signup', 'Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients');
-pest()->use(TenantAuthTestHelpers::class)->in('Feature/TenantAuth', 'Feature/Billing', 'Feature/Team', 'Feature/Notifications', 'Feature/Audit', 'Feature/Clients');
-pest()->use(BillingTestHelpers::class, OpenApiAssertions::class)->in('Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients');
+pest()->use(ResetsTenancyDatabase::class)->in('Feature/Tenancy', 'Feature/Platform', 'Feature/Plans', 'Feature/Signup', 'Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients', 'Feature/Services');
+pest()->use(TenantAuthTestHelpers::class)->in('Feature/TenantAuth', 'Feature/Billing', 'Feature/Team', 'Feature/Notifications', 'Feature/Audit', 'Feature/Clients', 'Feature/Services');
+pest()->use(BillingTestHelpers::class, OpenApiAssertions::class)->in('Feature/Billing', 'Feature/TenantAuth', 'Feature/Team', 'Feature/Coupons', 'Feature/Notifications', 'Feature/Admin', 'Feature/Leads', 'Feature/Audit', 'Feature/Clients', 'Feature/Services');
 pest()->use(SignupTestHelpers::class)->in('Feature/Signup', 'Feature/Coupons', 'Feature/Notifications');
 pest()->use(PlatformTestHelpers::class)->in('Feature/Platform', 'Feature/Plans', 'Feature/Coupons', 'Feature/Admin', 'Feature/Leads');
 
@@ -25,3 +25,4 @@ require_once __DIR__.'/Support/PlanChangeHelpers.php';
 require_once __DIR__.'/Support/AuditProbe.php';
 require_once __DIR__.'/Support/AuditHelpers.php';
 require_once __DIR__.'/Support/ClientHelpers.php';
+require_once __DIR__.'/Support/ServiceHelpers.php';

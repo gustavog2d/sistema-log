@@ -28,4 +28,5 @@ export default defineConfig({
   planChange: contract('planChange', 'PLT-013-troca-de-plano'),
   audit: contract('audit', 'FND-008-auditoria-do-assinante'),
   clients: contract('clients', 'CLI-001-clientes'),
+  services: contract('services', 'AGD-001-servicos'),
 });
