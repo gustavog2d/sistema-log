@@ -2,6 +2,8 @@
 
 namespace App\Finance;
 
+use Illuminate\Database\UniqueConstraintViolationException;
+
 /** Meta mensal de receita do negócio (FIN-003): uma só, vale para todos os meses. */
 class MonthlyGoal
 {
@@ -25,7 +27,12 @@ class MonthlyGoal
         }
 
         if ($setting === null) {
-            TenantSetting::create(['key' => self::KEY, 'value' => (string) $cents]);
+            try {
+                TenantSetting::create(['key' => self::KEY, 'value' => (string) $cents]);
+            } catch (UniqueConstraintViolationException) {
+                // Outra gravação criou a meta agora: sobrescreve com o valor mais novo.
+                TenantSetting::query()->where('key', self::KEY)->firstOrFail()->fill(['value' => (string) $cents])->save();
+            }
         } elseif ($setting->value !== (string) $cents) {
             $setting->fill(['value' => (string) $cents])->save();
         }

@@ -115,6 +115,8 @@ export function FinanceView({
       call<FinanceCalendar>('GET', `finance/calendar?month=${nextMonth}`),
     ])
       .then(([summary, monthly, calendar]) => {
+        // O mês só muda quando os números dele chegaram: falhou, o título continua combinando com o que está na tela.
+        setMonth(nextMonth);
         setData({
           summary: summary.data,
           monthly: monthly.data,
@@ -130,7 +132,6 @@ export function FinanceView({
   }
 
   function go(nextMonth: string) {
-    setMonth(nextMonth);
     load(nextMonth);
   }
 

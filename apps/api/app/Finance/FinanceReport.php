@@ -24,7 +24,7 @@ class FinanceReport
     private const DAY_STARTED = "to_char((a.starts_at AT TIME ZONE ?)::date, 'YYYY-MM-DD')";
 
     /** Colunas da previsão: valor, comissão (valor × percentual), quantidade e quanto falta receber (nunca negativo por agendamento). */
-    private const EXPECTED_COLUMNS = "COALESCE(SUM(COALESCE(a.value_total_cents, 0)), 0) as expected, COALESCE(SUM(COALESCE(a.value_total_cents, 0) * a.commission_percent), 0) as commission, COUNT(*) as items, COALESCE(SUM(GREATEST(COALESCE(a.value_total_cents, 0) - (SELECT COALESCE(SUM(p.amount_cents), 0) FROM payments p WHERE p.appointment_id = a.id AND p.tenant_id = a.tenant_id AND p.status = 'received'), 0)), 0) as to_receive";
+    private const EXPECTED_COLUMNS = "COALESCE(SUM(COALESCE(a.value_total_cents, 0)), 0) as expected, COALESCE(SUM(ROUND(COALESCE(a.value_total_cents, 0) * a.commission_percent / 100.0)), 0) as commission, COUNT(*) as items, COALESCE(SUM(GREATEST(COALESCE(a.value_total_cents, 0) - (SELECT COALESCE(SUM(p.amount_cents), 0) FROM payments p WHERE p.appointment_id = a.id AND p.tenant_id = a.tenant_id AND p.status = 'received'), 0)), 0) as to_receive";
 
     /**
      * @return array{received_cents: int, expected_cents: int, to_receive_cents: int, commission_received_cents: int, net_received_cents: int, commission_expected_cents: int, net_expected_cents: int, expenses_cents: int, result_cents: int, appointments_count: int, by_method: list<array{method: string, total_cents: int}>}
@@ -32,7 +32,7 @@ class FinanceReport
     public function summary(string $from, string $to): array
     {
         $paid = $this->receivedQuery($from, $to)
-            ->selectRaw('COALESCE(SUM(p.amount_cents), 0) as total, COALESCE(SUM(p.amount_cents * a.commission_percent), 0) as commission')->first();
+            ->selectRaw('COALESCE(SUM(p.amount_cents), 0) as total, COALESCE(SUM(ROUND(p.amount_cents * a.commission_percent / 100.0)), 0) as commission')->first();
         $planned = $this->expectedQuery($from, $to)
             ->selectRaw(self::EXPECTED_COLUMNS)->first();
         $expenses = $this->int(DB::table('expenses')->whereBetween('spent_on', [$from, $to])->sum('amount_cents'));
@@ -74,7 +74,7 @@ class FinanceReport
         $until = $last->copy()->endOfMonth()->format('Y-m-d');
 
         $received = $this->receivedQuery($from, $until)->groupByRaw('1')
-            ->selectRaw(self::MONTH_PAID.' as m, SUM(p.amount_cents) as total, SUM(p.amount_cents * a.commission_percent) as commission', [BusinessTime::ZONE])->get()->keyBy('m');
+            ->selectRaw(self::MONTH_PAID.' as m, SUM(p.amount_cents) as total, SUM(ROUND(p.amount_cents * a.commission_percent / 100.0)) as commission', [BusinessTime::ZONE])->get()->keyBy('m');
         $expected = $this->expectedQuery($from, $until)->groupByRaw('1')
             ->selectRaw(self::MONTH_STARTED.' as m, SUM(COALESCE(a.value_total_cents, 0)) as expected', [BusinessTime::ZONE])->get()->keyBy('m');
         $expenses = DB::table('expenses')->whereBetween('spent_on', [$from, $until])->groupByRaw("to_char(spent_on, 'YYYY-MM')")
@@ -157,9 +157,9 @@ class FinanceReport
         return is_numeric($value) ? (int) $value : 0;
     }
 
-    /** Soma de (valor × percentual) vira centavos: divide por 100 e arredonda o meio para cima. */
+    /** A comissão já vem arredondada ao centavo por pagamento e por agendamento (meio para cima, como `AppointmentFinance`). */
     private function cents(mixed $raw): int
     {
-        return (int) round($this->int($raw) / 100, 0, PHP_ROUND_HALF_UP);
+        return $this->int($raw);
     }
 }

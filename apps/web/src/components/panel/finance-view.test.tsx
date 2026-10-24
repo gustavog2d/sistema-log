@@ -260,3 +260,23 @@ describe('FinanceView', () => {
     expect(await axe(screen.getByRole('dialog'))).toHaveNoViolations();
   });
 });
+
+describe('FinanceView month change failure', () => {
+  it('CA-13 keeps the title of the month on screen when the next one fails to load', async () => {
+    const user = userEvent.setup();
+    render(view());
+    call.mockRejectedValue(new ApiError('x', 500));
+
+    await user.click(screen.getByRole('button', { name: 'Próximo mês' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não foi possível carregar o financeiro agora.',
+    );
+    expect(
+      screen.getByRole('heading', { name: 'novembro de 2026' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'dezembro de 2026' }),
+    ).not.toBeInTheDocument();
+  });
+});

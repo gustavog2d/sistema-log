@@ -122,3 +122,17 @@ it('CA-06 refuses a missing, inverted, too long or invalid period', function (st
     ['from=2025-01-01&to=2026-11-30', 'to'],
     ['from=2026-02-30&to=2026-03-01', 'from'],
 ]);
+
+it('CA-03 rounds the commission cent by cent in each payment, so the totals match the appointment screen', function () {
+    $w = finWorld($this);
+    // 3 pagamentos de R$ 10,05 a 15%: 150,75 → 151 centavos cada (453), e não 452 como um arredondamento só no total.
+    foreach ([3, 4, 5] as $day) {
+        finAppointment($w, "2026-11-0{$day} 13:00:00", 1005, 'scheduled', 15, [[1005, "2026-11-0{$day} 13:00:00", 'pix']]);
+    }
+
+    $summary = expApi($this, $w->token, 'GET', 'finance/summary?from=2026-11-01&to=2026-11-30')->assertOk();
+    $monthly = expApi($this, $w->token, 'GET', 'finance/monthly?to=2026-11')->assertOk();
+
+    expect($summary->json('commission_received_cents'))->toBe(453)->and($summary->json('commission_expected_cents'))->toBe(453)
+        ->and($monthly->json('totals.net_received_cents'))->toBe($summary->json('net_received_cents'));
+});

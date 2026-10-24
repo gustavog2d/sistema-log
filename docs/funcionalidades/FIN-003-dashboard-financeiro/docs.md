@@ -25,7 +25,7 @@ Os dias seguem o calendário do negócio (Brasília): um pagamento às 23:30 do 
 | PUT | `/finance/goal` (`monthly_goal_cents` de 1 a 1.000.000.000 ou `null`) | dona e gerente |
 
 - **Cálculo** em `App\Finance\FinanceReport`, direto das tabelas `payments`, `appointments` e `expenses` (sem tabelas de resultado, nada fica velho). O instante vira data no fuso `BusinessTime::ZONE` antes de comparar; o RLS limita ao negócio.
-- **Comissão** = soma de `valor × percentual do agendamento` ÷ 100, arredondada no total (meio para cima). O percentual é o congelado no agendamento (FIN-001).
+- **Comissão** = `valor × percentual do agendamento` ÷ 100 arredondada ao centavo (meio para cima) **por pagamento** (recebida) e **por agendamento** (prevista), como na tela do agendamento; assim o resumo, o balanço e o calendário somam igual. O percentual é o congelado no agendamento (FIN-001).
 - **A receber** é calculado por agendamento (`GREATEST(valor − recebido, 0)`), então nunca fica negativo.
 - **Meta:** `App\Finance\MonthlyGoal` guarda em `tenant_settings` (chave `monthly_goal_cents`, única por negócio); limpar apaga a linha. A mudança entra no histórico como "Configuração".
 - **Acesso:** `role:owner,manager`; `PUT /finance/goal` tem `no.impersonation` e respeita `subscription.access`.
