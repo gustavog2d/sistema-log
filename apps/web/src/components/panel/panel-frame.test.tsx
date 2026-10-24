@@ -32,14 +32,18 @@ describe('navFor', () => {
         'Início',
         'Assinatura',
         'Clientes',
+        'Serviços',
         'Equipe',
         'Histórico',
         'Minha conta',
       ],
     ],
-    ['manager', ['Início', 'Clientes', 'Equipe', 'Histórico', 'Minha conta']],
-    ['professional', ['Início', 'Clientes', 'Minha conta']],
-    ['reception', ['Início', 'Clientes', 'Minha conta']],
+    [
+      'manager',
+      ['Início', 'Clientes', 'Serviços', 'Equipe', 'Histórico', 'Minha conta'],
+    ],
+    ['professional', ['Início', 'Clientes', 'Serviços', 'Minha conta']],
+    ['reception', ['Início', 'Clientes', 'Serviços', 'Minha conta']],
   ] as const)('CA-04 shows only what a %s can use', (role, labels) => {
     expect(navFor(me(role)).map((item) => item.label)).toEqual(labels);
   });
@@ -136,7 +140,14 @@ describe('PanelFrame', () => {
       within(nav)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Início', 'Clientes', 'Equipe', 'Histórico', 'Minha conta']);
+    ).toEqual([
+      'Início',
+      'Clientes',
+      'Serviços',
+      'Equipe',
+      'Histórico',
+      'Minha conta',
+    ]);
     expect(within(nav).getByRole('link', { name: 'Equipe' })).toHaveAttribute(
       'aria-current',
       'page',

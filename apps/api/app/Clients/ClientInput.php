@@ -72,7 +72,7 @@ final class ClientInput
     }
 
     /** Notas: texto livre, mas sem caracteres de controle (o banco recusa o NUL) nem de direção do texto; quebra de linha e tabulação valem. */
-    private static function noControl(): Closure
+    public static function noControl(): Closure
     {
         return function (string $attribute, mixed $value, Closure $fail): void {
             if (is_string($value) && (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value) === 1 || preg_match('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}\x{FEFF}]/u', $value) === 1)) {

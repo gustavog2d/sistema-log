@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { safeAdminReturnPath, safeReturnPath } from './safe-path';
 
 describe('safeReturnPath', () => {
-  it.each(['/', '/assinatura', '/clientes', '/equipe', '/historico', '/conta'])(
-    'CA-03 keeps %s',
-    (path) => {
-      expect(safeReturnPath(path)).toBe(path);
-    },
-  );
+  it.each([
+    '/',
+    '/assinatura',
+    '/clientes',
+    '/servicos',
+    '/equipe',
+    '/historico',
+    '/conta',
+  ])('CA-03 keeps %s', (path) => {
+    expect(safeReturnPath(path)).toBe(path);
+  });
 
   it.each([
     '//evil.com',
