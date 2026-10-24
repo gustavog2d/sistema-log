@@ -82,6 +82,7 @@ export const AREA_ROLES = {
   subscription: ['owner'],
   team: ['owner', 'manager'],
   audit: ['owner', 'manager'],
+  agenda: ['owner', 'manager', 'professional', 'reception'],
   clients: ['owner', 'manager', 'professional', 'reception'],
   services: ['owner', 'manager', 'professional', 'reception'],
   professionals: ['owner', 'manager', 'professional', 'reception'],

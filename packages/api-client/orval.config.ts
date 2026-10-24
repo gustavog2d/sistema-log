@@ -33,4 +33,5 @@ export default defineConfig({
     'professionals',
     'AGD-002-profissionais-e-expediente',
   ),
+  appointments: contract('appointments', 'AGD-003-agenda'),
 });

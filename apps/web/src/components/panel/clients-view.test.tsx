@@ -32,6 +32,8 @@ const client = (over: Partial<Client> = {}): Client => ({
   email: 'bia@exemplo.com',
   instagram: 'bia.lima',
   notes: 'Prefere à tarde',
+  appointments_count: 0,
+  average_review: null,
   created_at: '2026-11-01T12:00:00Z',
   updated_at: '2026-11-01T12:00:00Z',
   ...over,

@@ -126,7 +126,7 @@ components:
   schemas:
     Client:
       type: object
-      required: [id, name, phone, email, instagram, notes, created_at, updated_at]
+      required: [id, name, phone, email, instagram, notes, appointments_count, average_review, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
@@ -134,6 +134,8 @@ components:
         email: { type: [string, "null"] }
         instagram: { type: [string, "null"] }
         notes: { type: [string, "null"] }
+        appointments_count: { type: integer, description: "Agendamentos do cliente, sem os cancelados (AGD-003)" }
+        average_review: { type: [number, "null"], description: "Média das avaliações de 1 a 5, com 2 casas; nulo se não há avaliação (AGD-003)" }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     QuickClient:

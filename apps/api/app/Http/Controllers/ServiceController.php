@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Appointments\Appointment;
 use App\Services\CatalogInput;
 use App\Services\Service;
 use App\Services\ServiceCatalog;
+use App\Support\ResourceInUse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -56,7 +58,13 @@ class ServiceController extends Controller
 
     public function destroy(string $id): Response
     {
-        Service::query()->findOrFail($id)->delete();
+        $service = Service::query()->findOrFail($id);
+
+        if (Appointment::query()->where('service_id', $service->id)->exists()) {
+            throw new ResourceInUse('service_in_use', 'O serviço já foi usado em agendamentos. Arquive-o em vez de excluir.');
+        }
+
+        $service->delete();
 
         return response()->noContent();
     }

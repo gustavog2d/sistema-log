@@ -23,5 +23,5 @@
 
 ## Limites conhecidos
 
-- A exclusão do serviço ainda não é barrada por uso em agendamentos nem orçamentos (passa a valer com AGD-003; hoje, para manter o histórico, prefira arquivar).
+- A exclusão do serviço é barrada quando há agendamentos (409 `service_in_use`; arquive em vez de excluir). A trava por orçamentos chega com a fase de orçamento.
 - Sem preço por profissional, pacotes de sessões, variações (tamanho, comprimento), foto nem vocabulário por nicho nos textos.

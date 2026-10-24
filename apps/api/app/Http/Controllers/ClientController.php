@@ -52,7 +52,7 @@ class ClientController extends Controller
 
     public function show(string $id): JsonResponse
     {
-        return response()->json(Client::query()->findOrFail($id)->toApi());
+        return response()->json(Client::query()->withStats()->findOrFail($id)->toApi());
     }
 
     public function update(Request $request, string $id): JsonResponse

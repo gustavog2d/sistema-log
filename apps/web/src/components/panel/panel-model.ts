@@ -16,6 +16,7 @@ const ALL_NAV: NavItem[] = [
     label: 'panel.nav.subscription',
     area: 'subscription',
   },
+  { href: '/agenda', label: 'panel.nav.agenda', area: 'agenda' },
   { href: '/clientes', label: 'panel.nav.clients', area: 'clients' },
   { href: '/servicos', label: 'panel.nav.services', area: 'services' },
   {

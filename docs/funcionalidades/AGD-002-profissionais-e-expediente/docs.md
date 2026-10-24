@@ -27,6 +27,6 @@
 
 ## Limites conhecidos
 
-- A exclusão do profissional ainda não é barrada por agendamentos (passa a valer com AGD-003); prefira desativar.
+- A exclusão do profissional é barrada quando há agendamentos (409 `professional_in_use`); desative em vez de excluir.
 - Sem folga recorrente, expediente por data específica nem comissão por serviço; o profissional não edita o próprio expediente.
 - O horário do expediente e das folgas usa o fuso de Brasília (o fuso do negócio ainda é fixo).
